@@ -73,7 +73,8 @@ enum Square : int {
 };
 // clang-format on
 
-typedef Piece BoardArray[SQUARE_NB];
+typedef Piece    BoardArray[SQUARE_NB];
+typedef uint64_t Bitboard;
 
 enum Direction : int {
     NORTH = 8,

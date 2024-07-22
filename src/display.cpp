@@ -6,15 +6,16 @@ namespace Oracle {
 Board::Board() {
     // TODO: do not hardcode path
     if (!m_piece_atlas.loadFromFile("D:/projects/ChessAgent/assets/piece-atlas.png"))
-    {
         std::cerr << "Piece atlas could not be loaded" << std::endl;
-    }
+
     m_piece_atlas.setSmooth(true);
 
     m_board_texture = make_board_texture();
 
     std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    m_bitboards.set_position(fen);
+    m_position.set(fen);
+    m_bitboards.init(m_position);
+
     init_board();
 }
 
@@ -22,20 +23,24 @@ Board::~Board() {
     for (auto& piece : m_board)
     {
         if (piece != nullptr)
-        {
             delete piece;
-        }
+    }
+}
+
+void Board::clear_board() {
+    for (Square sq = SQ_A1; sq <= SQ_H8; ++sq)
+    {
+        delete m_board[sq];
+        m_board[sq] = nullptr;
     }
 }
 
 void Board::init_board() {
     for (Square sq = SQ_A1; sq <= SQ_H8; ++sq)
     {
-        Piece piece = m_bitboards.get_piece_at_sq(sq);
+        Piece piece = m_position.piece_at(sq);
         if (piece != NO_PIECE)
-        {
             m_board[sq] = new PieceGUI(m_piece_atlas, piece, sq);
-        }
     }
 }
 
@@ -63,17 +68,23 @@ void Board::draw_board(sf::RenderWindow& window) {
 void Board::draw_pieces(sf::RenderWindow& window) {
     for (Square sq = SQ_A1; sq <= SQ_H8; ++sq)
     {
+        // to avoid having to loop again, draw any valid moves for a selected piece as we iterate over board squares
+        if (m_dragged_piece != nullptr)
+        {
+            if (m_bitboards.is_valid_move(m_dragged_piece->square(), sq))
+            {
+                sf::RectangleShape board_sq = make_board_square(file_of(sq), rank_of(sq), VALID_SQ);
+                window.draw(board_sq);
+            }
+        }
+
         PieceGUI* piece = m_board[sq];
         if ((piece != nullptr) && (piece != m_dragged_piece))
-        {
             m_board[sq]->draw(window);
-        }
     }
 
     if (m_dragged_piece != nullptr)
-    {
         m_dragged_piece->draw(window);
-    }
 }
 
 void Board::mouse_handler(sf::RenderWindow& window) {
@@ -107,10 +118,22 @@ void Board::move(sf::RenderWindow& window) {
         File   dest_f  = file_from_x(mouse_coords.x);
         Rank   dest_r  = rank_from_y(mouse_coords.y);
         Square dest_sq = make_square(dest_f, dest_r);
-        m_dragged_piece->move(dest_sq);
+        if (m_bitboards.is_valid_move(src_sq, dest_sq))
+        {
+            m_position.make_move(src_sq, dest_sq);
+            m_dragged_piece->move(dest_sq);
+
+            clear_board();
+            init_board();
+        }
+        else
+        {
+            m_dragged_piece->move(src_sq);
+        }
+
+        m_dragged_piece = nullptr;
+        draw(window);
     }
-    m_move_occurred = true;
-    m_dragged_piece = nullptr;
 }
 
 // PieceGUI

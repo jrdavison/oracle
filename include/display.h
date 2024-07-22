@@ -8,6 +8,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "bitboards.h"
+#include "position.h"
 #include "utils.h"
 
 namespace Oracle {
@@ -39,7 +40,6 @@ class Board {
     bool is_paused() { return m_paused; };
     bool move_occurred() { return m_move_occurred; };
 
-
     void draw(sf::RenderWindow& window);
     void mouse_handler(sf::RenderWindow& window);
     void move(sf::RenderWindow& window);
@@ -48,6 +48,7 @@ class Board {
     PieceGUI* m_board[SQUARE_NB] = {nullptr};
     PieceGUI* m_dragged_piece    = nullptr;
 
+    Position  m_position;
     Bitboards m_bitboards;
 
     sf::Font    m_font;
@@ -60,6 +61,7 @@ class Board {
     void draw_board(sf::RenderWindow& window);
     void draw_pieces(sf::RenderWindow& window);
     void init_board();
+    void clear_board();
 };
 
 inline File        file_from_x(int x) { return File(x / BOARD_SQ_PX); };

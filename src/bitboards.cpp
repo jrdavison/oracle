@@ -2,60 +2,52 @@
 
 namespace Oracle {
 
-void Bitboards::set_position(const std::string& fen) {
-    File file = FILE_A;
-    Rank rank = RANK_8;
-
-    int blank_space_nb = 0;
-    for (char c : fen)
+void Bitboards::init(const Position& pos) {
+    for (Square sq = SQ_A1; sq < SQUARE_NB; ++sq)
     {
-        if (c == '/')
+        Piece     p          = pos.piece_at(sq);
+        PieceType piece_type = type_of(p);
+        Color     color      = color_of(p);
+
+        switch (piece_type)
         {
-            --rank;
-            file = FILE_A;
-        }
-        else if (isdigit(c))
-        {
-            file += (c - '0');
-        }
-        else if (c == ' ')
-        {
-            blank_space_nb++;
-        }
-        else
-        {
-            if (blank_space_nb == 0)
-            {
-                Color     color      = isupper(c) ? WHITE : BLACK;
-                Square    square     = make_square(file, rank);
-                PieceType piece_type = from_char(c);
-                Piece     piece      = make_piece(piece_type, color);
-                m_board[square]      = piece;
-                ++file;
-            }
+        case PAWN :
+            m_valid_moves[sq] = compute_pawn_moves(p, sq);
+            break;
         }
     }
-    return;
 }
 
-PieceType from_char(char c) {
-    switch (tolower(c))
+Bitboard Bitboards::compute_pawn_moves(Piece p, Square sq) {
+    Bitboard valid_moves = 0;
+
+    Color     color       = color_of(p);
+    Direction forward_dir = forward_direction(color);
+
+    // Forward Move (single square)
+    Square target_square = sq;
+    target_square += forward_dir;
+    if (target_square < SQUARE_NB)
+        set_bit(valid_moves, target_square);
+
+    return valid_moves;
+}
+
+// helpers
+void print_bitboard(Bitboard bb, const std::string& label) {
+    std::string result = label + " bitboard:\n";
+
+    for (int rank = (RANK_NB - 1); rank > 0; --rank)
     {
-    case 'p' :
-        return PAWN;
-    case 'n' :
-        return KNIGHT;
-    case 'b' :
-        return BISHOP;
-    case 'r' :
-        return ROOK;
-    case 'q' :
-        return QUEEN;
-    case 'k' :
-        return KING;
-    default :
-        return NO_PIECE_TYPE;
+        for (int file = FILE_A; file < FILE_NB; ++file)
+        {
+            Square sq = make_square(File(file), Rank(rank));
+            result += is_bit_set(bb, sq) ? '1' : '0';
+        }
+        result += "\n";
     }
+
+    std::cout << result;
 }
 
 }  // namespace Oracle

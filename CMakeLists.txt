@@ -19,6 +19,8 @@ add_executable(Oracle
     src/display.cpp
     include/bitboards.h
     src/bitboards.cpp
+    include/position.h
+    src/position.cpp
 )
 
 # Specify include directories for the target
