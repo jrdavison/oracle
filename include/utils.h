@@ -112,7 +112,15 @@ enum Rank : int {
     RANK_NB
 };
 
-// allow increment and decrement of enum types
+// Allow directions to increment/decrement squares (defaulting to SQUARE_NB if out of bounds)
+constexpr Square operator+(Square sq, Direction dir) {
+    int new_square = static_cast<int>(sq) + static_cast<int>(dir);
+    if (new_square < 0 || new_square >= SQUARE_NB)
+        return SQUARE_NB;
+    return static_cast<Square>(new_square);
+}
+
+// Allow increment/decrement of enum types
 template<typename T>
 inline T& operator++(T& d) {
     return d = T(int(d) + 1);
@@ -134,14 +142,22 @@ inline T& operator-=(T& d, int i) {
 
 // Swap color of piece B_KNIGHT <-> W_KNIGHT
 constexpr Piece operator~(Piece p) { return Piece(p ^ 8); }
+// Swap color
+constexpr Color operator~(Color c) { return Color(c ^ 1); }
 
 constexpr PieceType type_of(Piece p) { return PieceType(p & 7); };
 constexpr Color     color_of(Piece p) { return Color(p >> 3); };
 constexpr File      file_of(Square s) { return File(s & 7); };
 constexpr Rank      rank_of(Square s) { return Rank(s >> 3); };
+constexpr Rank      relative_rank(Color c, Rank r) { return c == WHITE ? r : Rank(RANK_8 - r); };
 constexpr Square    make_square(File f, Rank r) { return Square((r << 3) + f); };
 constexpr Piece     make_piece(PieceType pt, Color c) { return Piece(pt + (c << 3)); };
 constexpr Direction forward_direction(Color c) { return c == WHITE ? NORTH : SOUTH; };
+
+// Bitboard operations
+inline void    set_bit(Bitboard& bb, Square sq) { bb |= (1ULL << sq); };
+inline void    clear_bit(Bitboard& bb, Square sq) { bb &= ~(1ULL << sq); };
+constexpr bool is_bit_set(Bitboard bb, Square sq) { return bb & (1ULL << sq); };
 
 }  // namespace Oracle
 

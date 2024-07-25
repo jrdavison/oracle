@@ -4,17 +4,14 @@ namespace Oracle {
 
 // Board
 Board::Board() {
-    // TODO: do not hardcode path
-    if (!m_piece_atlas.loadFromFile("D:/projects/ChessAgent/assets/piece-atlas.png"))
+    if (!m_piece_atlas.loadFromFile("../../assets/piece-atlas.png"))
         std::cerr << "Piece atlas could not be loaded" << std::endl;
 
     m_piece_atlas.setSmooth(true);
-
     m_board_texture = make_board_texture();
 
     std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    m_position.set(fen);
-    m_bitboards.init(m_position);
+    m_position      = Position(fen);
 
     init_board();
 }
@@ -50,8 +47,6 @@ void Board::draw(sf::RenderWindow& window) {
 
     window.clear(sf::Color::Black);
 
-    m_move_occurred = false;
-
     mouse_handler(window);
     draw_board(window);
     draw_pieces(window);
@@ -71,7 +66,7 @@ void Board::draw_pieces(sf::RenderWindow& window) {
         // to avoid having to loop again, draw any valid moves for a selected piece as we iterate over board squares
         if (m_dragged_piece != nullptr)
         {
-            if (m_bitboards.is_valid_move(m_dragged_piece->square(), sq))
+            if (m_position.is_valid_move(m_dragged_piece->square(), sq))
             {
                 sf::RectangleShape board_sq = make_board_square(file_of(sq), rank_of(sq), VALID_SQ);
                 window.draw(board_sq);
@@ -118,21 +113,24 @@ void Board::move(sf::RenderWindow& window) {
         File   dest_f  = file_from_x(mouse_coords.x);
         Rank   dest_r  = rank_from_y(mouse_coords.y);
         Square dest_sq = make_square(dest_f, dest_r);
-        if (m_bitboards.is_valid_move(src_sq, dest_sq))
+        if (m_position.is_valid_move(src_sq, dest_sq))
         {
             m_position.make_move(src_sq, dest_sq);
             m_dragged_piece->move(dest_sq);
 
             clear_board();
             init_board();
+
+            m_dragged_piece = nullptr;
+            draw(window);
+            m_position.compute_valid_moves();
         }
         else
         {
-            m_dragged_piece->move(src_sq);
+            m_dragged_piece->move(src_sq);  // reset piece to original position
+            m_dragged_piece = nullptr;
+            draw(window);
         }
-
-        m_dragged_piece = nullptr;
-        draw(window);
     }
 }
 

@@ -17,8 +17,6 @@ add_executable(Oracle
     src/main.cpp
     include/display.h
     src/display.cpp
-    include/bitboards.h
-    src/bitboards.cpp
     include/position.h
     src/position.cpp
 )

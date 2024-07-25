@@ -7,7 +7,6 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "bitboards.h"
 #include "position.h"
 #include "utils.h"
 
@@ -38,7 +37,6 @@ class Board {
     void pause() { m_paused = true; };
     void resume() { m_paused = false; };
     bool is_paused() { return m_paused; };
-    bool move_occurred() { return m_move_occurred; };
 
     void draw(sf::RenderWindow& window);
     void mouse_handler(sf::RenderWindow& window);
@@ -48,15 +46,13 @@ class Board {
     PieceGUI* m_board[SQUARE_NB] = {nullptr};
     PieceGUI* m_dragged_piece    = nullptr;
 
-    Position  m_position;
-    Bitboards m_bitboards;
+    Position m_position;
 
     sf::Font    m_font;
     sf::Texture m_board_texture;
     sf::Texture m_piece_atlas;
 
-    bool m_paused        = false;
-    bool m_move_occurred = false;
+    bool m_paused = false;
 
     void draw_board(sf::RenderWindow& window);
     void draw_pieces(sf::RenderWindow& window);
