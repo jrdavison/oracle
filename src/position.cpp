@@ -54,7 +54,13 @@ Position::Position(const std::string& fen) {
         }
     }
 
+    load_magic_bitboards();
     compute_valid_moves();
+}
+
+void Position::load_magic_bitboards() {
+    std::string filename = "../../resources/rook_moves.bin";
+    m_rook_moves         = load_rook_move_database(filename);
 }
 
 void Position::make_move(Square from, Square to) {
@@ -86,6 +92,9 @@ void Position::compute_valid_moves() {
             break;
         case KNIGHT :
             m_valid_moves[sq] = compute_knight_moves(p, sq);
+            break;
+        case ROOK :
+            m_valid_moves[sq] = compute_rook_moves(p, sq);
             break;
         }
     }
@@ -153,6 +162,24 @@ Bitboard Position::compute_knight_moves(Piece p, Square sq) {
     return valid_moves;
 }
 
+Bitboard Position::compute_rook_moves(Piece p, Square sq) {
+    Bitboard valid_moves = 0;
+    Color    color       = color_of(p);
+
+    // shift rook moves to relevant square (assuming no blockers)
+    Bitboard h_mask    = HORIZONTAL_MASK << (rank_of(sq) * 8);
+    Bitboard v_mask    = VERTICAL_MASK << file_of(sq);
+    Bitboard move_mask = (h_mask | v_mask) & ~(1ULL << sq);
+
+    Bitboard blockers_key = get_all_checkers_bb() & move_mask;
+    if (m_rook_moves[sq].find(blockers_key) != m_rook_moves[sq].end())
+        valid_moves = m_rook_moves[sq][blockers_key];
+    else
+        std::cerr << "Blockers key not found in lookup table." << std::endl;
+
+    return valid_moves & ~m_checkers_bb[color];
+}
+
 // helpers
 PieceType from_char(char c) {
     switch (tolower(c))
@@ -188,5 +215,38 @@ void print_bitboard(Bitboard bb, const std::string& label) {
     }
 
     std::cout << result;
+}
+
+std::unordered_map<uint64_t, uint64_t> read_rook_moves_for_square(std::ifstream& file) {
+    std::unordered_map<uint64_t, uint64_t> rook_moves;
+    uint32_t                               num_entries;
+    file.read(reinterpret_cast<char*>(&num_entries), sizeof(num_entries));
+
+    for (uint32_t i = 0; i < num_entries; ++i)
+    {
+        uint64_t blockers;
+        uint64_t attacks;
+        file.read(reinterpret_cast<char*>(&blockers), sizeof(blockers));
+        file.read(reinterpret_cast<char*>(&attacks), sizeof(attacks));
+        rook_moves[blockers] = attacks;
+    }
+
+    return rook_moves;
+}
+
+std::vector<std::unordered_map<uint64_t, uint64_t>> load_rook_move_database(const std::string& filename) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open())
+    {
+        throw std::runtime_error("Failed to open file: " + filename);
+    }
+
+    std::vector<std::unordered_map<uint64_t, uint64_t>> rook_move_database(64);
+    for (int square = 0; square < 64; ++square)
+    {
+        rook_move_database[square] = read_rook_moves_for_square(file);
+    }
+
+    return rook_move_database;
 }
 }  // namespace Oracle

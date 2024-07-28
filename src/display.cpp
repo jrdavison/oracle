@@ -4,7 +4,7 @@ namespace Oracle {
 
 // Board
 Board::Board() {
-    if (!m_piece_atlas.loadFromFile("../../assets/piece-atlas.png"))
+    if (!m_piece_atlas.loadFromFile("../../resources/piece-atlas.png"))
         std::cerr << "Piece atlas could not be loaded" << std::endl;
 
     m_piece_atlas.setSmooth(true);
