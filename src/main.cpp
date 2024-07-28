@@ -42,7 +42,7 @@ int main() {
         if (mouse_pressed)
             game.draw(window);
         else
-            sf::sleep(sf::milliseconds(10));
+            sf::sleep(sf::milliseconds(50));
     }
 
     return 0;

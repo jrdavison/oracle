@@ -131,12 +131,20 @@ Bitboard Position::compute_pawn_moves(Piece p, Square sq) {
 Bitboard Position::compute_knight_moves(Piece p, Square sq) {
     Bitboard valid_moves = 0;
     Color    color       = color_of(p);
+    Rank     src_rank    = rank_of(sq);
+    File     src_file    = file_of(sq);
 
     for (Direction dir : KNIGHT_MOVES)
     {
         Square target_square = sq + dir;
         if (SQ_A1 <= target_square < SQUARE_NB)
-            set_bit(valid_moves, target_square);
+        {
+            // prevent wrapping around the board
+            Rank target_rank = rank_of(target_square);
+            File target_file = file_of(target_square);
+            if (std::abs(target_rank - src_rank) <= 2 && std::abs(target_file - src_file) <= 2)
+                set_bit(valid_moves, target_square);
+        }
     }
 
     // can't capture own pieces
