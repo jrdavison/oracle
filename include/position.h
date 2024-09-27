@@ -18,8 +18,10 @@ class Position {
     Position()  = default;
     ~Position() = default;
 
-    Piece piece_at(Square sq) const { return m_board[sq]; }
-    bool  is_valid_move(Square from, Square to) { return m_valid_moves[from] & (1ULL << to); }
+    Piece  piece_at(Square sq) const { return m_board[sq]; }
+    bool   is_valid_move(Square from, Square to);
+    double get_last_move_gen_speed() const { return last_move_gen_speed; }
+    Color  turn_color() const { return m_turn_color; }
 
     void compute_valid_moves();
     void make_move(Square from, Square to);
@@ -31,10 +33,12 @@ class Position {
     Bitboard   m_valid_moves[SQUARE_NB] = {0};
     Bitboard   m_checkers_bb[COLOR_NB]  = {0};
 
-    Color m_side_to_move = COLOR_NB;
+    Color m_turn_color = COLOR_NB;
 
     RookMoveDatabase   m_rook_moves;
     KnightMoveDatabase m_knight_moves = {0};
+
+    double last_move_gen_speed = 0.0;
 
     Bitboard compute_pawn_moves(Piece p, Square sq);
     Bitboard compute_knight_moves(Piece p, Square sq);

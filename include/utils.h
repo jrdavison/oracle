@@ -18,6 +18,7 @@ const sf::Color LIGHT_SQ = sf::Color(240, 217, 181);    // off white
 const sf::Color DARK_SQ  = sf::Color(181, 136, 99);     // tan
 const sf::Color VALID_SQ = sf::Color(35, 64, 153, 90);  // transparent blue
 const sf::Color CHECK_SQ = sf::Color(252, 3, 3, 90);    // transparent red
+const sf::Color INFO_BG  = sf::Color(60, 60, 60);       // gray
 
 constexpr uint64_t HORIZONTAL_MASK = 0x00000000000000FF;
 constexpr uint64_t VERTICAL_MASK   = 0x0101010101010101;

@@ -36,7 +36,7 @@ Position::Position(const std::string& fen) {
             }
             else if (blank_space_nb == 1)
             {
-                m_side_to_move = (c == 'w') ? WHITE : BLACK;
+                m_turn_color = (c == 'w') ? WHITE : BLACK;
             }
         }
     }
@@ -45,6 +45,13 @@ Position::Position(const std::string& fen) {
     load_knight_move_db("../../resources/precalculated_moves/knight_moves.bin");
 
     compute_valid_moves();
+}
+
+bool Position::is_valid_move(Square from, Square to) {
+    Piece p = m_board[from];
+    if (color_of(p) != m_turn_color)
+        return false;
+    return m_valid_moves[from] & (1ULL << to);
 }
 
 void Position::make_move(Square from, Square to) {
@@ -57,11 +64,11 @@ void Position::make_move(Square from, Square to) {
     set_bit(m_checkers_bb[color], to);
 
     // TODO: save what was captured so we can undo the move
-    m_side_to_move = ~color;
+    m_turn_color = ~color;
 }
 
 void Position::compute_valid_moves() {
-    auto startTime = std::chrono::high_resolution_clock::now();
+    auto start = std::chrono::high_resolution_clock::now();
 
     for (Square sq = SQ_A1; sq < SQUARE_NB; ++sq)
     {
@@ -86,9 +93,9 @@ void Position::compute_valid_moves() {
         }
     }
 
-    auto endTime  = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-    std::cout << "Move generation took " << duration.count() << " ms\n";
+    auto duration =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - start);
+    last_move_gen_speed = duration.count() / 1'000'000.0;
 }
 
 Bitboard Position::compute_pawn_moves(Piece p, Square sq) {

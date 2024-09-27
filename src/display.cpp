@@ -5,7 +5,10 @@ namespace Oracle {
 // Board
 Board::Board() {
     if (!m_piece_atlas.loadFromFile("../../resources/piece-atlas.png"))
-        std::cerr << "Piece atlas could not be loaded" << std::endl;
+        throw std::runtime_error("Piece atlas could not be loaded");
+
+    if (!m_font.loadFromFile("../../resources/font.ttf"))
+        throw std::runtime_error("Font could not be loaded");
 
     m_piece_atlas.setSmooth(true);
     m_board_texture = make_board_texture();
@@ -50,6 +53,7 @@ void Board::draw(sf::RenderWindow& window) {
     mouse_handler(window);
     draw_board(window);
     draw_pieces(window);
+    draw_info(window);
 
     window.display();
 }
@@ -80,6 +84,58 @@ void Board::draw_pieces(sf::RenderWindow& window) {
 
     if (m_dragged_piece != nullptr)
         m_dragged_piece->draw(window);
+}
+
+void Board::draw_info(sf::RenderWindow& window) {
+    const int font_size_lg             = 32;
+    const int font_size_sm             = 16;
+    const int padding                  = 10;
+    const int move_gen_speed_precision = 4;
+
+    Color turn_color = m_position.turn_color();  // TODO: get turn color from position
+
+    // background
+    sf::RectangleShape info_pane_bg(sf::Vector2f(BOARD_SQ_PX * BOARD_SQ_ROW_NB, BOARD_SQ_PX * BOARD_SQ_ROW_NB));
+    info_pane_bg.setFillColor(INFO_BG);
+    info_pane_bg.setPosition(BOARD_SQ_PX * BOARD_SQ_ROW_NB, 0);
+    window.draw(info_pane_bg);
+
+    // turn banner
+    sf::Color          turn_banner_color = (turn_color == WHITE) ? sf::Color::White : sf::Color::Black;
+    sf::RectangleShape turn_banner(sf::Vector2f((BOARD_SQ_PX * BOARD_SQ_ROW_NB) - padding, font_size_lg + padding));
+    turn_banner.setFillColor(turn_banner_color);
+    turn_banner.setPosition(BOARD_SQ_PX * BOARD_SQ_ROW_NB + 5, 5);
+    window.draw(turn_banner);
+
+    // turn text
+    sf::Text  turn_text;
+    sf::Color turn_text_color = (turn_color == WHITE) ? sf::Color::Black : sf::Color::White;
+    turn_text.setFont(m_font);
+    if (turn_color == WHITE)
+        turn_text.setString("White's Move");
+    else
+        turn_text.setString("Black's Move");
+    turn_text.setCharacterSize(font_size_lg);
+    turn_text.setFillColor(turn_text_color);
+    float centerX = turn_banner.getPosition().x + (turn_banner.getSize().x / 2) - (turn_text.getLocalBounds().width / 2)
+                  + (padding / 2);
+    float centerY = padding / 2;
+    turn_text.setPosition(centerX, centerY);
+    window.draw(turn_text);
+
+
+    sf::Text           move_gen_speed_text;
+    std::ostringstream move_gen_speed;
+    move_gen_speed.precision(move_gen_speed_precision);
+    move_gen_speed << std::fixed << m_position.get_last_move_gen_speed();
+    move_gen_speed_text.setFont(m_font);
+    move_gen_speed_text.setString("Last move gen speed: " + move_gen_speed.str() + " ms");
+    move_gen_speed_text.setCharacterSize(font_size_sm);
+    move_gen_speed_text.setFillColor(sf::Color::White);
+    move_gen_speed_text.setPosition((BOARD_SQ_PX * BOARD_SQ_ROW_NB) + padding,
+                                    (BOARD_SQ_PX * BOARD_SQ_ROW_NB)
+                                      - (move_gen_speed_text.getLocalBounds().height + padding));
+    window.draw(move_gen_speed_text);
 }
 
 void Board::mouse_handler(sf::RenderWindow& window) {
@@ -124,6 +180,7 @@ void Board::move(sf::RenderWindow& window) {
             m_dragged_piece = nullptr;
             draw(window);
             m_position.compute_valid_moves();
+            draw(window);  // draw again to update info pane
         }
         else
         {

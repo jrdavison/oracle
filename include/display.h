@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #include <SFML/Graphics.hpp>
@@ -56,6 +57,7 @@ class Board {
 
     void draw_board(sf::RenderWindow& window);
     void draw_pieces(sf::RenderWindow& window);
+    void draw_info(sf::RenderWindow& window);
     void init_board();
     void clear_board();
 };
