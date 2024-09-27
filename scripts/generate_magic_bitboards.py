@@ -6,7 +6,17 @@ from typing import Iterator, List, Dict
 
 HORIZONTAL_MASK = 0xFF
 VERTICAL_MASK = 0x0101010101010101
-DIAGONAL_MASK = 0x8040201008040201
+
+KNIGHT_DIRECTIONS = [
+    (2, 1),  # NNW
+    (2, -1),  # NNE
+    (-2, 1),  # SSW
+    (-2, -1),  # SSE
+    (1, 2),  # NEW
+    (-1, 2),  # SEW
+    (1, -2),  # NWW
+    (-1, -2),  # SWW
+]
 
 
 def get_square(r: int, f: int) -> int:
@@ -21,7 +31,7 @@ def get_file(sq: int) -> int:
     return sq % 8
 
 
-def mask_rook_attacks(sq: int):
+def mask_rook_attacks(sq: int) -> int:
     h_mask = HORIZONTAL_MASK << get_rank(sq) * 8
     v_mask = VERTICAL_MASK << get_file(sq)
 
@@ -29,22 +39,10 @@ def mask_rook_attacks(sq: int):
     return (h_mask | v_mask) & ~(1 << sq)
 
 
-def mask_bishop_attacks(sq: int):
+def rook_attacks(sq: int, blockers: int) -> int:
+    attacks = 0
     rank = get_rank(sq)
     file = get_file(sq)
-    diag1 = DIAGONAL_MASK << (rank - min(rank, file)) * 8 + (file - min(rank, file))
-    diag2 = DIAGONAL_MASK << (rank - min(rank, 7 - file)) * 8 + (
-        file + min(rank, 7 - file)
-    )
-
-    # clear square that the bishop is on
-    return (diag1 | diag2) & ~(1 << sq)
-
-
-def rook_attacks(sq: int, blockers: int):
-    attacks = 0
-    rank = sq // 8
-    file = sq % 8
 
     # horizontal attack (east)
     for f in range(file + 1, 8):
@@ -68,6 +66,18 @@ def rook_attacks(sq: int, blockers: int):
         if blockers & (1 << get_square(r, file)):
             break
 
+    return attacks
+
+
+def knight_attacks(sq: int) -> int:
+    attacks = 0
+    rank = get_rank(sq)
+    file = get_file(sq)
+
+    for direction in KNIGHT_DIRECTIONS:
+        r, f = rank + direction[0], file + direction[1]
+        if 0 <= r < 8 and 0 <= f < 8:
+            attacks |= 1 << get_square(r, f)
     return attacks
 
 
@@ -96,21 +106,15 @@ def generate_rook_move_database() -> List[Dict[int, int]]:
     return rook_moves
 
 
-# def generate_bishop_move_database() -> List[Dict[int, int]]:
-#     bishop_moves = [{} for _ in range(64)]
-#     for sq in range(64):
-#         start_time = time.perf_counter()
-#         mask = mask_bishop_attacks(sq)
-#         for blockers in generate_relevant_blockers(mask):
-#             attacks = bishop_attacks(sq, blockers)
-#             bishop_moves[sq][blockers] = attacks
-#         print(
-#             f"Computed {len(bishop_moves[sq])} moves for square {sq}. Done in {time.perf_counter() - start_time:.2f} seconds."
-#         )
-#     return bishop_moves
+def generate_knight_move_database() -> List[int]:
+    knight_moves = [0 for _ in range(64)]
+    for sq in range(64):
+        knight_moves[sq] = knight_attacks(sq)
+    print("Computed knight moves.")
+    return knight_moves
 
 
-def save_move_database(filename, rook_move_database):
+def save_rook_move_database(filename, rook_move_database) -> None:
     with open(filename, "wb") as f:
         for square in range(64):
             num_entries = len(rook_move_database[square])
@@ -120,6 +124,12 @@ def save_move_database(filename, rook_move_database):
             for blockers, attacks in rook_move_database[square].items():
                 f.write(struct.pack("Q", blockers))  # Write the blocker bitboard
                 f.write(struct.pack("Q", attacks))  # Write the attack bitboard
+
+
+def save_knight_move_database(filename, knight_move_database) -> None:
+    with open(filename, "wb") as f:
+        for move in knight_move_database:
+            f.write(struct.pack("Q", move))
 
 
 def print_bitboard(bb: int) -> None:
@@ -133,8 +143,12 @@ def print_bitboard(bb: int) -> None:
     print()
 
 
-print_bitboard(mask_bishop_attacks(1))
-print_bitboard(mask_bishop_attacks(8))
+rook_move_database = generate_rook_move_database()
+save_rook_move_database(
+    "../resources/precalculated_moves/rook_moves.bin", rook_move_database
+)
 
-# rook_move_database = generate_rook_move_database()
-# save_move_database("../resources/rook_moves.bin", rook_move_database)
+knight_move_database = generate_knight_move_database()
+save_knight_move_database(
+    "../resources/precalculated_moves/knight_moves.bin", knight_move_database
+)

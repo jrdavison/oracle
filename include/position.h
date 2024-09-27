@@ -7,8 +7,6 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <unordered_map>
-#include <vector>
 
 #include "utils.h"
 
@@ -35,19 +33,21 @@ class Position {
 
     Color m_side_to_move = COLOR_NB;
 
-    std::vector<std::unordered_map<uint64_t, uint64_t>> m_rook_moves;
-
-    void load_magic_bitboards();
+    RookMoveDatabase   m_rook_moves;
+    KnightMoveDatabase m_knight_moves = {0};
 
     Bitboard compute_pawn_moves(Piece p, Square sq);
     Bitboard compute_knight_moves(Piece p, Square sq);
     Bitboard compute_rook_moves(Piece p, Square sq);
+    Bitboard compute_bishop_moves(Piece p, Square sq);
+
+    void load_rook_move_db(const std::string& filename);
+    void load_knight_move_db(const std::string& filename);
 };
 
-PieceType                                           from_char(char c);
-void                                                print_bitboard(Bitboard bb, const std::string& label);
-std::unordered_map<uint64_t, uint64_t>              read_rook_moves_for_square(std::ifstream& file);
-std::vector<std::unordered_map<uint64_t, uint64_t>> load_rook_move_database(const std::string& filename);
+PieceType from_char(char c);
+void      print_bitboard(Bitboard bb, const std::string& label);
+
 }
 
 #endif  // POSITION_H_INCLUDED

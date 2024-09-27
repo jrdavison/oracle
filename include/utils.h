@@ -2,6 +2,7 @@
 #define UTILS_H_
 
 #include <cstdint>
+#include <unordered_map>
 
 #include <SFML/Graphics.hpp>
 
@@ -76,8 +77,11 @@ enum Square : int {
 };
 // clang-format on
 
-typedef Piece    BoardArray[SQUARE_NB];
-typedef uint64_t Bitboard;
+typedef Piece BoardArray[SQUARE_NB];
+
+typedef uint64_t                               Bitboard;
+typedef Bitboard                               KnightMoveDatabase[SQUARE_NB];
+typedef std::unordered_map<Bitboard, Bitboard> RookMoveDatabase[SQUARE_NB];
 
 enum Direction : int {
     NORTH = 8,
@@ -88,7 +92,7 @@ enum Direction : int {
     NORTH_EAST = NORTH + EAST,
     SOUTH_EAST = SOUTH + EAST,
     SOUTH_WEST = SOUTH + WEST,
-    NORTH_WEST = NORTH + WEST
+    NORTH_WEST = NORTH + WEST,
 };
 
 enum File : int {
@@ -115,12 +119,51 @@ enum Rank : int {
     RANK_NB
 };
 
+// Swap color of piece B_KNIGHT <-> W_KNIGHT
+constexpr Piece operator~(Piece p) { return Piece(p ^ 8); }
+// Swap color
+constexpr Color operator~(Color c) { return Color(c ^ 1); }
+
+constexpr PieceType type_of(Piece p) { return PieceType(p & 7); };
+constexpr Color     color_of(Piece p) { return Color(p >> 3); };
+constexpr File      file_of(Square s) { return File(s & 7); };
+constexpr Rank      rank_of(Square s) { return Rank(s >> 3); };
+constexpr Rank      relative_rank(Color c, Rank r) { return c == WHITE ? r : Rank(RANK_8 - r); };
+constexpr Square    make_square(File f, Rank r) { return Square((r << 3) + f); };
+constexpr Piece     make_piece(PieceType pt, Color c) { return Piece(pt + (c << 3)); };
+constexpr Direction forward_direction(Color c) { return c == WHITE ? NORTH : SOUTH; };
+constexpr bool      valid_square(int square) { return SQ_A1 <= square && square < SQUARE_NB; }
+
+// Bitboard operations
+inline void    set_bit(Bitboard& bb, Square sq) { bb |= (1ULL << sq); };
+inline void    clear_bit(Bitboard& bb, Square sq) { bb &= ~(1ULL << sq); };
+constexpr bool is_bit_set(Bitboard bb, Square sq) { return bb & (1ULL << sq); };
+
 // Allow directions to increment/decrement squares (defaulting to SQUARE_NB if out of bounds)
 constexpr Square operator+(Square sq, Direction dir) {
-    int new_square = static_cast<int>(sq) + static_cast<int>(dir);
-    if (new_square < 0 || new_square >= SQUARE_NB)
+    int new_sq = static_cast<int>(sq) + static_cast<int>(dir);
+
+    // Check if new square is out of bounds
+    if (!valid_square(new_sq))
         return SQUARE_NB;
-    return static_cast<Square>(new_square);
+
+    // Prevent wrapping for basic east-west movement
+    File file = file_of(sq);
+    if ((file == FILE_A && (dir == WEST)) || (file == FILE_H && (dir == EAST)))
+        return SQUARE_NB;
+
+    // Break down compound directions into basic directions
+    switch (dir)
+    {
+    case NORTH_EAST :
+    case NORTH_WEST :
+        return sq + NORTH + (dir == NORTH_EAST ? EAST : WEST);
+    case SOUTH_EAST :
+    case SOUTH_WEST :
+        return sq + SOUTH + (dir == SOUTH_EAST ? EAST : WEST);
+    default :
+        return static_cast<Square>(new_sq);
+    }
 }
 
 // Allow increment/decrement of enum types
@@ -142,25 +185,6 @@ template<typename T>
 inline T& operator-=(T& d, int i) {
     return d = T(int(d) - i);
 };
-
-// Swap color of piece B_KNIGHT <-> W_KNIGHT
-constexpr Piece operator~(Piece p) { return Piece(p ^ 8); }
-// Swap color
-constexpr Color operator~(Color c) { return Color(c ^ 1); }
-
-constexpr PieceType type_of(Piece p) { return PieceType(p & 7); };
-constexpr Color     color_of(Piece p) { return Color(p >> 3); };
-constexpr File      file_of(Square s) { return File(s & 7); };
-constexpr Rank      rank_of(Square s) { return Rank(s >> 3); };
-constexpr Rank      relative_rank(Color c, Rank r) { return c == WHITE ? r : Rank(RANK_8 - r); };
-constexpr Square    make_square(File f, Rank r) { return Square((r << 3) + f); };
-constexpr Piece     make_piece(PieceType pt, Color c) { return Piece(pt + (c << 3)); };
-constexpr Direction forward_direction(Color c) { return c == WHITE ? NORTH : SOUTH; };
-
-// Bitboard operations
-inline void    set_bit(Bitboard& bb, Square sq) { bb |= (1ULL << sq); };
-inline void    clear_bit(Bitboard& bb, Square sq) { bb &= ~(1ULL << sq); };
-constexpr bool is_bit_set(Bitboard bb, Square sq) { return bb & (1ULL << sq); };
 
 }  // namespace Oracle
 

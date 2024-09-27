@@ -2,19 +2,6 @@
 
 namespace Oracle {
 
-// clang-format off
-const Direction KNIGHT_MOVES[8] = {
-    static_cast<Direction>(NORTH + NORTH_EAST), // NNE
-    static_cast<Direction>(NORTH + NORTH_WEST), // NNW
-    static_cast<Direction>(SOUTH + SOUTH_EAST), // SSE
-    static_cast<Direction>(SOUTH + SOUTH_WEST), // SSW
-    static_cast<Direction>(NORTH_EAST + EAST), // NEE
-    static_cast<Direction>(SOUTH_EAST + EAST), // SEE
-    static_cast<Direction>(NORTH_WEST + WEST), // NWW
-    static_cast<Direction>(SOUTH_WEST + WEST) // SWW
-};
-// clang-format on
-
 Position::Position(const std::string& fen) {
     File file = FILE_A;
     Rank rank = RANK_8;
@@ -54,13 +41,10 @@ Position::Position(const std::string& fen) {
         }
     }
 
-    load_magic_bitboards();
-    compute_valid_moves();
-}
+    load_rook_move_db("../../resources/precalculated_moves/rook_moves.bin");
+    load_knight_move_db("../../resources/precalculated_moves/knight_moves.bin");
 
-void Position::load_magic_bitboards() {
-    std::string filename = "../../resources/rook_moves.bin";
-    m_rook_moves         = load_rook_move_database(filename);
+    compute_valid_moves();
 }
 
 void Position::make_move(Square from, Square to) {
@@ -95,6 +79,9 @@ void Position::compute_valid_moves() {
             break;
         case ROOK :
             m_valid_moves[sq] = compute_rook_moves(p, sq);
+            break;
+        case BISHOP :
+            m_valid_moves[sq] = compute_bishop_moves(p, sq);
             break;
         }
     }
@@ -138,28 +125,10 @@ Bitboard Position::compute_pawn_moves(Piece p, Square sq) {
 }
 
 Bitboard Position::compute_knight_moves(Piece p, Square sq) {
-    Bitboard valid_moves = 0;
-    Color    color       = color_of(p);
-    Rank     src_rank    = rank_of(sq);
-    File     src_file    = file_of(sq);
-
-    for (Direction dir : KNIGHT_MOVES)
-    {
-        Square target_square = sq + dir;
-        if (SQ_A1 <= target_square < SQUARE_NB)
-        {
-            // prevent wrapping around the board
-            Rank target_rank = rank_of(target_square);
-            File target_file = file_of(target_square);
-            if (std::abs(target_rank - src_rank) <= 2 && std::abs(target_file - src_file) <= 2)
-                set_bit(valid_moves, target_square);
-        }
-    }
-
-    // can't capture own pieces
-    valid_moves &= ~m_checkers_bb[color];
-
-    return valid_moves;
+    Color color    = color_of(p);
+    Rank  src_rank = rank_of(sq);
+    File  src_file = file_of(sq);
+    return m_knight_moves[sq] & ~m_checkers_bb[color];
 }
 
 Bitboard Position::compute_rook_moves(Piece p, Square sq) {
@@ -178,6 +147,49 @@ Bitboard Position::compute_rook_moves(Piece p, Square sq) {
         std::cerr << "Blockers key not found in lookup table." << std::endl;
 
     return valid_moves & ~m_checkers_bb[color];
+}
+
+Bitboard Position::compute_bishop_moves(Piece p, Square sq) {
+    Bitboard valid_moves = 0;
+    Color    color       = color_of(p);
+
+    return valid_moves & ~m_checkers_bb[color];
+}
+
+void Position::load_rook_move_db(const std::string& filename) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open())
+        throw std::runtime_error("Failed to open file: " + filename);
+
+    for (Square sq = SQ_A1; sq < SQUARE_NB; ++sq)
+    {
+        std::unordered_map<Bitboard, Bitboard> moves;
+        uint32_t                               num_entries;
+        file.read(reinterpret_cast<char*>(&num_entries), sizeof(num_entries));
+
+        for (uint32_t i = 0; i < num_entries; ++i)
+        {
+            uint64_t blockers;
+            uint64_t attacks;
+            file.read(reinterpret_cast<char*>(&blockers), sizeof(blockers));
+            file.read(reinterpret_cast<char*>(&attacks), sizeof(attacks));
+            moves[blockers] = attacks;
+        }
+        m_rook_moves[sq] = moves;
+    }
+}
+
+void Position::load_knight_move_db(const std::string& filename) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open())
+        throw std::runtime_error("Failed to open file: " + filename);
+
+    Bitboard bb = 0;
+    for (int sq = SQ_A1; sq < SQUARE_NB; ++sq)
+    {
+        file.read(reinterpret_cast<char*>(&bb), sizeof(bb));
+        m_knight_moves[sq] = bb;
+    }
 }
 
 // helpers
@@ -217,36 +229,5 @@ void print_bitboard(Bitboard bb, const std::string& label) {
     std::cout << result;
 }
 
-std::unordered_map<uint64_t, uint64_t> read_rook_moves_for_square(std::ifstream& file) {
-    std::unordered_map<uint64_t, uint64_t> rook_moves;
-    uint32_t                               num_entries;
-    file.read(reinterpret_cast<char*>(&num_entries), sizeof(num_entries));
 
-    for (uint32_t i = 0; i < num_entries; ++i)
-    {
-        uint64_t blockers;
-        uint64_t attacks;
-        file.read(reinterpret_cast<char*>(&blockers), sizeof(blockers));
-        file.read(reinterpret_cast<char*>(&attacks), sizeof(attacks));
-        rook_moves[blockers] = attacks;
-    }
-
-    return rook_moves;
-}
-
-std::vector<std::unordered_map<uint64_t, uint64_t>> load_rook_move_database(const std::string& filename) {
-    std::ifstream file(filename, std::ios::binary);
-    if (!file.is_open())
-    {
-        throw std::runtime_error("Failed to open file: " + filename);
-    }
-
-    std::vector<std::unordered_map<uint64_t, uint64_t>> rook_move_database(64);
-    for (int square = 0; square < 64; ++square)
-    {
-        rook_move_database[square] = read_rook_moves_for_square(file);
-    }
-
-    return rook_move_database;
-}
 }  // namespace Oracle
