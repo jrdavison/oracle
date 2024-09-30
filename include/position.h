@@ -18,39 +18,40 @@ class Position {
     Position()  = default;
     ~Position() = default;
 
-    Piece  piece_at(Square sq) const { return m_board[sq]; }
-    bool   is_valid_move(Square from, Square to);
-    double get_last_move_gen_speed() const { return last_move_gen_speed; }
-    Color  turn_color() const { return m_turn_color; }
+    Utils::Bitboard get_all_checkers_bb() const { return m_checkers_bb[Utils::WHITE] | m_checkers_bb[Utils::BLACK]; };
+    Utils::Color    turn_color() const { return m_turn_color; }
+    Utils::Piece    piece_at(Utils::Square sq) const { return m_board[sq]; }
+    double          last_move_gen_speed() const { return m_last_move_gen_speed; }
+    int             move_count() const { return m_move_count; }
 
+    bool is_valid_move(Utils::Square from, Utils::Square to);
     void compute_valid_moves();
-    void make_move(Square from, Square to);
+    void make_move(Utils::Square from, Utils::Square to);
 
-    Bitboard get_all_checkers_bb() const { return m_checkers_bb[WHITE] | m_checkers_bb[BLACK]; };
 
    private:
-    BoardArray m_board                  = {NO_PIECE};
-    Bitboard   m_valid_moves[SQUARE_NB] = {0};
-    Bitboard   m_checkers_bb[COLOR_NB]  = {0};
+    Utils::Bitboard   m_checkers_bb[Utils::COLOR_NB]  = {0};
+    Utils::Bitboard   m_valid_moves[Utils::SQUARE_NB] = {0};
+    Utils::BoardArray m_board                         = {Utils::NO_PIECE};
 
-    Color m_turn_color = COLOR_NB;
+    Utils::Color m_turn_color          = Utils::COLOR_NB;
+    double       m_last_move_gen_speed = 0.0;
+    int          m_move_count          = 0;
 
-    RookMoveDatabase   m_rook_moves;
-    KnightMoveDatabase m_knight_moves = {0};
+    Utils::RookMoveDatabase   m_rook_moves;
+    Utils::KnightMoveDatabase m_knight_moves = {0};
 
-    double last_move_gen_speed = 0.0;
+    Utils::Bitboard compute_bishop_moves(Utils::Piece p, Utils::Square sq);
+    Utils::Bitboard compute_knight_moves(Utils::Piece p, Utils::Square sq);
+    Utils::Bitboard compute_pawn_moves(Utils::Piece p, Utils::Square sq);
+    Utils::Bitboard compute_rook_moves(Utils::Piece p, Utils::Square sq);
 
-    Bitboard compute_pawn_moves(Piece p, Square sq);
-    Bitboard compute_knight_moves(Piece p, Square sq);
-    Bitboard compute_rook_moves(Piece p, Square sq);
-    Bitboard compute_bishop_moves(Piece p, Square sq);
-
-    void load_rook_move_db(const std::string& filename);
     void load_knight_move_db(const std::string& filename);
+    void load_rook_move_db(const std::string& filename);
 };
 
-PieceType from_char(char c);
-void      print_bitboard(Bitboard bb, const std::string& label);
+Utils::PieceType from_char(char c);
+void             print_bitboard(Utils::Bitboard bb, const std::string& label);
 
 }
 

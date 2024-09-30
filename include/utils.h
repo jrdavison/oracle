@@ -8,6 +8,8 @@
 
 namespace Oracle {
 
+namespace Utils {
+
 constexpr int BOARD_W_PX      = 640;
 constexpr int BOARD_SQ_PX     = 80;
 constexpr int BOARD_SQ_ROW_NB = 8;
@@ -97,6 +99,7 @@ enum Direction : int {
 };
 
 enum File : int {
+    FILE_LB = -1,
     FILE_A,
     FILE_B,
     FILE_C,
@@ -105,10 +108,11 @@ enum File : int {
     FILE_F,
     FILE_G,
     FILE_H,
-    FILE_NB
+    FILE_UB
 };
 
 enum Rank : int {
+    RANK_LB = -1,
     RANK_1,
     RANK_2,
     RANK_3,
@@ -117,7 +121,7 @@ enum Rank : int {
     RANK_6,
     RANK_7,
     RANK_8,
-    RANK_NB
+    RANK_UB
 };
 
 // Swap color of piece B_KNIGHT <-> W_KNIGHT
@@ -186,6 +190,9 @@ template<typename T>
 inline T& operator-=(T& d, int i) {
     return d = T(int(d) - i);
 };
+
+
+}  // namespace Utils
 
 }  // namespace Oracle
 

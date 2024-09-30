@@ -5,7 +5,8 @@
 
 int main() {
     // create the window
-    sf::RenderWindow window(sf::VideoMode(Oracle::BOARD_W_PX * 2, Oracle::BOARD_W_PX), "Oracle Chess Engine");
+    sf::RenderWindow window(sf::VideoMode(Oracle::Utils::BOARD_W_PX * 2, Oracle::Utils::BOARD_W_PX),
+                            "Oracle Chess Engine");
 
     Oracle::Board game;
     game.draw(window);

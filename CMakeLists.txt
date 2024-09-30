@@ -19,6 +19,8 @@ add_executable(Oracle
     src/display.cpp
     include/position.h
     src/position.cpp
+    include/info_panel.h
+    src/info_panel.cpp
 )
 
 # Specify include directories for the target
