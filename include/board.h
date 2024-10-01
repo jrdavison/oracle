@@ -1,5 +1,5 @@
-#ifndef DISPLAY_H_
-#define DISPLAY_H_
+#ifndef BOARD_H_
+#define BOARD_H_
 
 #include <algorithm>
 #include <iostream>
@@ -7,16 +7,17 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "info_panel.h"
 #include "position.h"
 #include "utils.h"
 
 namespace Oracle {
 
-class PieceGUI {
+namespace GUI {
+
+class Piece {
    public:
-    PieceGUI(sf::Texture& pa, Utils::Piece p, Utils::Square sq);
-    ~PieceGUI() = default;
+    Piece(sf::Texture& pa, Utils::Piece p, Utils::Square sq);
+    ~Piece() = default;
 
     void          draw(sf::RenderWindow& window) { window.draw(m_sprite); };
     void          drag(int x, int y) { m_sprite.setPosition(x, y); };
@@ -32,31 +33,22 @@ class PieceGUI {
 class Board {
    public:
     Board();
-    ~Board();
+    ~Board() { clear_board(); };
 
-    void pause() { m_paused = true; };
-    void resume() { m_paused = false; };
-    bool is_paused() { return m_paused; };
-
-    void draw(sf::RenderWindow& window);
+    void draw(sf::RenderWindow& window, Position& position);
+    void init_board(Position& position);
     void mouse_handler(sf::RenderWindow& window);
-    void move(sf::RenderWindow& window);
+    void move(sf::RenderWindow& window, Position& position);
 
    private:
-    PieceGUI* m_board[Utils::SQUARE_NB] = {nullptr};
-    PieceGUI* m_dragged_piece           = nullptr;
-
-    Position m_position;
+    Piece* m_board[Utils::SQUARE_NB] = {nullptr};
+    Piece* m_dragged_piece           = nullptr;
 
     sf::Texture m_board_texture;
     sf::Texture m_piece_atlas;
-    InfoPanel   m_info_panel;
-
-    bool m_paused = false;
 
     void draw_board(sf::RenderWindow& window);
-    void draw_pieces(sf::RenderWindow& window);
-    void init_board();
+    void draw_pieces(sf::RenderWindow& window, Position& position);
     void clear_board();
 };
 
@@ -66,6 +58,8 @@ sf::RectangleShape make_board_square(Utils::File file, Utils::Rank rank, sf::Col
 sf::Texture        make_board_texture();
 Utils::MouseCoords get_mouse_coords(sf::RenderWindow& window);
 
+}  // namespace GUI
+
 }  // namespace Oracle
 
-#endif  // DISPLAY_H_
+#endif  // BOARD_H_

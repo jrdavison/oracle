@@ -2,6 +2,8 @@
 
 namespace Oracle {
 
+namespace GUI {
+
 InfoPanel::InfoPanel() {
     if (!m_font.loadFromFile("../../resources/font.ttf"))
         throw std::runtime_error("Font could not be loaded");
@@ -70,5 +72,6 @@ void InfoPanel::draw(sf::RenderWindow& window, Position& position) {
     window.draw(move_count_text);
 }
 
+}  // namespace GUI
 
 }  // namespace Oracle

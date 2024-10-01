@@ -10,6 +10,8 @@
 
 namespace Oracle {
 
+namespace GUI {
+
 class InfoPanel {
    public:
     InfoPanel();
@@ -19,6 +21,8 @@ class InfoPanel {
    private:
     sf::Font m_font;
 };
+
+}  // namespace GUI
 
 }  // namespace Oracle
 

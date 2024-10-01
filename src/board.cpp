@@ -1,6 +1,8 @@
-#include "display.h"
+#include "board.h"
 
 namespace Oracle {
+
+namespace GUI {
 
 // Board
 Board::Board() {
@@ -9,20 +11,6 @@ Board::Board() {
 
     m_piece_atlas.setSmooth(true);
     m_board_texture = make_board_texture();
-
-    std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    m_position      = Position(fen);
-
-    init_board();
-    m_info_panel = InfoPanel();
-}
-
-Board::~Board() {
-    for (auto& piece : m_board)
-    {
-        if (piece != nullptr)
-            delete piece;
-    }
 }
 
 void Board::clear_board() {
@@ -33,27 +21,18 @@ void Board::clear_board() {
     }
 }
 
-void Board::init_board() {
+void Board::init_board(Position& position) {
     for (Utils::Square sq = Utils::SQ_A1; sq <= Utils::SQ_H8; ++sq)
     {
-        Utils::Piece piece = m_position.piece_at(sq);
+        Utils::Piece piece = position.piece_at(sq);
         if (piece != Utils::NO_PIECE)
-            m_board[sq] = new PieceGUI(m_piece_atlas, piece, sq);
+            m_board[sq] = new Piece(m_piece_atlas, piece, sq);
     }
 }
 
-void Board::draw(sf::RenderWindow& window) {
-    if (m_paused)
-        return;
-
-    window.clear(sf::Color::Black);
-
-    mouse_handler(window);
+void Board::draw(sf::RenderWindow& window, Position& position) {
     draw_board(window);
-    draw_pieces(window);
-    m_info_panel.draw(window, m_position);
-
-    window.display();
+    draw_pieces(window, position);
 }
 
 void Board::draw_board(sf::RenderWindow& window) {
@@ -62,20 +41,20 @@ void Board::draw_board(sf::RenderWindow& window) {
     window.draw(board);
 }
 
-void Board::draw_pieces(sf::RenderWindow& window) {
+void Board::draw_pieces(sf::RenderWindow& window, Position& position) {
     for (Utils::Square sq = Utils::SQ_A1; sq <= Utils::SQ_H8; ++sq)
     {
         // to avoid having to loop again, draw any valid moves for a selected piece as we iterate over board squares
         if (m_dragged_piece != nullptr)
         {
-            if (m_position.is_valid_move(m_dragged_piece->square(), sq))
+            if (position.is_valid_move(m_dragged_piece->square(), sq))
             {
                 sf::RectangleShape board_sq = make_board_square(file_of(sq), rank_of(sq), Utils::VALID_SQ);
                 window.draw(board_sq);
             }
         }
 
-        PieceGUI* piece = m_board[sq];
+        Piece* piece = m_board[sq];
         if ((piece != nullptr) && (piece != m_dragged_piece))
             m_board[sq]->draw(window);
     }
@@ -104,7 +83,7 @@ void Board::mouse_handler(sf::RenderWindow& window) {
     }
 }
 
-void Board::move(sf::RenderWindow& window) {
+void Board::move(sf::RenderWindow& window, Position& position) {
     Utils::MouseCoords mouse_coords = get_mouse_coords(window);
     if (m_dragged_piece != nullptr)
     {
@@ -112,30 +91,30 @@ void Board::move(sf::RenderWindow& window) {
         Utils::File   dest_f  = file_from_x(mouse_coords.x);
         Utils::Rank   dest_r  = rank_from_y(mouse_coords.y);
         Utils::Square dest_sq = make_square(dest_f, dest_r);
-        if (m_position.is_valid_move(src_sq, dest_sq))
+        if (position.is_valid_move(src_sq, dest_sq))
         {
-            m_position.make_move(src_sq, dest_sq);
+            position.make_move(src_sq, dest_sq);
             m_dragged_piece->move(dest_sq);
 
             clear_board();
-            init_board();
+            init_board(position);
 
             m_dragged_piece = nullptr;
-            draw(window);
-            m_position.compute_valid_moves();
-            draw(window);  // draw again to update info pane
+            draw(window, position);
+            position.compute_valid_moves();
+            draw(window, position);  // draw again to update info pane
         }
         else
         {
             m_dragged_piece->move(src_sq);  // reset piece to original position
             m_dragged_piece = nullptr;
-            draw(window);
+            draw(window, position);
         }
     }
 }
 
-// PieceGUI
-PieceGUI::PieceGUI(sf::Texture& pa, Utils::Piece p, Utils::Square sq) {
+// Piece
+Piece::Piece(sf::Texture& pa, Utils::Piece p, Utils::Square sq) {
     int x_offset = (int(type_of(p)) - 1) * Utils::ATLAS_GRID_W_PX;
     int y_offset = (color_of(p) == Utils::WHITE) ? 0 : Utils::ATLAS_GRID_W_PX;
 
@@ -148,7 +127,7 @@ PieceGUI::PieceGUI(sf::Texture& pa, Utils::Piece p, Utils::Square sq) {
     move(sq);
 };
 
-void PieceGUI::move(Utils::Square sq) {
+void Piece::move(Utils::Square sq) {
     m_square = sq;
 
     int x = (file_of(m_square) * Utils::BOARD_SQ_PX) + (Utils::BOARD_SQ_PX / 2);
@@ -199,5 +178,7 @@ Utils::MouseCoords get_mouse_coords(sf::RenderWindow& window) {
     coords.y = std::max(0, std::min(sf_mouse_coords.y, Utils::BOARD_W_PX - 1));
     return coords;
 }
+
+}  // namespace GUI
 
 }  // namespace Oracle

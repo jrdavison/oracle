@@ -1,6 +1,6 @@
 #include <SFML/Graphics.hpp>
 
-#include "display.h"
+#include "game.h"
 #include "utils.h"
 
 int main() {
@@ -8,8 +8,8 @@ int main() {
     sf::RenderWindow window(sf::VideoMode(Oracle::Utils::BOARD_W_PX * 2, Oracle::Utils::BOARD_W_PX),
                             "Oracle Chess Engine");
 
-    Oracle::Board game;
-    game.draw(window);
+    Oracle::Game game;
+    game.play(window);
 
     bool mouse_pressed = false;
     while (window.isOpen())
@@ -36,12 +36,12 @@ int main() {
             if (event.type == sf::Event::MouseButtonReleased)
             {
                 mouse_pressed = false;
-                game.move(window);
+                // game.move(window);
             }
         }
 
         if (mouse_pressed)
-            game.draw(window);
+            game.play(window);
         else
             sf::sleep(sf::milliseconds(50));
     }
