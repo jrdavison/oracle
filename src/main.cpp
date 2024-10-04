@@ -36,14 +36,14 @@ int main() {
             if (event.type == sf::Event::MouseButtonReleased)
             {
                 mouse_pressed = false;
-                // game.move(window);
+                game.move(window);
             }
         }
 
         if (mouse_pressed)
             game.play(window);
         else
-            sf::sleep(sf::milliseconds(50));
+            sf::sleep(sf::milliseconds(10));
     }
 
     return 0;

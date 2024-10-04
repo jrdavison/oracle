@@ -7,6 +7,7 @@
 
 #include <SFML/Graphics.hpp>
 
+#include "info_panel.h"
 #include "position.h"
 #include "utils.h"
 
@@ -35,21 +36,24 @@ class Board {
     Board();
     ~Board() { clear_board(); };
 
-    void draw(sf::RenderWindow& window, Position& position);
-    void init_board(Position& position);
+    void draw(sf::RenderWindow& window);
     void mouse_handler(sf::RenderWindow& window);
-    void move(sf::RenderWindow& window, Position& position);
+    void move(sf::RenderWindow& window);
 
    private:
-    Piece* m_board[Utils::SQUARE_NB] = {nullptr};
-    Piece* m_dragged_piece           = nullptr;
+    Piece*   m_board[Utils::SQUARE_NB] = {nullptr};
+    Piece*   m_dragged_piece           = nullptr;
+    Position m_position;
+
+    InfoPanel m_info_panel;
 
     sf::Texture m_board_texture;
     sf::Texture m_piece_atlas;
 
-    void draw_board(sf::RenderWindow& window);
-    void draw_pieces(sf::RenderWindow& window, Position& position);
+    void init_board();
     void clear_board();
+    void draw_board(sf::RenderWindow& window);
+    void draw_pieces(sf::RenderWindow& window);
 };
 
 inline Utils::File file_from_x(int x) { return Utils::File(x / Utils::BOARD_SQ_PX); };

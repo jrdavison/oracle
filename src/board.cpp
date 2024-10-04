@@ -11,6 +11,11 @@ Board::Board() {
 
     m_piece_atlas.setSmooth(true);
     m_board_texture = make_board_texture();
+
+    std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    m_position      = Position(fen);
+
+    init_board();
 }
 
 void Board::clear_board() {
@@ -21,18 +26,22 @@ void Board::clear_board() {
     }
 }
 
-void Board::init_board(Position& position) {
+void Board::init_board() {
     for (Utils::Square sq = Utils::SQ_A1; sq <= Utils::SQ_H8; ++sq)
     {
-        Utils::Piece piece = position.piece_at(sq);
+        Utils::Piece piece = m_position.piece_at(sq);
         if (piece != Utils::NO_PIECE)
             m_board[sq] = new Piece(m_piece_atlas, piece, sq);
     }
 }
 
-void Board::draw(sf::RenderWindow& window, Position& position) {
+void Board::draw(sf::RenderWindow& window) {
+    window.clear(sf::Color::Black);
+    mouse_handler(window);
     draw_board(window);
-    draw_pieces(window, position);
+    draw_pieces(window);
+    m_info_panel.draw(window, m_position);
+    window.display();
 }
 
 void Board::draw_board(sf::RenderWindow& window) {
@@ -41,13 +50,13 @@ void Board::draw_board(sf::RenderWindow& window) {
     window.draw(board);
 }
 
-void Board::draw_pieces(sf::RenderWindow& window, Position& position) {
+void Board::draw_pieces(sf::RenderWindow& window) {
     for (Utils::Square sq = Utils::SQ_A1; sq <= Utils::SQ_H8; ++sq)
     {
         // to avoid having to loop again, draw any valid moves for a selected piece as we iterate over board squares
         if (m_dragged_piece != nullptr)
         {
-            if (position.is_valid_move(m_dragged_piece->square(), sq))
+            if (m_position.is_valid_move(m_dragged_piece->square(), sq))
             {
                 sf::RectangleShape board_sq = make_board_square(file_of(sq), rank_of(sq), Utils::VALID_SQ);
                 window.draw(board_sq);
@@ -83,7 +92,7 @@ void Board::mouse_handler(sf::RenderWindow& window) {
     }
 }
 
-void Board::move(sf::RenderWindow& window, Position& position) {
+void Board::move(sf::RenderWindow& window) {
     Utils::MouseCoords mouse_coords = get_mouse_coords(window);
     if (m_dragged_piece != nullptr)
     {
@@ -91,24 +100,24 @@ void Board::move(sf::RenderWindow& window, Position& position) {
         Utils::File   dest_f  = file_from_x(mouse_coords.x);
         Utils::Rank   dest_r  = rank_from_y(mouse_coords.y);
         Utils::Square dest_sq = make_square(dest_f, dest_r);
-        if (position.is_valid_move(src_sq, dest_sq))
+        if (m_position.is_valid_move(src_sq, dest_sq))
         {
-            position.make_move(src_sq, dest_sq);
+            m_position.make_move(src_sq, dest_sq);
             m_dragged_piece->move(dest_sq);
+            m_dragged_piece = nullptr;
 
             clear_board();
-            init_board(position);
+            init_board();
 
-            m_dragged_piece = nullptr;
-            draw(window, position);
-            position.compute_valid_moves();
-            draw(window, position);  // draw again to update info pane
+            draw(window);
+            m_position.compute_valid_moves();
+            draw(window);
         }
         else
         {
             m_dragged_piece->move(src_sq);  // reset piece to original position
             m_dragged_piece = nullptr;
-            draw(window, position);
+            draw(window);
         }
     }
 }

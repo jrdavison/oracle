@@ -16,7 +16,7 @@ namespace Oracle {
 
 class Game {
    public:
-    Game();
+    Game()  = default;
     ~Game() = default;
 
     void pause() { m_paused = true; };
@@ -24,12 +24,11 @@ class Game {
     bool is_paused() { return m_paused; };
 
     void play(sf::RenderWindow& window);
+    void move(sf::RenderWindow& window);
 
    private:
-    GUI::Board     m_board;
-    GUI::InfoPanel m_info_panel;
-    Position       m_position;
-    bool           m_paused = false;
+    GUI::Board m_board;
+    bool       m_paused = false;
 };
 
 }  // namespace Oracle
