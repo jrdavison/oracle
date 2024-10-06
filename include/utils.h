@@ -149,17 +149,22 @@ constexpr Square operator+(Square sq, Direction dir) {
     if ((file == FILE_A && (dir == WEST)) || (file == FILE_H && (dir == EAST)))
         return SQUARE_NB;
 
-    // Break down compound directions into basic directions
+    // return if basic movement
+    if (dir == NORTH || dir == SOUTH || dir == EAST || dir == WEST)
+        return static_cast<Square>(new_sq);
+
+    // break down diagonal movement into basic movements
     switch (dir)
     {
-    case NORTH_EAST :
-    case NORTH_WEST :
-        return sq + NORTH + (dir == NORTH_EAST ? EAST : WEST);
     case SOUTH_EAST :
     case SOUTH_WEST :
-        return sq + SOUTH + (dir == SOUTH_EAST ? EAST : WEST);
+        return (sq + SOUTH) + (dir == SOUTH_EAST ? EAST : WEST);
+    case NORTH_EAST :
+    case NORTH_WEST :
+        return (sq + NORTH) + (dir == NORTH_EAST ? EAST : WEST);
     default :
-        return static_cast<Square>(new_sq);
+        std::cerr << "Invalid direction." << std::endl;
+        return SQUARE_NB;
     }
 }
 

@@ -90,6 +90,12 @@ void Position::compute_valid_moves() {
         case Utils::BISHOP :
             m_valid_moves[sq] = compute_bishop_moves(p, sq);
             break;
+        case Utils::QUEEN :
+            m_valid_moves[sq] = compute_rook_moves(p, sq) | compute_bishop_moves(p, sq);
+            break;
+        case Utils::KING :
+            m_valid_moves[sq] = compute_king_moves(p, sq);
+            break;
         }
     }
 
@@ -111,7 +117,7 @@ Utils::Bitboard Position::compute_pawn_moves(Utils::Piece p, Utils::Square sq) {
         if (i == 1 && Utils::relative_rank(color, Utils::rank_of(sq)) != Utils::RANK_2)
             break;
 
-        target_square += forward_dir;
+        target_square = target_square + forward_dir;
         if ((target_square < Utils::SQUARE_NB) && !is_bit_set(get_all_checkers_bb(), target_square))
             set_bit(valid_moves, target_square);
         else
@@ -119,12 +125,11 @@ Utils::Bitboard Position::compute_pawn_moves(Utils::Piece p, Utils::Square sq) {
     }
 
     // Capture moves
-    Utils::Square target_square_east = sq + forward_dir + Utils::EAST;
+    Utils::Square target_square_east = (sq + forward_dir) + Utils::EAST;
     if (target_square_east < Utils::SQUARE_NB && is_bit_set(m_checkers_bb[~color], target_square_east))
         set_bit(valid_moves, target_square_east);
 
-    Utils::Square target_square_west = sq;
-    target_square_west += forward_dir + Utils::WEST;
+    Utils::Square target_square_west = (sq + forward_dir) + Utils::WEST;
     if (target_square_west < Utils::SQUARE_NB && is_bit_set(m_checkers_bb[~color], target_square_west))
         set_bit(valid_moves, target_square_west);
 
@@ -160,7 +165,48 @@ Utils::Bitboard Position::compute_bishop_moves(Utils::Piece p, Utils::Square sq)
     Utils::Bitboard valid_moves = 0;
     Utils::Color    color       = color_of(p);
 
+    Utils::Square target_square = sq + Utils::NORTH_EAST;
+    while (target_square < Utils::SQUARE_NB)
+    {
+        set_bit(valid_moves, target_square);
+        if (is_bit_set(get_all_checkers_bb(), target_square))
+            break;
+        target_square = target_square + Utils::NORTH_EAST;
+    }
+
+    target_square = sq + Utils::NORTH_WEST;
+    while (target_square < Utils::SQUARE_NB)
+    {
+        set_bit(valid_moves, target_square);
+        if (is_bit_set(get_all_checkers_bb(), target_square))
+            break;
+        target_square = target_square + Utils::NORTH_WEST;
+    }
+
+    target_square = sq + Utils::SOUTH_EAST;
+    while (target_square < Utils::SQUARE_NB)
+    {
+        set_bit(valid_moves, target_square);
+        if (is_bit_set(get_all_checkers_bb(), target_square))
+            break;
+        target_square = target_square + Utils::SOUTH_EAST;
+    }
+
+    target_square = sq + Utils::SOUTH_WEST;
+    while (target_square < Utils::SQUARE_NB)
+    {
+        set_bit(valid_moves, target_square);
+        if (is_bit_set(get_all_checkers_bb(), target_square))
+            break;
+        target_square = target_square + Utils::SOUTH_WEST;
+    }
+
     return valid_moves & ~m_checkers_bb[color];
+}
+
+Utils::Bitboard Position::compute_king_moves(Utils::Piece p, Utils::Square sq) {
+    Utils::Color color = color_of(p);
+    return 0;
 }
 
 void Position::load_rook_move_db(const std::string& filename) {
