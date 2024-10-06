@@ -12,6 +12,12 @@ namespace Oracle {
 
 namespace GUI {
 
+constexpr int   FONT_SIZE_LG      = 32;
+constexpr int   FONT_SIZE_SM      = 16;
+constexpr int   PADDING           = 10;
+constexpr int   DECIMAL_PRECISION = 4;
+const sf::Color INFO_BG           = sf::Color(60, 60, 60);  // gray
+
 class InfoPanel {
    public:
     InfoPanel();

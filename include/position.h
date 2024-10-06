@@ -45,6 +45,7 @@ class Position {
     Utils::Bitboard compute_knight_moves(Utils::Piece p, Utils::Square sq);
     Utils::Bitboard compute_pawn_moves(Utils::Piece p, Utils::Square sq);
     Utils::Bitboard compute_rook_moves(Utils::Piece p, Utils::Square sq);
+    Utils::Bitboard compute_king_moves(Utils::Piece p, Utils::Square sq);
 
     void load_knight_move_db(const std::string& filename);
     void load_rook_move_db(const std::string& filename);

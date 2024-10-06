@@ -58,7 +58,7 @@ void Board::draw_pieces(sf::RenderWindow& window) {
         {
             if (m_position.is_valid_move(m_dragged_piece->square(), sq))
             {
-                sf::RectangleShape board_sq = make_board_square(file_of(sq), rank_of(sq), Utils::VALID_SQ);
+                sf::RectangleShape board_sq = make_board_square(file_of(sq), rank_of(sq), VALID_SQ);
                 window.draw(board_sq);
             }
         }
@@ -124,14 +124,13 @@ void Board::move(sf::RenderWindow& window) {
 
 // Piece
 Piece::Piece(sf::Texture& pa, Utils::Piece p, Utils::Square sq) {
-    int x_offset = (int(type_of(p)) - 1) * Utils::ATLAS_GRID_W_PX;
-    int y_offset = (color_of(p) == Utils::WHITE) ? 0 : Utils::ATLAS_GRID_W_PX;
+    int x_offset = (int(type_of(p)) - 1) * ATLAS_GRID_W_PX;
+    int y_offset = (color_of(p) == Utils::WHITE) ? 0 : ATLAS_GRID_W_PX;
 
     m_sprite.setTexture(pa);
-    m_sprite.setTextureRect(sf::IntRect(x_offset, y_offset, Utils::ATLAS_GRID_W_PX, Utils::ATLAS_GRID_W_PX));
-    m_sprite.setOrigin(Utils::ATLAS_GRID_W_PX / 2, Utils::ATLAS_GRID_W_PX / 2);
-    m_sprite.setScale((1.0f * Utils::BOARD_SQ_PX) / Utils::ATLAS_GRID_W_PX,
-                      (1.0f * Utils::BOARD_SQ_PX) / Utils::ATLAS_GRID_W_PX);
+    m_sprite.setTextureRect(sf::IntRect(x_offset, y_offset, ATLAS_GRID_W_PX, ATLAS_GRID_W_PX));
+    m_sprite.setOrigin(ATLAS_GRID_W_PX / 2, ATLAS_GRID_W_PX / 2);
+    m_sprite.setScale((1.0f * Utils::BOARD_SQ_PX) / ATLAS_GRID_W_PX, (1.0f * Utils::BOARD_SQ_PX) / ATLAS_GRID_W_PX);
 
     move(sq);
 };
@@ -157,7 +156,7 @@ sf::Texture make_board_texture() {
     {
         for (Utils::File f = Utils::FILE_A; f <= Utils::FILE_H; ++f)
         {
-            sf::Color          sq_color = (f + r) % 2 == 0 ? Utils::DARK_SQ : Utils::LIGHT_SQ;
+            sf::Color          sq_color = (f + r) % 2 == 0 ? DARK_SQ : LIGHT_SQ;
             sf::RectangleShape board_sq = make_board_square(f, r, sq_color);
             render_texture.draw(board_sq);
         }

@@ -15,6 +15,13 @@ namespace Oracle {
 
 namespace GUI {
 
+constexpr int ATLAS_GRID_W_PX = 170;
+
+const sf::Color LIGHT_SQ = sf::Color(240, 217, 181);    // off white
+const sf::Color DARK_SQ  = sf::Color(181, 136, 99);     // tan
+const sf::Color VALID_SQ = sf::Color(35, 64, 153, 90);  // transparent blue
+const sf::Color CHECK_SQ = sf::Color(252, 3, 3, 90);    // transparent red
+
 class Piece {
    public:
     Piece(sf::Texture& pa, Utils::Piece p, Utils::Square sq);
