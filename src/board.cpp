@@ -110,7 +110,7 @@ void Board::move(sf::RenderWindow& window) {
             init_board();
 
             draw(window);
-            m_position.compute_valid_moves();
+            m_position.compute_valid_moves(m_position.turn_color());
             draw(window);
         }
         else

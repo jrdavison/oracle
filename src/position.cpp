@@ -44,7 +44,7 @@ Position::Position(const std::string& fen) {
     load_rook_move_db("../../resources/precalculated_moves/rook_moves.bin");
     load_knight_move_db("../../resources/precalculated_moves/knight_moves.bin");
 
-    compute_valid_moves();
+    compute_valid_moves(m_turn_color);
 }
 
 bool Position::is_valid_move(Utils::Square from, Utils::Square to) {
@@ -67,35 +67,35 @@ void Position::make_move(Utils::Square from, Utils::Square to) {
     m_turn_color = ~color;
 }
 
-void Position::compute_valid_moves() {
+void Position::compute_valid_moves(Utils::Color color) {
     auto start = std::chrono::high_resolution_clock::now();
 
     for (Utils::Square sq = Utils::SQ_A1; sq < Utils::SQUARE_NB; ++sq)
     {
-        Utils::Piece     p          = piece_at(sq);
-        Utils::PieceType piece_type = Utils::type_of(p);
-        Utils::Color     color      = Utils::color_of(p);
-
-        switch (piece_type)
+        Utils::Piece p = piece_at(sq);
+        if (color == Utils::color_of(p))
         {
-        case Utils::PAWN :
-            m_valid_moves[sq] = compute_pawn_moves(p, sq);
-            break;
-        case Utils::KNIGHT :
-            m_valid_moves[sq] = compute_knight_moves(p, sq);
-            break;
-        case Utils::ROOK :
-            m_valid_moves[sq] = compute_rook_moves(p, sq);
-            break;
-        case Utils::BISHOP :
-            m_valid_moves[sq] = compute_bishop_moves(p, sq);
-            break;
-        case Utils::QUEEN :
-            m_valid_moves[sq] = compute_rook_moves(p, sq) | compute_bishop_moves(p, sq);
-            break;
-        case Utils::KING :
-            m_valid_moves[sq] = compute_king_moves(p, sq);
-            break;
+            switch (Utils::type_of(p))
+            {
+            case Utils::PAWN :
+                m_valid_moves[sq] = compute_pawn_moves(p, sq);
+                break;
+            case Utils::KNIGHT :
+                m_valid_moves[sq] = compute_knight_moves(p, sq);
+                break;
+            case Utils::ROOK :
+                m_valid_moves[sq] = compute_rook_moves(p, sq);
+                break;
+            case Utils::BISHOP :
+                m_valid_moves[sq] = compute_bishop_moves(p, sq);
+                break;
+            case Utils::QUEEN :
+                m_valid_moves[sq] = compute_rook_moves(p, sq) | compute_bishop_moves(p, sq);
+                break;
+            case Utils::KING :
+                m_valid_moves[sq] = compute_king_moves(p, sq);
+                break;
+            }
         }
     }
 
@@ -132,6 +132,8 @@ Utils::Bitboard Position::compute_pawn_moves(Utils::Piece p, Utils::Square sq) {
     Utils::Square target_square_west = (sq + forward_dir) + Utils::WEST;
     if (target_square_west < Utils::SQUARE_NB && is_bit_set(m_checkers_bb[~color], target_square_west))
         set_bit(valid_moves, target_square_west);
+
+    // TODO: en passant
 
     return valid_moves;
 }
@@ -206,6 +208,11 @@ Utils::Bitboard Position::compute_bishop_moves(Utils::Piece p, Utils::Square sq)
 
 Utils::Bitboard Position::compute_king_moves(Utils::Piece p, Utils::Square sq) {
     Utils::Color color = color_of(p);
+
+    // TODO: basic king moves
+    // TODO: castling
+    // TODO: check for check
+
     return 0;
 }
 

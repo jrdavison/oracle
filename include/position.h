@@ -25,7 +25,7 @@ class Position {
     int             move_count() const { return m_move_count; }
 
     bool is_valid_move(Utils::Square from, Utils::Square to);
-    void compute_valid_moves();
+    void compute_valid_moves(Utils::Color color);
     void make_move(Utils::Square from, Utils::Square to);
 
 
