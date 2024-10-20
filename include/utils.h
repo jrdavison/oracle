@@ -2,21 +2,20 @@
 #define UTILS_H_
 
 #include <cstdint>
+#include <unordered_map>
 
 #include <SFML/Graphics.hpp>
 
 namespace Oracle {
 
+namespace Utils {
+
 constexpr int BOARD_W_PX      = 640;
 constexpr int BOARD_SQ_PX     = 80;
 constexpr int BOARD_SQ_ROW_NB = 8;
 
-constexpr int ATLAS_GRID_W_PX = 170;
-
-const sf::Color LIGHT_SQ = sf::Color(240, 217, 181);    // off white
-const sf::Color DARK_SQ  = sf::Color(181, 136, 99);     // tan
-const sf::Color VALID_SQ = sf::Color(35, 64, 153, 90);  // transparent blue
-const sf::Color CHECK_SQ = sf::Color(252, 3, 3, 90);    // transparent red
+constexpr uint64_t HORIZONTAL_MASK = 0x00000000000000FF;
+constexpr uint64_t VERTICAL_MASK   = 0x0101010101010101;
 
 struct MouseCoords {
     int x;
@@ -75,6 +74,10 @@ enum Square : int {
 
 typedef Piece BoardArray[SQUARE_NB];
 
+typedef uint64_t                               Bitboard;
+typedef Bitboard                               KnightMoveDatabase[SQUARE_NB];
+typedef std::unordered_map<Bitboard, Bitboard> RookMoveDatabase[SQUARE_NB];
+
 enum Direction : int {
     NORTH = 8,
     EAST  = 1,
@@ -84,10 +87,11 @@ enum Direction : int {
     NORTH_EAST = NORTH + EAST,
     SOUTH_EAST = SOUTH + EAST,
     SOUTH_WEST = SOUTH + WEST,
-    NORTH_WEST = NORTH + WEST
+    NORTH_WEST = NORTH + WEST,
 };
 
 enum File : int {
+    FILE_LB = -1,
     FILE_A,
     FILE_B,
     FILE_C,
@@ -96,10 +100,11 @@ enum File : int {
     FILE_F,
     FILE_G,
     FILE_H,
-    FILE_NB
+    FILE_UB
 };
 
 enum Rank : int {
+    RANK_LB = -1,
     RANK_1,
     RANK_2,
     RANK_3,
@@ -108,10 +113,62 @@ enum Rank : int {
     RANK_6,
     RANK_7,
     RANK_8,
-    RANK_NB
+    RANK_UB
 };
 
-// allow increment and decrement of enum types
+// Swap color of piece B_KNIGHT <-> W_KNIGHT
+constexpr Piece operator~(Piece p) { return Piece(p ^ 8); }
+// Swap color
+constexpr Color operator~(Color c) { return Color(c ^ 1); }
+
+constexpr PieceType type_of(Piece p) { return PieceType(p & 7); };
+constexpr Color     color_of(Piece p) { return Color(p >> 3); };
+constexpr File      file_of(Square s) { return File(s & 7); };
+constexpr Rank      rank_of(Square s) { return Rank(s >> 3); };
+constexpr Rank      relative_rank(Color c, Rank r) { return c == WHITE ? r : Rank(RANK_8 - r); };
+constexpr Square    make_square(File f, Rank r) { return Square((r << 3) + f); };
+constexpr Piece     make_piece(PieceType pt, Color c) { return Piece(pt + (c << 3)); };
+constexpr Direction forward_direction(Color c) { return c == WHITE ? NORTH : SOUTH; };
+constexpr bool      valid_square(int square) { return SQ_A1 <= square && square < SQUARE_NB; }
+
+// Bitboard operations
+inline void    set_bit(Bitboard& bb, Square sq) { bb |= (1ULL << sq); };
+inline void    clear_bit(Bitboard& bb, Square sq) { bb &= ~(1ULL << sq); };
+constexpr bool is_bit_set(Bitboard bb, Square sq) { return bb & (1ULL << sq); };
+
+// Allow directions to increment/decrement squares (defaulting to SQUARE_NB if out of bounds)
+constexpr Square operator+(Square sq, Direction dir) {
+    int new_sq = static_cast<int>(sq) + static_cast<int>(dir);
+
+    // Check if new square is out of bounds
+    if (!valid_square(new_sq))
+        return SQUARE_NB;
+
+    // Prevent wrapping for basic east-west movement
+    File file = file_of(sq);
+    if ((file == FILE_A && (dir == WEST)) || (file == FILE_H && (dir == EAST)))
+        return SQUARE_NB;
+
+    // return if basic movement
+    if (dir == NORTH || dir == SOUTH || dir == EAST || dir == WEST)
+        return static_cast<Square>(new_sq);
+
+    // break down diagonal movement into basic movements
+    switch (dir)
+    {
+    case SOUTH_EAST :
+    case SOUTH_WEST :
+        return (sq + SOUTH) + (dir == SOUTH_EAST ? EAST : WEST);
+    case NORTH_EAST :
+    case NORTH_WEST :
+        return (sq + NORTH) + (dir == NORTH_EAST ? EAST : WEST);
+    default :
+        std::cerr << "Invalid direction." << std::endl;
+        return SQUARE_NB;
+    }
+}
+
+// Allow increment/decrement of enum types
 template<typename T>
 inline T& operator++(T& d) {
     return d = T(int(d) + 1);
@@ -131,16 +188,8 @@ inline T& operator-=(T& d, int i) {
     return d = T(int(d) - i);
 };
 
-// Swap color of piece B_KNIGHT <-> W_KNIGHT
-constexpr Piece operator~(Piece p) { return Piece(p ^ 8); }
 
-constexpr PieceType type_of(Piece p) { return PieceType(p & 7); };
-constexpr Color     color_of(Piece p) { return Color(p >> 3); };
-constexpr File      file_of(Square s) { return File(s & 7); };
-constexpr Rank      rank_of(Square s) { return Rank(s >> 3); };
-constexpr Square    make_square(File f, Rank r) { return Square((r << 3) + f); };
-constexpr Piece     make_piece(PieceType pt, Color c) { return Piece(pt + (c << 3)); };
-constexpr Direction forward_direction(Color c) { return c == WHITE ? NORTH : SOUTH; };
+}  // namespace Utils
 
 }  // namespace Oracle
 

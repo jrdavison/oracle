@@ -15,10 +15,14 @@ include_directories(include)
 
 add_executable(Oracle
     src/main.cpp
-    include/display.h
-    src/display.cpp
-    include/bitboards.h
-    src/bitboards.cpp
+    include/board.h
+    src/board.cpp
+    include/game.h
+    src/game.cpp
+    include/info_panel.h
+    src/info_panel.cpp
+    include/position.h
+    src/position.cpp
 )
 
 # Specify include directories for the target
