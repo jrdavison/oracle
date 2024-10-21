@@ -2,35 +2,29 @@ export component Board inherits Rectangle {
     for i in 64: Rectangle {
         height: parent.height / 8;
         width: parent.width / 8;
+
+        // build the board (starting from the bottom left corner A1)
         x: mod(i, 8) * self.width;
-        y: floor(i / 8) * self.height;
+        y: (7 - floor(i / 8)) * self.height;
         background: mod(floor(i / 8) + i, 2) == 0 ? #b58863 : #f0d9B5;
 
-        // add numbers to left file
+        // Add numbers to left file (1-8)
         if (mod(i, 8) == 0) : Text {
-            text: [8, 7, 6, 5, 4, 3, 2, 1][floor(i / 8)];
-            x: 5px;
-            y: 5px;
+            text: [1, 2, 3, 4, 5, 6, 7, 8][floor(i / 8)]; // Adjust text to match reversed rank
+            x: 3px;
+            y: 0px;
             color: mod(floor(i / 8) + i, 2) == 0 ? #f0d9B5 : #b58863;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 600;
         }
 
-        // add letters to bottom rank
-        if (floor(i / 8) == 0) : Text {
-            text: ["a", "b", "c", "d", "e", "f", "g", "h"][mod(i, 8)];
-            x: parent.height;
-            y: parent.width;
+        // Add letters to bottom rank (a-h)
+        if (i < 8) : Text {
+            text: ["a", "b", "c", "d", "e", "f", "g", "h"][i];
+            x: parent.width - 13px;
+            y: parent.height - 22px;
             color: mod(floor(i / 8) + i, 2) == 0 ? #f0d9B5 : #b58863;
-            font-size: 14px;
-            font-weight: 600;
-        }
-        Text {
-            text: i;
-            x: parent.width / 2;
-            y: parent.height / 2;
-            color: #000;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 600;
         }
     }
