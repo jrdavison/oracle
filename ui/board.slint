@@ -1,0 +1,9 @@
+export component Board inherits Rectangle {
+    for i in 64: Rectangle {
+        height: parent.height / 8;
+        width: parent.width / 8;
+        x: mod(i, 8) * self.width;
+        y: floor(i / 8) * self.height;
+        background: mod(floor(i / 8) + i, 2) == 0 ? #b58863 : #f0d9B5;
+    }
+}
