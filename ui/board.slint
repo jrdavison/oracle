@@ -5,5 +5,33 @@ export component Board inherits Rectangle {
         x: mod(i, 8) * self.width;
         y: floor(i / 8) * self.height;
         background: mod(floor(i / 8) + i, 2) == 0 ? #b58863 : #f0d9B5;
+
+        // add numbers to left file
+        if (mod(i, 8) == 0) : Text {
+            text: [8, 7, 6, 5, 4, 3, 2, 1][floor(i / 8)];
+            x: 5px;
+            y: 5px;
+            color: mod(floor(i / 8) + i, 2) == 0 ? #f0d9B5 : #b58863;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        // add letters to bottom rank
+        if (floor(i / 8) == 0) : Text {
+            text: ["a", "b", "c", "d", "e", "f", "g", "h"][mod(i, 8)];
+            x: parent.height;
+            y: parent.width;
+            color: mod(floor(i / 8) + i, 2) == 0 ? #f0d9B5 : #b58863;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        Text {
+            text: i;
+            x: parent.width / 2;
+            y: parent.height / 2;
+            color: #000;
+            font-size: 14px;
+            font-weight: 600;
+        }
     }
 }
