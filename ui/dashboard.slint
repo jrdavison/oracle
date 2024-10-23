@@ -1,0 +1,13 @@
+export component EvalBar inherits VerticalLayout {
+    in property <percent> b_eval: 50%;
+    in property <percent> w_eval: 50%;
+
+    Rectangle {
+        height: b_eval;
+        background: #000;
+    }
+    Rectangle {
+        height: w_eval;
+        background: #fff;
+    }
+}

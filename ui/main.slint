@@ -1,13 +1,25 @@
 import { Board } from "./board.slint";
+import { EvalBar } from "./dashboard.slint";
+import { Palette } from "./globals.slint";
+
 
 export component AppWindow inherits Window {
-    width: 1280px;
-    height: 640px;
+    in-out property <[int]> board_state;
+    title: "Oracle Chess Agent";
 
-    Board {
-        width: parent.width / 2;
-        height: parent.height;
-        x: 0;
-        y: 0;
+    height: 640px;
+    width: 1280px;
+    background: Palette.window_bg;
+
+    HorizontalLayout {
+        Board {
+            board_state: board_state;
+            width: parent.width / 2;
+            height: parent.height;
+        }
+        EvalBar {
+            height: parent.height;
+            width: 18px;
+        }
     }
 }

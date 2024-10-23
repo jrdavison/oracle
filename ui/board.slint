@@ -1,4 +1,11 @@
+import { Palette } from "./globals.slint";
+
+
 export component Board inherits Rectangle {
+    property <[int]> files: [1, 2, 3, 4, 5, 6, 7, 8];
+    property <[string]> ranks: ["a", "b", "c", "d", "e", "f", "g", "h"];
+    in property <[int]> board_state: [];
+
     for i in 64: Rectangle {
         height: parent.height / 8;
         width: parent.width / 8;
@@ -10,17 +17,17 @@ export component Board inherits Rectangle {
 
         // Add numbers to left file (1-8)
         if (mod(i, 8) == 0) : Text {
-            text: [1, 2, 3, 4, 5, 6, 7, 8][floor(i / 8)]; // Adjust text to match reversed rank
+            text: files[floor(i / 8)]; // Adjust text to match reversed rank
             x: 3px;
             y: 0px;
-            color: mod(floor(i / 8) + i, 2) == 0 ? #f0d9B5 : #b58863;
+            color: mod(floor(i / 8) + i, 2) == 0 ? Palette.light_sq : Palette.dark_sq;
             font-size: 16px;
             font-weight: 600;
         }
 
         // Add letters to bottom rank (a-h)
         if (i < 8) : Text {
-            text: ["a", "b", "c", "d", "e", "f", "g", "h"][i];
+            text: ranks[i];
             x: parent.width - 13px;
             y: parent.height - 22px;
             color: mod(floor(i / 8) + i, 2) == 0 ? #f0d9B5 : #b58863;
