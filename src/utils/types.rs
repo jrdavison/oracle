@@ -71,6 +71,12 @@ impl Default for Piece {
     }
 }
 
+impl From<Piece> for i32 {
+    fn from(piece: Piece) -> Self {
+        piece as i32
+    }
+}
+
 impl Piece {
     pub fn make_piece(pt: PieceType, c: Color) -> Piece {
         Piece::from_u8((pt as u8) + ((c as u8) << 3)).unwrap_or(Piece::NoPiece)

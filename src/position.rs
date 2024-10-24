@@ -32,8 +32,8 @@ impl Position {
         load_from_fen(fen)
     }
 
-    pub fn get_board(&self) -> [types::Piece; constants::SQUARE_NB] {
-        self.board
+    pub fn get_board_i32(&self) -> [i32; constants::SQUARE_NB] {
+        self.board.map(|piece| piece.into())
     }
 }
 

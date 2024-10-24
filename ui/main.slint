@@ -2,9 +2,12 @@ import { Board } from "./board.slint";
 import { EvalBar } from "./dashboard.slint";
 import { Palette } from "./globals.slint";
 
+struct OracleState {
+    board: [int],
+}
 
 export component AppWindow inherits Window {
-    in-out property <[int]> board_state;
+    in-out property <OracleState> state;
     title: "Oracle Chess Agent";
 
     height: 640px;
@@ -13,7 +16,7 @@ export component AppWindow inherits Window {
 
     HorizontalLayout {
         Board {
-            board_state: board_state;
+            board_state: state.board;
             width: parent.width / 2;
             height: parent.height;
         }
