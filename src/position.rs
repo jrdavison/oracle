@@ -1,9 +1,18 @@
-use crate::utils;
+use crate::utils::{constants, types};
 use std::fmt;
 
 pub struct Position {
-    board: [utils::Piece; utils::SQUARE_NB],
-    side_to_move: utils::Color,
+    board: [types::Piece; constants::SQUARE_NB],
+    side_to_move: types::Color,
+}
+
+impl Default for Position {
+    fn default() -> Self {
+        Position {
+            board: [types::Piece::default(); constants::SQUARE_NB],
+            side_to_move: types::Color::default(),
+        }
+    }
 }
 
 impl fmt::Debug for Position {
@@ -19,11 +28,11 @@ impl fmt::Debug for Position {
 }
 
 impl Position {
-    pub fn new(fen: &str) -> Position {
+    pub fn new(fen: &str) -> Self {
         load_from_fen(fen)
     }
 
-    pub fn get_board(&self) -> [utils::Piece; utils::SQUARE_NB] {
+    pub fn get_board(&self) -> [types::Piece; constants::SQUARE_NB] {
         self.board
     }
 }
@@ -33,16 +42,16 @@ fn load_from_fen(fen: &str) -> Position {
 
     let mut fen_parts = fen.split_whitespace();
 
-    let mut file: utils::File = utils::File::FileA;
-    let mut rank: utils::Rank = utils::Rank::Rank8;
-    let mut board = [utils::Piece::NoPiece; utils::SQUARE_NB];
+    let mut file: types::File = types::File::FileA;
+    let mut rank: types::Rank = types::Rank::Rank8;
+    let mut board = [types::Piece::NoPiece; constants::SQUARE_NB];
 
     let pieces = fen_parts.next().unwrap_or("");
     for c in pieces.chars() {
         match c {
             '/' => {
                 rank = rank - 1;
-                file = utils::File::FileA;
+                file = types::File::FileA;
             }
             c if c.is_digit(10) => {
                 let c_digit = c.to_digit(10).expect("Expected digit");
@@ -50,13 +59,13 @@ fn load_from_fen(fen: &str) -> Position {
             }
             _ => {
                 let color = if c.is_uppercase() {
-                    utils::Color::White
+                    types::Color::White
                 } else {
-                    utils::Color::Black
+                    types::Color::Black
                 };
-                let sq = utils::Square::make_square(file, rank);
-                let piece_type = from_char(c);
-                board[sq as usize] = utils::Piece::make_piece(piece_type, color);
+                let sq = types::Square::make_square(file, rank);
+                let piece_type = types::PieceType::make_piece_type(c);
+                board[sq as usize] = types::Piece::make_piece(piece_type, color);
                 file = file + 1;
             }
         }
@@ -64,19 +73,6 @@ fn load_from_fen(fen: &str) -> Position {
 
     Position {
         board,
-        side_to_move: utils::Color::White,
-    }
-}
-
-fn from_char(c: char) -> utils::PieceType {
-    let c_lower = c.to_lowercase().next().unwrap_or(' ');
-    match c_lower {
-        'k' => utils::PieceType::King,
-        'q' => utils::PieceType::Queen,
-        'b' => utils::PieceType::Bishop,
-        'n' => utils::PieceType::Knight,
-        'r' => utils::PieceType::Rook,
-        'p' => utils::PieceType::Pawn,
-        _ => utils::PieceType::NoPiece,
+        side_to_move: types::Color::White,
     }
 }

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-slint = "1.8.0"
-
-[build-dependencies]
-slint-build = "1.8.0"
+druid = "0.8.3"
+iced = "0.13.1"
+num-derive = "0.4.2"
+num-traits = "0.2.19"

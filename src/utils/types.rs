@@ -2,16 +2,24 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use std::ops::{Add, Sub};
 
-/*
-Types
-*/
+use crate::utils::constants::SQUARE_NB;
+
+#[repr(u8)]
 #[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub enum Color {
     White,
     Black,
+    ColorNb = 2,
 }
 
+impl Default for Color {
+    fn default() -> Self {
+        Color::ColorNb
+    }
+}
+
+#[repr(u8)]
 #[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
 pub enum PieceType {
     NoPiece,
@@ -23,22 +31,44 @@ pub enum PieceType {
     Pawn,
 }
 
+impl PieceType {
+    pub fn make_piece_type(c: char) -> PieceType {
+        let c_lower = c.to_lowercase().next().unwrap_or(' ');
+        match c_lower {
+            'k' => PieceType::King,
+            'q' => PieceType::Queen,
+            'b' => PieceType::Bishop,
+            'n' => PieceType::Knight,
+            'r' => PieceType::Rook,
+            'p' => PieceType::Pawn,
+            _ => PieceType::NoPiece,
+        }
+    }
+}
+
+#[repr(u8)]
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
 pub enum Piece {
     NoPiece,
-    WKing = PieceType::King as isize,
+    WKing = PieceType::King as u8,
     WQueen,
     WBishop,
     WKnight,
     WRook,
     WPawn,
-    BKing = PieceType::King as isize + 8,
+    BKing = PieceType::King as u8 + 8,
     BQueen,
     BBishop,
     BKnight,
     BRook,
     BPawn,
+}
+
+impl Default for Piece {
+    fn default() -> Self {
+        Piece::NoPiece
+    }
 }
 
 impl Piece {
@@ -47,6 +77,7 @@ impl Piece {
     }
 }
 
+#[repr(u8)]
 #[rustfmt::skip]
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
@@ -60,10 +91,8 @@ pub enum Square {
     SqA7, SqB7, SqC7, SqD7, SqE7, SqF7, SqG7, SqH7,
     SqA8, SqB8, SqC8, SqD8, SqE8, SqF8, SqG8, SqH8,
 
-    SquareNb = 64,
+    SquareNb = SQUARE_NB as u8,
 }
-
-pub const SQUARE_NB: usize = Square::SquareNb as usize;
 
 impl Square {
     pub fn make_square(file: File, rank: Rank) -> Square {
@@ -71,6 +100,7 @@ impl Square {
     }
 }
 
+#[repr(u8)]
 #[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
 pub enum File {
     FileA,
@@ -87,18 +117,19 @@ pub enum File {
 impl Add<u8> for File {
     type Output = File;
     fn add(self, rhs: u8) -> File {
-        FromPrimitive::from_u8(self as u8 + rhs).unwrap_or(File::FileNb)
+        File::from_u8(self as u8 + rhs).unwrap_or(File::FileNb)
     }
 }
 
 impl Sub<u8> for File {
     type Output = File;
     fn sub(self, rhs: u8) -> File {
-        FromPrimitive::from_u8(self as u8 - rhs).unwrap_or(File::FileNb)
+        File::from_u8(self as u8 - rhs).unwrap_or(File::FileNb)
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, FromPrimitive)]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
 pub enum Rank {
     Rank1,
     Rank2,
@@ -113,16 +144,14 @@ pub enum Rank {
 
 impl Add<u8> for Rank {
     type Output = Rank;
-
     fn add(self, rhs: u8) -> Rank {
-        FromPrimitive::from_u8(self as u8 + rhs).unwrap_or(Rank::RankNb)
+        Rank::from_u8(self as u8 + rhs).unwrap_or(Rank::RankNb)
     }
 }
 
 impl Sub<u8> for Rank {
     type Output = Rank;
-
     fn sub(self, rhs: u8) -> Rank {
-        FromPrimitive::from_u8(self as u8 - rhs).unwrap_or(Rank::RankNb)
+        Rank::from_u8(self as u8 - rhs).unwrap_or(Rank::RankNb)
     }
 }
