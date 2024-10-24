@@ -6,5 +6,6 @@ edition = "2021"
 [dependencies]
 druid = "0.8.3"
 iced = "0.13.1"
+im = "15.1.0"
 num-derive = "0.4.2"
 num-traits = "0.2.19"
