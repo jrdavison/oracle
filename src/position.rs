@@ -1,30 +1,10 @@
 use crate::utils::{constants, types};
-use std::fmt;
 
 pub struct Position {
     board: [types::Piece; constants::SQUARE_NB],
     side_to_move: types::Color,
-}
-
-impl Default for Position {
-    fn default() -> Self {
-        Position {
-            board: [types::Piece::default(); constants::SQUARE_NB],
-            side_to_move: types::Color::default(),
-        }
-    }
-}
-
-impl fmt::Debug for Position {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Position {{\n  board: {{\n")?;
-
-        for (index, value) in self.board.iter().enumerate() {
-            write!(f, "    [{}]: {:?},\n", index, value)?;
-        }
-
-        write!(f, "  }},\n  side_to_move: {:?}\n}}", self.side_to_move)
-    }
+    halfmove_clock: i32,
+    fullmove_number: i32,
 }
 
 impl Position {
@@ -35,15 +15,29 @@ impl Position {
     pub fn get_board_i32(&self) -> [i32; constants::SQUARE_NB] {
         self.board.map(|piece| piece.into())
     }
+
+    pub fn get_side_to_move(&self) -> i32 {
+        self.side_to_move.into()
+    }
+
+    pub fn get_halfmove_clock(&self) -> i32 {
+        self.halfmove_clock
+    }
+
+    pub fn get_fullmove_number(&self) -> i32 {
+        self.fullmove_number
+    }
 }
 
 fn load_from_fen(fen: &str) -> Position {
+    // https://www.chess.com/terms/fen-chess
+
     println!("Loading from FEN: {}", fen);
 
     let mut fen_parts = fen.split_whitespace();
 
-    let mut file: types::File = types::File::FileA;
-    let mut rank: types::Rank = types::Rank::Rank8;
+    let mut file = types::File::FileA;
+    let mut rank = types::Rank::Rank8;
     let mut board = [types::Piece::NoPiece; constants::SQUARE_NB];
 
     let pieces = fen_parts.next().unwrap_or("");
@@ -71,8 +65,25 @@ fn load_from_fen(fen: &str) -> Position {
         }
     }
 
+    let side_to_move = match fen_parts.next().unwrap_or("w") {
+        "w" => types::Color::White,
+        "b" => types::Color::Black,
+        _ => panic!("Invalid side to move"),
+    };
+
+    // TODO: castling rights
+    let _ = fen_parts.next().unwrap_or("-");
+
+    // TODO: en passant square
+    let _ = fen_parts.next().unwrap_or("-");
+
+    let halfmove_clock = fen_parts.next().unwrap_or("0").parse::<i32>().unwrap_or(0);
+    let fullmove_number = fen_parts.next().unwrap_or("1").parse::<i32>().unwrap_or(1);
+
     Position {
         board,
-        side_to_move: types::Color::White,
+        side_to_move,
+        halfmove_clock,
+        fullmove_number,
     }
 }

@@ -1,4 +1,7 @@
-export component EvalBar inherits VerticalLayout {
+import { Button } from "std-widgets.slint";
+import { Palette } from "globals.slint";
+
+component EvalBar inherits VerticalLayout {
     in property <percent> b_eval: 50%;
     in property <percent> w_eval: 50%;
 
@@ -9,5 +12,29 @@ export component EvalBar inherits VerticalLayout {
     Rectangle {
         height: w_eval;
         background: #fff;
+    }
+}
+
+export component Dashboard inherits Rectangle {
+    HorizontalLayout {
+        EvalBar {
+            width: 20px;
+            b_eval: 30%;
+            w_eval: 70%;
+        }
+        Rectangle {
+            background: Palette.window_bg;
+            VerticalLayout {
+                Button {
+                    text: "New Game";
+                }
+                Button {
+                    text: "Undo";
+                }
+                Button {
+                    text: "Redo";
+                }
+            }
+        }
     }
 }

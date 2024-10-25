@@ -15,6 +15,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let pos = Position::new("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     ui.set_state(OracleState {
         board: pos.get_board_i32().into(),
+        turn: pos.get_side_to_move(),
+        halfmove: pos.get_halfmove_clock(),
+        fullmove: pos.get_fullmove_number(),
     });
     ui.run().unwrap();
 

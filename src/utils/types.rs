@@ -5,22 +5,21 @@ use std::ops::{Add, Sub};
 use crate::utils::constants::SQUARE_NB;
 
 #[repr(u8)]
-#[allow(dead_code)]
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug)]
 pub enum Color {
     White,
     Black,
     ColorNb = 2,
 }
 
-impl Default for Color {
-    fn default() -> Self {
-        Color::ColorNb
+impl From<Color> for i32 {
+    fn from(color: Color) -> Self {
+        color as i32
     }
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
+#[derive(Clone, Copy, Debug, FromPrimitive)]
 pub enum PieceType {
     NoPiece,
     King,
@@ -48,7 +47,7 @@ impl PieceType {
 
 #[repr(u8)]
 #[allow(dead_code)]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
+#[derive(Clone, Copy, Debug, FromPrimitive)]
 pub enum Piece {
     NoPiece,
     WKing = PieceType::King as u8,
@@ -86,7 +85,7 @@ impl Piece {
 #[repr(u8)]
 #[rustfmt::skip]
 #[allow(dead_code)]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
+#[derive(Clone, Copy, Debug, FromPrimitive)]
 pub enum Square {
     SqA1, SqB1, SqC1, SqD1, SqE1, SqF1, SqG1, SqH1,
     SqA2, SqB2, SqC2, SqD2, SqE2, SqF2, SqG2, SqH2,
@@ -107,7 +106,7 @@ impl Square {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
+#[derive(Clone, Copy, Debug, FromPrimitive)]
 pub enum File {
     FileA,
     FileB,
@@ -135,7 +134,7 @@ impl Sub<u8> for File {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
+#[derive(Clone, Copy, Debug, FromPrimitive)]
 pub enum Rank {
     Rank1,
     Rank2,

@@ -1,9 +1,12 @@
 import { Board } from "./board.slint";
-import { EvalBar } from "./dashboard.slint";
+import { Dashboard } from "./dashboard.slint";
 import { Palette } from "./globals.slint";
 
 struct OracleState {
     board: [int],
+    turn: int,
+    halfmove: int,
+    fullmove: int,
 }
 
 export component AppWindow inherits Window {
@@ -20,9 +23,9 @@ export component AppWindow inherits Window {
             width: parent.width / 2;
             height: parent.height;
         }
-        EvalBar {
+        Dashboard {
+            width: parent.width / 2;
             height: parent.height;
-            width: 18px;
         }
     }
 }
