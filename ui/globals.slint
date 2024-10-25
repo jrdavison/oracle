@@ -1,0 +1,29 @@
+export global Palette {
+    out property <color> light_sq: #f0d9B5;
+    out property <color> dark_sq: #b58863;
+    out property <color> window_bg: #11151c;
+}
+
+export global Utils {
+    out property <[int]> files: [1, 2, 3, 4, 5, 6, 7, 8];
+    out property <[string]> ranks: ["a", "b", "c", "d", "e", "f", "g", "h"];
+
+    // TODO: this works but there has to be a better way to do this
+    out property <[image]> piece_urls: [
+        @image-url(""),
+        @image-url("pieces/1.png"),
+        @image-url("pieces/2.png"),
+        @image-url("pieces/3.png"),
+        @image-url("pieces/4.png"),
+        @image-url("pieces/5.png"),
+        @image-url("pieces/6.png"),
+        @image-url(""),
+        @image-url(""),
+        @image-url("pieces/9.png"),
+        @image-url("pieces/10.png"),
+        @image-url("pieces/11.png"),
+        @image-url("pieces/12.png"),
+        @image-url("pieces/13.png"),
+        @image-url("pieces/14.png"),
+    ];
+}

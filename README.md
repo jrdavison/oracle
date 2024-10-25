@@ -1,21 +1,19 @@
-# Oracle
+# Oracle Chess Agent
 
-Play chess on a GUI against a bot
+## About
 
-## Compile/Run
+A chess agent built using Rust.
 
-To compile program, run:
+## Usage
 
-```bash
-cmake --build ./build --config Release --target all --
-```
+1. Build with `cargo`:
 
-Then run:
+    ```cli
+    cargo build
+    ```
 
-```bash
-./build/Oracle.exe
-```
+2. Run the application binary:
 
-## Assets
-
-TODO: need to not hardcode these
+    ```cli
+    cargo run
+    ```
