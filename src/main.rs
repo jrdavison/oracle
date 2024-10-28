@@ -39,13 +39,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             ui.set_dragged_piece(DraggedPiece { piece: sq as i32, x, y });
         }
     });
-    // ui.global::<Logic>().on_drag_piece(move || {
-    //     |x, y| {
-    //         println!("x: {},  y: {}", x, y);
-    //         let ui = ui_weak.unwrap();
-    //         ui.set_dragged_piece(DraggedPiece { piece: 0, x, y });
-    //     }
-    // });
 
     ui.run().unwrap();
 
