@@ -1,8 +1,8 @@
-import { Board, DraggedPiece } from "./board.slint";
+import { Board } from "./board.slint";
 import { Dashboard } from "./dashboard.slint";
-import { Palette, Logic } from "./globals.slint";
+import { Dimensions, Palette, RustInterface } from "./globals.slint";
 
-export { Logic, DraggedPiece }  // export so we can use it in our rust code
+export { RustInterface } // export to use in rust code
 
 struct BoardState {
     board: [int],
@@ -13,17 +13,17 @@ struct BoardState {
 
 export component AppWindow inherits Window {
     in-out property <BoardState> board_state;
-    in-out property <DraggedPiece> dragged_piece;
+    in-out property <int> dragged_piece_sq;
     title: "Oracle Chess Agent";
 
-    height: 640px;
-    width:  640px * 2;
+    height: Dimensions.board_size;
+    width:  Dimensions.board_size * 2;
     background: Palette.window_bg;
 
     HorizontalLayout {
         Board {
             board_state: board_state.board;
-            dragged_piece: dragged_piece;
+            dragged_piece_sq: dragged_piece_sq;
 
             width: parent.width / 2;
             height: parent.height;

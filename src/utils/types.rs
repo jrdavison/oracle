@@ -120,8 +120,8 @@ pub enum File {
 
 impl File {
     pub fn from_x(x: f32) -> Self {
-        let file = x / 80.0; // TODO: don't hardcode square size
-        File::from_f32(file).unwrap_or(File::FileNb)
+        let file = (x.floor() as i32) / 80; // TODO: don't hardcode square size
+        File::from_i32(file).unwrap_or(File::FileNb)
     }
 }
 
@@ -155,8 +155,8 @@ pub enum Rank {
 
 impl Rank {
     pub fn from_y(y: f32) -> Self {
-        let rank = (8.0 - 1.0) - (y / 80.0); // TODO: don't hardcode square size
-        Rank::from_f32(rank).unwrap_or(Rank::RankNb)
+        let rank = 7 - (y.floor() as i32 / 80); // TODO: don't hardcode square size
+        Rank::from_i32(rank).unwrap_or(Rank::RankNb)
     }
 }
 
