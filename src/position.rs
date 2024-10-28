@@ -12,8 +12,8 @@ impl Position {
         load_from_fen(fen)
     }
 
-    pub fn get_board_i32(&self) -> [i32; constants::SQUARE_NB] {
-        self.board.map(|piece| piece.into())
+    pub fn get_board_i32(&self) -> Vec<i32> {
+        self.board.iter().map(|&piece| piece.into()).collect()
     }
 
     pub fn get_side_to_move(&self) -> i32 {

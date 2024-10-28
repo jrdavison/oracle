@@ -1,7 +1,17 @@
+import "./font/JackInput.ttf";
+
 export global Palette {
     out property <color> light_sq: #f0d9B5;
     out property <color> dark_sq: #b58863;
     out property <color> window_bg: #11151c;
+}
+
+export global Font {
+    out property <int> semi_bold: 600;
+    out property <int> bold: 800;
+    out property <length> font_size_sm: 16px;
+    out property <length> font_size_lg: 24px;
+    out property <string> font_family: "JackInput";
 }
 
 export global Utils {
@@ -27,3 +37,8 @@ export global Utils {
         @image-url("pieces/14.png"),
     ];
 }
+
+export global Logic {
+    pure callback drag_piece(length, length);
+}
+

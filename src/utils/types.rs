@@ -46,7 +46,6 @@ impl PieceType {
 }
 
 #[repr(u8)]
-#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, FromPrimitive)]
 pub enum Piece {
     NoPiece,
@@ -119,6 +118,13 @@ pub enum File {
     FileNb = 8,
 }
 
+impl File {
+    pub fn from_x(x: f32) -> Self {
+        let file = x / 80.0; // TODO: don't hardcode square size
+        File::from_f32(file).unwrap_or(File::FileNb)
+    }
+}
+
 impl Add<u8> for File {
     type Output = File;
     fn add(self, rhs: u8) -> File {
@@ -145,6 +151,13 @@ pub enum Rank {
     Rank7,
     Rank8,
     RankNb = 8,
+}
+
+impl Rank {
+    pub fn from_y(y: f32) -> Self {
+        let rank = (8.0 - 1.0) - (y / 80.0); // TODO: don't hardcode square size
+        Rank::from_f32(rank).unwrap_or(Rank::RankNb)
+    }
 }
 
 impl Add<u8> for Rank {
