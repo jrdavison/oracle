@@ -1,31 +1,40 @@
 import { Board } from "./board.slint";
 import { Dashboard } from "./dashboard.slint";
-import { Palette } from "./globals.slint";
+import { Dimensions, Palette, RustInterface } from "./globals.slint";
 
-struct OracleState {
+export { RustInterface } // export to use in rust code
+
+struct BoardState {
     board: [int],
     turn: int,
-    halfmove: int,
-    fullmove: int,
+    halfmove_clock: int,
+    fullmove_count: int,
 }
 
 export component AppWindow inherits Window {
-    in-out property <OracleState> state;
+    in-out property <BoardState> board_state;
+    in-out property <int> dragged_piece_sq;
     title: "Oracle Chess Agent";
 
-    height: 640px;
-    width: 1280px;
+    height: Dimensions.board_size;
+    width:  Dimensions.board_size * 2;
     background: Palette.window_bg;
 
     HorizontalLayout {
         Board {
-            board_state: state.board;
+            board_state: board_state.board;
+            dragged_piece_sq: dragged_piece_sq;
+
             width: parent.width / 2;
             height: parent.height;
         }
         Dashboard {
             width: parent.width / 2;
             height: parent.height;
+
+            turn: board_state.turn;
+            halfmove_clock: board_state.halfmove_clock;
+            fullmove_count: board_state.fullmove_count;
         }
     }
 }

@@ -1,7 +1,19 @@
+export global Dimensions {
+    out property <length> board_size: 640px;
+    out property <length> sq_size: 80px;
+}
+
 export global Palette {
     out property <color> light_sq: #f0d9B5;
     out property <color> dark_sq: #b58863;
     out property <color> window_bg: #11151c;
+}
+
+export global Font {
+    out property <int> semi_bold: 600;
+    out property <int> bold: 800;
+    out property <length> font_size_sm: 16px;
+    out property <length> font_size_lg: 24px;
 }
 
 export global Utils {
@@ -26,4 +38,29 @@ export global Utils {
         @image-url("pieces/13.png"),
         @image-url("pieces/14.png"),
     ];
+
+    public pure function square_to_x(sq: int, sq_width: length) -> length {
+        Math.mod(sq, 8) * sq_width;
+    }
+
+    public pure function square_to_y(sq: int, sq_height: length) -> length {
+        (7 - Math.floor(sq / 8)) * sq_height;
+    }
+
+    public pure function square_color(sq: int) -> int {
+        return Math.mod(Math.floor(sq / 8) + sq, 2);
+    }
+
+    public pure function constrain_mouse_x(x: length) -> length {
+        Math.min(Math.max(x, 0), Dimensions.board_size);
+    }
+
+    public pure function constrain_mouse_y(y: length) -> length {
+        Math.min(Math.max(y, 0), Dimensions.board_size);
+    }
+}
+
+export global RustInterface {
+    pure callback square_from_xy(length, length) -> int;
+    callback move_piece(int, int);
 }

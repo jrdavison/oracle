@@ -1,5 +1,6 @@
-import { Button } from "std-widgets.slint";
-import { Palette } from "globals.slint";
+import { Button, HorizontalBox } from "std-widgets.slint";
+
+import { Palette, Font } from "./globals.slint";
 
 component EvalBar inherits VerticalLayout {
     in property <percent> b_eval: 50%;
@@ -7,32 +8,48 @@ component EvalBar inherits VerticalLayout {
 
     Rectangle {
         height: b_eval;
-        background: #000;
+        background: black;
     }
     Rectangle {
         height: w_eval;
-        background: #fff;
+        background: white;
     }
 }
 
 export component Dashboard inherits Rectangle {
+    in property <int> turn: 0;  // 0 for white, 1 for black
+    in property <int> fullmove_count: 0;
+    in property <int> halfmove_clock: 0;
+    in property <percent> b_eval: 50%;
+    in property <percent> w_eval: 50%;
+
     HorizontalLayout {
         EvalBar {
             width: 20px;
-            b_eval: 30%;
-            w_eval: 70%;
+            b_eval: b_eval;
+            w_eval: w_eval;
         }
-        Rectangle {
-            background: Palette.window_bg;
+        HorizontalBox {
             VerticalLayout {
-                Button {
-                    text: "New Game";
+                Rectangle {
+                    height: 50px;
+                    background: turn == 0 ? white : black;
+                    border-radius: 5px;
+
+                    Text {
+                        text: (turn == 0 ? "White" : "Black") + "'s Turn";
+                        color: turn == 0 ? black : white;
+                        horizontal-alignment: center;
+                        font-size: Font.font_size_lg;
+                        font-weight: Font.bold;
+                    }
                 }
-                Button {
-                    text: "Undo";
-                }
-                Button {
-                    text: "Redo";
+                Rectangle {
+                    Text {
+                        text: "Fullmove Count: " + fullmove_count;
+                        font-size: Font.font_size_sm;
+                        font-weight: Font.bold;
+                    }
                 }
             }
         }

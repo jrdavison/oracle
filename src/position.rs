@@ -1,10 +1,15 @@
-use crate::utils::{constants, types};
+use num_traits::ToPrimitive;
+
+use crate::utils::{
+    constants,
+    types::{self, Piece},
+};
 
 pub struct Position {
     board: [types::Piece; constants::SQUARE_NB],
     side_to_move: types::Color,
     halfmove_clock: i32,
-    fullmove_number: i32,
+    fullmove_count: i32,
 }
 
 impl Position {
@@ -12,28 +17,49 @@ impl Position {
         load_from_fen(fen)
     }
 
-    pub fn get_board_i32(&self) -> [i32; constants::SQUARE_NB] {
-        self.board.map(|piece| piece.into())
+    pub fn get_board_i32(&self) -> Vec<i32> {
+        self.board
+            .iter()
+            .map(|&piece| types::Piece::to_i32(&piece).unwrap())
+            .collect()
     }
 
     pub fn get_side_to_move(&self) -> i32 {
-        self.side_to_move.into()
+        types::Color::to_i32(&self.side_to_move).unwrap()
     }
 
     pub fn get_halfmove_clock(&self) -> i32 {
         self.halfmove_clock
     }
 
-    pub fn get_fullmove_number(&self) -> i32 {
-        self.fullmove_number
+    pub fn get_fullmove_count(&self) -> i32 {
+        self.fullmove_count
+    }
+
+    pub fn move_piece(&mut self, src: types::Square, dest: types::Square) {
+        let src_piece = self.board[src];
+        if Piece::color_of(src_piece) != self.side_to_move {
+            return;
+        }
+
+        self.board[src] = types::Piece::NoPiece;
+        self.board[dest] = src_piece;
+
+        if self.side_to_move == types::Color::Black {
+            self.fullmove_count += 1;
+        }
+
+        self.side_to_move = !self.side_to_move;
+        // TODO: validate moves
+        // TODO: store move history for undos
+        // TODO: count halfmoves
     }
 }
 
 fn load_from_fen(fen: &str) -> Position {
-    // https://www.chess.com/terms/fen-chess
-
-    println!("Loading from FEN: {}", fen);
-
+    /*
+    More info about fen notation: https://www.chess.com/terms/fen-chess
+    */
     let mut fen_parts = fen.split_whitespace();
 
     let mut file = types::File::FileA;
@@ -78,12 +104,12 @@ fn load_from_fen(fen: &str) -> Position {
     let _ = fen_parts.next().unwrap_or("-");
 
     let halfmove_clock = fen_parts.next().unwrap_or("0").parse::<i32>().unwrap_or(0);
-    let fullmove_number = fen_parts.next().unwrap_or("1").parse::<i32>().unwrap_or(1);
+    let fullmove_count = fen_parts.next().unwrap_or("1").parse::<i32>().unwrap_or(1);
 
     Position {
         board,
         side_to_move,
         halfmove_clock,
-        fullmove_number,
+        fullmove_count,
     }
 }

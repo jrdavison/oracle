@@ -1,25 +1,29 @@
-import { Palette, Utils } from "./globals.slint";
+import { VerticalBox } from "std-widgets.slint";
 
-export component Board inherits Rectangle {
-    in property <[int]> board_state: [];
+import { Font,  Palette, Utils, RustInterface } from "./globals.slint";
+import { Dimensions } from "globals.slint";
+
+export component Board inherits TouchArea {
+    in property <[int]> board_state;
+    in-out property <int> dragged_piece_sq;
 
     for i in 64: Rectangle {
-        height: parent.height / 8;
-        width: parent.width / 8;
+        height: Dimensions.sq_size;
+        width: Dimensions.sq_size;
 
         // build the board (starting from the bottom left corner A1)
-        x: mod(i, 8) * self.width;
-        y: (7 - floor(i / 8)) * self.height;
-        background: mod(floor(i / 8) + i, 2) == 0 ? Palette.dark_sq : Palette.light_sq;
+        x: Utils.square_to_x(i, self.width);
+        y: Utils.square_to_y(i, self.height);
+        background: Utils.square_color(i) == 0 ? Palette.dark_sq : Palette.light_sq;
 
         // Add numbers to left file (1-8)
         if (mod(i, 8) == 0) : Text {
             text: Utils.files[floor(i / 8)]; // Adjust text to match reversed rank
             x: 3px;
             y: 0px;
-            color: mod(floor(i / 8) + i, 2) == 0 ? Palette.light_sq : Palette.dark_sq;
-            font-size: 16px;
-            font-weight: 600;
+            color: Utils.square_color(i) == 0 ? Palette.light_sq : Palette.dark_sq;
+            font-size: Font.font_size_sm;
+            font-weight: Font.semi_bold;
         }
 
         // Add letters to bottom rank (a-h)
@@ -27,15 +31,40 @@ export component Board inherits Rectangle {
             text: Utils.ranks[i];
             x: parent.width - 13px;
             y: parent.height - 22px;
-            color: mod(floor(i / 8) + i, 2) == 0 ? Palette.light_sq : Palette.dark_sq;
-            font-size: 16px;
-            font-weight: 600;
+            color: Utils.square_color(i) == 0 ? Palette.light_sq : Palette.dark_sq;
+            font-size: Font.font_size_sm;
+            font-weight: Font.semi_bold;
         }
 
-        if (board_state[i] != 0) : Image {
+        if (board_state[i] != 0 && dragged_piece_sq != i) : Image {
             source: Utils.piece_urls[board_state[i]];
             width: parent.width;
             height: parent.height;
+        }
+    }
+
+    if (dragged_piece_sq != -1) : Image {
+        source: Utils.piece_urls[board_state[dragged_piece_sq]];
+        height: Dimensions.sq_size;
+        width: Dimensions.sq_size;
+        x: Utils.constrain_mouse_x(parent.mouse-x) - (Dimensions.sq_size / 2);
+        y: Utils.constrain_mouse_y(parent.mouse-y) - (Dimensions.sq_size / 2);
+    }
+
+    moved => {
+        if (dragged_piece_sq == -1)
+        {
+            self.dragged_piece_sq = RustInterface.square_from_xy(self.mouse-x, self.mouse-y);
+        }
+    }
+
+    clicked => {
+        if (self.dragged_piece_sq != -1)
+        {
+            if (self.board_state[self.dragged_piece_sq] != 0) {
+                RustInterface.move_piece(self.dragged_piece_sq, RustInterface.square_from_xy(self.mouse-x, self.mouse-y));
+                self.dragged_piece_sq = -1;
+            }
         }
     }
 }
