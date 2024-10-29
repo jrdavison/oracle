@@ -59,6 +59,12 @@ export component Board inherits TouchArea {
     }
 
     clicked => {
-        RustInterface.move_piece(dragged_piece_sq, RustInterface.square_from_xy(self.mouse-x, self.mouse-y));
+        if (self.dragged_piece_sq != -1)
+        {
+            if (self.board_state[self.dragged_piece_sq] != 0) {
+                RustInterface.move_piece(self.dragged_piece_sq, RustInterface.square_from_xy(self.mouse-x, self.mouse-y));
+                self.dragged_piece_sq = -1;
+            }
+        }
     }
 }

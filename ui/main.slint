@@ -7,8 +7,8 @@ export { RustInterface } // export to use in rust code
 struct BoardState {
     board: [int],
     turn: int,
-    halfmove: int,
-    fullmove: int,
+    halfmove_clock: int,
+    fullmove_count: int,
 }
 
 export component AppWindow inherits Window {
@@ -31,6 +31,10 @@ export component AppWindow inherits Window {
         Dashboard {
             width: parent.width / 2;
             height: parent.height;
+
+            turn: board_state.turn;
+            halfmove_clock: board_state.halfmove_clock;
+            fullmove_count: board_state.fullmove_count;
         }
     }
 }

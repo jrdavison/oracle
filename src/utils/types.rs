@@ -1,16 +1,27 @@
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 use std::ops::{Add, Sub};
-use std::ops::{Index, IndexMut};
+use std::ops::{Index, IndexMut, Not};
 
 use crate::utils::constants::SQUARE_NB;
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive)]
+#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq)]
 pub enum Color {
     White,
     Black,
     ColorNb = 2,
+}
+
+impl Not for Color {
+    type Output = Color;
+    fn not(self) -> Color {
+        match self {
+            Color::White => Color::Black,
+            Color::Black => Color::White,
+            Color::ColorNb => Color::ColorNb,
+        }
+    }
 }
 
 #[repr(u8)]
@@ -67,6 +78,10 @@ impl Default for Piece {
 impl Piece {
     pub fn make_piece(pt: PieceType, c: Color) -> Piece {
         Piece::from_u8((pt as u8) + ((c as u8) << 3)).unwrap_or(Piece::NoPiece)
+    }
+
+    pub fn color_of(piece: Piece) -> Color {
+        Color::from_u8((piece as u8) >> 3).unwrap_or(Color::ColorNb)
     }
 }
 

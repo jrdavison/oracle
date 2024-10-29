@@ -18,9 +18,10 @@ component EvalBar inherits VerticalLayout {
 
 export component Dashboard inherits Rectangle {
     in property <int> turn: 0;  // 0 for white, 1 for black
+    in property <int> fullmove_count: 0;
+    in property <int> halfmove_clock: 0;
     in property <percent> b_eval: 50%;
     in property <percent> w_eval: 50%;
-
 
     HorizontalLayout {
         EvalBar {
@@ -40,6 +41,13 @@ export component Dashboard inherits Rectangle {
                         color: turn == 0 ? black : white;
                         horizontal-alignment: center;
                         font-size: Font.font_size_lg;
+                        font-weight: Font.bold;
+                    }
+                }
+                Rectangle {
+                    Text {
+                        text: "Fullmove Count: " + fullmove_count;
+                        font-size: Font.font_size_sm;
                         font-weight: Font.bold;
                     }
                 }

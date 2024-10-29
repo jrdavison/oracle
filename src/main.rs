@@ -30,13 +30,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragged_piece_sq: i32) {
-    println!("Setting application state");
     let pos = position.borrow();
     ui.set_board_state(BoardState {
         board: Rc::new(VecModel::from(pos.get_board_i32())).into(),
         turn: pos.get_side_to_move(),
-        halfmove: pos.get_halfmove_clock(),
-        fullmove: pos.get_fullmove_number(),
+        halfmove_clock: pos.get_halfmove_clock(),
+        fullmove_count: pos.get_fullmove_count(),
     });
 
     ui.set_dragged_piece_sq(dragged_piece_sq);
@@ -53,7 +52,7 @@ fn setup_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
     });
 
     ui.global::<RustInterface>().on_move_piece(move |src: i32, dest: i32| {
-        let _ui = ui_weak.upgrade().unwrap();
+        let ui = ui_weak.upgrade().unwrap();
         let position = position_weak.upgrade().unwrap();
         let mut position_mut = position.borrow_mut();
 
@@ -63,6 +62,6 @@ fn setup_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
         position_mut.move_piece(src_sq, dest_sq);
         drop(position_mut);
 
-        set_application_state(&_ui, &position, -1);
+        set_application_state(&ui, &position, -1);
     });
 }
