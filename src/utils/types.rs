@@ -1,25 +1,20 @@
-use num_derive::FromPrimitive;
+use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 use std::ops::{Add, Sub};
+use std::ops::{Index, IndexMut};
 
 use crate::utils::constants::SQUARE_NB;
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive)]
 pub enum Color {
     White,
     Black,
     ColorNb = 2,
 }
 
-impl From<Color> for i32 {
-    fn from(color: Color) -> Self {
-        color as i32
-    }
-}
-
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[derive(Clone, Copy, Debug)]
 pub enum PieceType {
     NoPiece,
     King,
@@ -46,7 +41,7 @@ impl PieceType {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive)]
 pub enum Piece {
     NoPiece,
     WKing = PieceType::King as u8,
@@ -64,14 +59,8 @@ pub enum Piece {
 }
 
 impl Default for Piece {
-    fn default() -> Self {
+    fn default() -> Piece {
         Piece::NoPiece
-    }
-}
-
-impl From<Piece> for i32 {
-    fn from(piece: Piece) -> Self {
-        piece as i32
     }
 }
 
@@ -83,7 +72,6 @@ impl Piece {
 
 #[repr(u8)]
 #[rustfmt::skip]
-#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, FromPrimitive)]
 pub enum Square {
     SqA1, SqB1, SqC1, SqD1, SqE1, SqF1, SqG1, SqH1,
@@ -96,6 +84,19 @@ pub enum Square {
     SqA8, SqB8, SqC8, SqD8, SqE8, SqF8, SqG8, SqH8,
 
     SquareNb = SQUARE_NB as u8,
+}
+
+impl Index<Square> for [Piece; SQUARE_NB] {
+    type Output = Piece;
+    fn index(&self, index: Square) -> &Piece {
+        &self[index as usize]
+    }
+}
+
+impl IndexMut<Square> for [Piece; SQUARE_NB] {
+    fn index_mut(&mut self, index: Square) -> &mut Piece {
+        &mut self[index as usize]
+    }
 }
 
 impl Square {
@@ -119,7 +120,7 @@ pub enum File {
 }
 
 impl File {
-    pub fn from_x(x: f32) -> Self {
+    pub fn from_x(x: f32) -> File {
         let file = (x.floor() as i32) / 80; // TODO: don't hardcode square size
         File::from_i32(file).unwrap_or(File::FileNb)
     }
@@ -154,7 +155,7 @@ pub enum Rank {
 }
 
 impl Rank {
-    pub fn from_y(y: f32) -> Self {
+    pub fn from_y(y: f32) -> Rank {
         let rank = 7 - (y.floor() as i32 / 80); // TODO: don't hardcode square size
         Rank::from_i32(rank).unwrap_or(Rank::RankNb)
     }

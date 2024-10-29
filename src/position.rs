@@ -1,3 +1,5 @@
+use num_traits::ToPrimitive;
+
 use crate::utils::{constants, types};
 
 pub struct Position {
@@ -13,11 +15,14 @@ impl Position {
     }
 
     pub fn get_board_i32(&self) -> Vec<i32> {
-        self.board.iter().map(|&piece| piece.into()).collect()
+        self.board
+            .iter()
+            .map(|&piece| types::Piece::to_i32(&piece).unwrap())
+            .collect()
     }
 
     pub fn get_side_to_move(&self) -> i32 {
-        self.side_to_move.into()
+        types::Color::to_i32(&self.side_to_move).unwrap()
     }
 
     pub fn get_halfmove_clock(&self) -> i32 {
@@ -26,6 +31,16 @@ impl Position {
 
     pub fn get_fullmove_number(&self) -> i32 {
         self.fullmove_number
+    }
+
+    pub fn move_piece(&mut self, src: types::Square, dest: types::Square) {
+        println!("Move from {:?} to {:?}", src, dest);
+
+        let src_piece = self.board[src];
+        self.board[src] = types::Piece::NoPiece;
+        self.board[dest] = src_piece;
+
+        // TODO: store move history for undos
     }
 }
 
