@@ -36,6 +36,10 @@ export component Board inherits TouchArea {
             font-weight: Font.semi_bold;
         }
 
+        if (dragged_piece_sq != -1 && RustInterface.highlight_valid_move_sq(dragged_piece_sq, i)) : Rectangle {
+            background: Palette.valid_sq;
+        }
+
         if (board_state[i] != 0 && dragged_piece_sq != i) : Image {
             source: Utils.piece_urls[board_state[i]];
             width: parent.width;

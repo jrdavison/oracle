@@ -14,7 +14,8 @@ struct BoardState {
 export component AppWindow inherits Window {
     in-out property <BoardState> board_state;
     in-out property <int> dragged_piece_sq;
-    title: "Oracle Chess Agent";
+
+    title: "Oracle";
 
     height: Dimensions.board_size;
     width:  Dimensions.board_size * 2;

@@ -1,9 +1,12 @@
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
+use std::collections::HashMap;
 use std::ops::{Add, Sub};
 use std::ops::{Index, IndexMut, Not};
 
-use crate::utils::constants::SQUARE_NB;
+pub type RookMoveDatabase = [HashMap<Bitboard, Bitboard>; Square::SquareNb as usize];
+pub type KnightMoveDatabase = [Bitboard; Square::SquareNb as usize];
+pub type Bitboard = u64;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq)]
@@ -25,7 +28,7 @@ impl Not for Color {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, FromPrimitive)]
 pub enum PieceType {
     NoPiece,
     King,
@@ -69,12 +72,6 @@ pub enum Piece {
     BPawn,
 }
 
-impl Default for Piece {
-    fn default() -> Piece {
-        Piece::NoPiece
-    }
-}
-
 impl Piece {
     pub fn make_piece(pt: PieceType, c: Color) -> Piece {
         Piece::from_u8((pt as u8) + ((c as u8) << 3)).unwrap_or(Piece::NoPiece)
@@ -82,6 +79,10 @@ impl Piece {
 
     pub fn color_of(piece: Piece) -> Color {
         Color::from_u8((piece as u8) >> 3).unwrap_or(Color::ColorNb)
+    }
+
+    pub fn type_of(piece: Piece) -> PieceType {
+        PieceType::from_u8(piece as u8 & 0b111).unwrap_or(PieceType::NoPiece)
     }
 }
 
@@ -98,17 +99,17 @@ pub enum Square {
     SqA7, SqB7, SqC7, SqD7, SqE7, SqF7, SqG7, SqH7,
     SqA8, SqB8, SqC8, SqD8, SqE8, SqF8, SqG8, SqH8,
 
-    SquareNb = SQUARE_NB as u8,
+    SquareNb = 64,
 }
 
-impl Index<Square> for [Piece; SQUARE_NB] {
+impl Index<Square> for [Piece; Square::SquareNb as usize] {
     type Output = Piece;
     fn index(&self, index: Square) -> &Piece {
         &self[index as usize]
     }
 }
 
-impl IndexMut<Square> for [Piece; SQUARE_NB] {
+impl IndexMut<Square> for [Piece; Square::SquareNb as usize] {
     fn index_mut(&mut self, index: Square) -> &mut Piece {
         &mut self[index as usize]
     }
@@ -117,6 +118,18 @@ impl IndexMut<Square> for [Piece; SQUARE_NB] {
 impl Square {
     pub fn make_square(file: File, rank: Rank) -> Square {
         Square::from_u8((rank as u8) << 3 | (file as u8)).unwrap_or(Square::SquareNb)
+    }
+
+    pub fn rank_of(sq: Square) -> Rank {
+        Rank::from_u8((sq as u8) >> 3).unwrap_or(Rank::RankNb)
+    }
+
+    pub fn file_of(sq: Square) -> File {
+        File::from_u8(sq as u8 & 0b111).unwrap_or(File::FileNb)
+    }
+
+    pub fn iter() -> impl Iterator<Item = Square> {
+        (0..(Square::SquareNb as usize)).map(|i| Square::from_u8(i as u8).unwrap())
     }
 }
 
