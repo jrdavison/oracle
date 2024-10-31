@@ -88,10 +88,6 @@ impl Position {
         return self.bitboards.checkers[color as usize];
     }
 
-    fn compute_knight_moves(&self, sq: Square) -> Bitboard {
-        KNIGHT_MOVES_DB[sq as usize]
-    }
-
     fn compute_pawn_moves(&self, sq: Square) -> Bitboard {
         let mut valid_moves = 0;
 
@@ -135,6 +131,10 @@ impl Position {
         return valid_moves;
     }
 
+    fn compute_knight_moves(&self, sq: Square) -> Bitboard {
+        KNIGHT_MOVES_DB[sq as usize]
+    }
+
     fn compute_rook_moves(&self, sq: Square) -> Bitboard {
         let rank = Square::rank_of(sq);
         let file = Square::file_of(sq);
@@ -152,11 +152,64 @@ impl Position {
         return valid_moves;
     }
 
+    fn compute_bishop_moves(&self, sq: Square) -> Bitboard {
+        let mut valid_moves = 0;
+
+        let mut target_square_ne = sq + Direction::North + Direction::East;
+        while target_square_ne != Square::SquareNb {
+            if bitboards::is_bit_set(self.get_checkers_bb(Color::ColorNb), target_square_ne) {
+                bitboards::set_bit(&mut valid_moves, target_square_ne);
+                break;
+            }
+            bitboards::set_bit(&mut valid_moves, target_square_ne);
+            target_square_ne = target_square_ne + Direction::North + Direction::East;
+        }
+
+        let mut target_square_nw = sq + Direction::North + Direction::West;
+        while target_square_nw != Square::SquareNb {
+            if bitboards::is_bit_set(self.get_checkers_bb(Color::ColorNb), target_square_nw) {
+                bitboards::set_bit(&mut valid_moves, target_square_nw);
+                break;
+            }
+            bitboards::set_bit(&mut valid_moves, target_square_nw);
+            target_square_nw = target_square_nw + Direction::North + Direction::West;
+        }
+
+        let mut target_square_se = sq + Direction::South + Direction::East;
+        while target_square_se != Square::SquareNb {
+            if bitboards::is_bit_set(self.get_checkers_bb(Color::ColorNb), target_square_se) {
+                bitboards::set_bit(&mut valid_moves, target_square_se);
+                break;
+            }
+            bitboards::set_bit(&mut valid_moves, target_square_se);
+            target_square_se = target_square_se + Direction::South + Direction::East;
+        }
+
+        let mut target_square_sw = sq + Direction::South + Direction::West;
+        while target_square_sw != Square::SquareNb {
+            if bitboards::is_bit_set(self.get_checkers_bb(Color::ColorNb), target_square_sw) {
+                bitboards::set_bit(&mut valid_moves, target_square_sw);
+                break;
+            }
+            bitboards::set_bit(&mut valid_moves, target_square_sw);
+            target_square_sw = target_square_sw + Direction::South + Direction::West;
+        }
+
+        return valid_moves;
+    }
+
+    fn compute_king_moves(&self, sq: Square) -> Bitboard {
+        return 0;
+    }
+
     pub fn compute_valid_moves(&mut self, color: Color) {
         let start = Instant::now();
 
+        // TODO: probably need to keep attack bitboards for each color
+
         for sq in Square::iter() {
             let piece = self.board[sq];
+            self.bitboards.valid_moves[sq as usize] = 0; // clear previous moves
             if Piece::color_of(piece) == color {
                 match Piece::type_of(piece) {
                     PieceType::Pawn => {
@@ -165,21 +218,32 @@ impl Position {
                     PieceType::Knight => {
                         self.bitboards.valid_moves[sq as usize] = self.compute_knight_moves(sq);
                     }
-                    PieceType::King => {}
-                    PieceType::Queen => {}
-                    PieceType::Bishop => {}
                     PieceType::Rook => {
                         self.bitboards.valid_moves[sq as usize] = self.compute_rook_moves(sq);
+                    }
+                    PieceType::Bishop => {
+                        self.bitboards.valid_moves[sq as usize] = self.compute_bishop_moves(sq);
+                    }
+                    PieceType::Queen => {
+                        self.bitboards.valid_moves[sq as usize] =
+                            self.compute_rook_moves(sq) | self.compute_bishop_moves(sq);
+                    }
+                    PieceType::King => {
+                        self.bitboards.valid_moves[sq as usize] = self.compute_king_moves(sq);
                     }
                     _ => {}
                 }
             }
 
+            // TODO: check if king is in check
+
             // can't capture own pieces
             self.bitboards.valid_moves[sq as usize] &= !self.get_checkers_bb(color);
         }
 
-        self.compute_time = start.elapsed();
+        let duration = start.elapsed();
+        println!("Computed moves in {:?}", duration);
+        self.compute_time = duration;
     }
 
     pub fn move_piece(&mut self, from: Square, to: Square) -> bool {

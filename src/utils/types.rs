@@ -166,6 +166,14 @@ pub enum Direction {
     West = -1,
 }
 
+impl Not for Direction {
+    type Output = Direction;
+    fn not(self) -> Direction {
+        let inverted = -(self as i8);
+        Direction::from_i8(inverted).unwrap()
+    }
+}
+
 impl Direction {
     pub fn forward_direction(c: Color) -> Direction {
         match c {
