@@ -14,6 +14,7 @@ struct BoardState {
 export component AppWindow inherits Window {
     in-out property <BoardState> board_state;
     in-out property <int> dragged_piece_sq;
+    in-out property <string> compute_time;
 
     title: "Oracle";
 
@@ -36,6 +37,7 @@ export component AppWindow inherits Window {
             turn: board_state.turn;
             halfmove_clock: board_state.halfmove_clock;
             fullmove_count: board_state.fullmove_count;
+            compute_time: compute_time;
         }
     }
 }

@@ -1,12 +1,13 @@
+use core::panic;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 use std::collections::HashMap;
 use std::ops::{Add, Sub};
 use std::ops::{Index, IndexMut, Not};
 
+pub type Bitboard = u64;
 pub type RookMoveDatabase = [HashMap<Bitboard, Bitboard>; Square::SquareNb as usize];
 pub type KnightMoveDatabase = [Bitboard; Square::SquareNb as usize];
-pub type Bitboard = u64;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq)]
@@ -19,11 +20,8 @@ pub enum Color {
 impl Not for Color {
     type Output = Color;
     fn not(self) -> Color {
-        match self {
-            Color::White => Color::Black,
-            Color::Black => Color::White,
-            Color::ColorNb => Color::ColorNb,
-        }
+        let inverted = !(self as u8) & 1;
+        Color::from_u8(inverted).unwrap_or(Color::ColorNb)
     }
 }
 
@@ -88,7 +86,7 @@ impl Piece {
 
 #[repr(u8)]
 #[rustfmt::skip]
-#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, PartialOrd)]
 pub enum Square {
     SqA1, SqB1, SqC1, SqD1, SqE1, SqF1, SqG1, SqH1,
     SqA2, SqB2, SqC2, SqD2, SqE2, SqF2, SqG2, SqH2,
@@ -115,6 +113,28 @@ impl IndexMut<Square> for [Piece; Square::SquareNb as usize] {
     }
 }
 
+impl Add<Direction> for Square {
+    type Output = Square;
+    fn add(self, rhs: Direction) -> Square {
+        let new_sq = (self as i8).wrapping_add(rhs as i8);
+
+        // prevent wrapping north-south movement
+        if !Square::is_valid(new_sq) {
+            return Square::SquareNb;
+        }
+
+        // prevent wrapping east-west movement
+        let file = Square::file_of(self);
+        if file == File::FileA && rhs == Direction::West {
+            return Square::SquareNb;
+        } else if file == File::FileH && rhs == Direction::East {
+            return Square::SquareNb;
+        }
+
+        return Square::from_i8(new_sq).unwrap_or(Square::SquareNb);
+    }
+}
+
 impl Square {
     pub fn make_square(file: File, rank: Rank) -> Square {
         Square::from_u8((rank as u8) << 3 | (file as u8)).unwrap_or(Square::SquareNb)
@@ -131,10 +151,33 @@ impl Square {
     pub fn iter() -> impl Iterator<Item = Square> {
         (0..(Square::SquareNb as usize)).map(|i| Square::from_u8(i as u8).unwrap())
     }
+
+    pub fn is_valid(sq: i8) -> bool {
+        Square::SqA1 as i8 <= sq && sq < Square::SquareNb as i8
+    }
+}
+
+#[repr(i8)]
+#[derive(Clone, Copy, Debug, PartialEq, FromPrimitive)]
+pub enum Direction {
+    North = 8,
+    East = 1,
+    South = -8,
+    West = -1,
+}
+
+impl Direction {
+    pub fn forward_direction(c: Color) -> Direction {
+        match c {
+            Color::White => Direction::North,
+            Color::Black => Direction::South,
+            _ => panic!("Invalid color"),
+        }
+    }
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
 pub enum File {
     FileA,
     FileB,
@@ -151,6 +194,10 @@ impl File {
     pub fn from_x(x: f32) -> File {
         let file = (x.floor() as i32) / 80; // TODO: don't hardcode square size
         File::from_i32(file).unwrap_or(File::FileNb)
+    }
+
+    pub fn iter() -> impl Iterator<Item = File> {
+        (0..(File::FileNb as usize)).map(|i| File::from_u8(i as u8).unwrap())
     }
 }
 
@@ -169,7 +216,7 @@ impl Sub<u8> for File {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
 pub enum Rank {
     Rank1,
     Rank2,
@@ -186,6 +233,24 @@ impl Rank {
     pub fn from_y(y: f32) -> Rank {
         let rank = 7 - (y.floor() as i32 / 80); // TODO: don't hardcode square size
         Rank::from_i32(rank).unwrap_or(Rank::RankNb)
+    }
+
+    pub fn relative_rank(color: Color, rank: Rank) -> Rank {
+        match color {
+            Color::White => rank,
+            Color::Black => Rank::Rank8 - (rank as u8),
+            _ => panic!("Invalid color"),
+        }
+    }
+
+    pub fn iter() -> impl Iterator<Item = Rank> {
+        (0..(Rank::RankNb as usize)).map(|i| Rank::from_u8(i as u8).unwrap())
+    }
+
+    pub fn iter_reverse() -> impl Iterator<Item = Rank> {
+        (0..(Rank::RankNb as usize))
+            .rev()
+            .map(|i| Rank::from_u8(i as u8).unwrap())
     }
 }
 

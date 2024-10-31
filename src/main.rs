@@ -1,12 +1,14 @@
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod bitboards;
 mod position;
 mod utils;
 
 use num_traits::FromPrimitive;
 use num_traits::ToPrimitive;
 use position::Position;
+use slint::SharedString;
 use slint::VecModel;
 use std::cell::RefCell;
 use std::error::Error;
@@ -27,16 +29,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     ui.run().unwrap();
 
-    Ok(())
+    return Ok(());
 }
 
 fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragged_piece_sq: i32, compute_moves: bool) {
     let mut pos = position.borrow_mut();
     let side_to_move = pos.get_side_to_move();
-
-    if compute_moves {
-        pos.compute_valid_moves(side_to_move);
-    }
 
     ui.set_board_state(BoardState {
         board: Rc::new(VecModel::from(pos.get_board_i32())).into(),
@@ -45,6 +43,12 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
         fullmove_count: pos.get_fullmove_count(),
     });
     ui.set_dragged_piece_sq(dragged_piece_sq);
+
+    if compute_moves {
+        pos.compute_valid_moves(side_to_move);
+        println!("Test: {:?}", pos.get_compute_time_string());
+        ui.set_compute_time(SharedString::from(pos.get_compute_time_string()));
+    }
 }
 
 fn setup_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {

@@ -20,7 +20,7 @@ export component Dashboard inherits Rectangle {
     in property <int> turn: 0;  // 0 for white, 1 for black
     in property <int> fullmove_count: 0;
     in property <int> halfmove_clock: 0;
-    in property <float> compute_time: 0.0;
+    in property <string> compute_time: "0.0";
     in property <percent> b_eval: 50%;
     in property <percent> w_eval: 50%;
 
@@ -58,7 +58,7 @@ export component Dashboard inherits Rectangle {
                         font-weight: Font.semi_bold;
                     }
                     Text {
-                        text: "Compute Time: " + compute_time + "ms";
+                        text: "Compute Time: " + compute_time;
                         font-size: Font.font_size_sm;
                         font-weight: Font.semi_bold;
                     }

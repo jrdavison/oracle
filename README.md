@@ -6,14 +6,14 @@ A chess agent built using Rust.
 
 ## Usage
 
-1. Build with `cargo`:
-
-    ```cli
-    cargo build
-    ```
-
-2. Run the application binary:
+1. Run the application binary:
 
     ```cli
     cargo run
+    ```
+
+2. Build release optimized binary:
+
+    ```cli
+    cargo build --release
     ```

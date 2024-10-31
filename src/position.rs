@@ -1,31 +1,56 @@
+use crate::bitboards;
 use crate::utils::constants;
 use crate::utils::types::{
-    Bitboard, Color, File, KnightMoveDatabase, Piece, PieceType, Rank, RookMoveDatabase, Square,
+    Bitboard, Color, Direction, File, KnightMoveDatabase, Piece, PieceType, Rank, RookMoveDatabase, Square,
 };
 use num_traits::ToPrimitive;
-use std::collections::HashMap;
-use std::hash::Hash;
-use std::io::{Cursor, Read};
-use std::time::Instant;
+use once_cell::sync::Lazy;
+use std::time::{Duration, Instant};
+
+static KNIGHT_MOVES_DB: Lazy<KnightMoveDatabase> = Lazy::new(|| bitboards::load_knight_move_db());
+static ROOK_MOVES_DB: Lazy<RookMoveDatabase> = Lazy::new(|| bitboards::load_rook_move_db());
+
+pub struct Bitboards {
+    valid_moves: [Bitboard; Square::SquareNb as usize],
+    checkers: [Bitboard; Color::ColorNb as usize],
+}
+
+impl Default for Bitboards {
+    fn default() -> Self {
+        Bitboards {
+            valid_moves: [0; Square::SquareNb as usize],
+            checkers: [0; Color::ColorNb as usize],
+        }
+    }
+}
 
 pub struct Position {
     board: [Piece; Square::SquareNb as usize],
 
-    // TODO: maybe move this into a separate struct bitboard.rs
-    valid_moves: [Bitboard; Square::SquareNb as usize],
-    checkers_bb: [Bitboard; Color::ColorNb as usize],
-
     side_to_move: Color,
     halfmove_clock: i32,
     fullmove_count: i32,
+    compute_time: Duration,
 
-    knight_moves_db: KnightMoveDatabase,
-    rook_moves_db: RookMoveDatabase,
+    bitboards: Bitboards,
+}
+
+impl Default for Position {
+    fn default() -> Self {
+        Position {
+            board: [Piece::NoPiece; Square::SquareNb as usize],
+            side_to_move: Color::White,
+            halfmove_clock: 0,
+            fullmove_count: 1,
+            compute_time: Duration::default(),
+            bitboards: Bitboards::default(),
+        }
+    }
 }
 
 impl Position {
     pub fn new(fen: &str) -> Position {
-        load_from_fen(fen)
+        init_from_fen(fen)
     }
 
     pub fn get_board_i32(&self) -> Vec<i32> {
@@ -44,28 +69,73 @@ impl Position {
         self.fullmove_count
     }
 
+    pub fn get_compute_time_string(&self) -> String {
+        format!("{:?}", self.compute_time)
+    }
+
     pub fn is_valid_move(&self, from: Square, to: Square) -> bool {
         let piece = self.board[from];
         if Piece::color_of(piece) != self.side_to_move {
             return false;
         }
-        is_bit_set(self.valid_moves[from as usize], to)
+        return bitboards::is_bit_set(self.bitboards.valid_moves[from as usize], to);
     }
 
     fn get_checkers_bb(&self, color: Color) -> Bitboard {
         if color == Color::ColorNb {
-            return self.checkers_bb[Color::White as usize] | self.checkers_bb[Color::Black as usize];
+            return self.bitboards.checkers[Color::White as usize] | self.bitboards.checkers[Color::Black as usize];
         }
-        self.checkers_bb[color as usize]
+        return self.bitboards.checkers[color as usize];
     }
 
     fn compute_knight_moves(&self, sq: Square) -> Bitboard {
-        self.knight_moves_db[sq as usize]
+        KNIGHT_MOVES_DB[sq as usize]
+    }
+
+    fn compute_pawn_moves(&self, sq: Square) -> Bitboard {
+        let mut valid_moves = 0;
+
+        let piece = self.board[sq];
+        let color = Piece::color_of(piece);
+        let forward = Direction::forward_direction(color);
+
+        // normal move
+        let mut target_sq = sq;
+        for i in 0..2 {
+            // only allow double move from starting rank
+            if i == 1 && (Rank::relative_rank(color, Square::rank_of(sq)) != Rank::Rank2) {
+                break;
+            }
+
+            target_sq = target_sq + forward;
+            if (target_sq != Square::SquareNb)
+                && !bitboards::is_bit_set(self.get_checkers_bb(Color::ColorNb), target_sq)
+            {
+                bitboards::set_bit(&mut valid_moves, target_sq);
+            } else {
+                break;
+            }
+
+            // TODO: set en passant square
+        }
+
+        // capture moves
+        let target_sq_east = (sq + forward) + Direction::East;
+        if (target_sq_east != Square::SquareNb) && bitboards::is_bit_set(self.get_checkers_bb(!color), target_sq_east) {
+            bitboards::set_bit(&mut valid_moves, target_sq_east);
+        }
+
+        let target_sq_west = (sq + forward) + Direction::West;
+        if (target_sq_west != Square::SquareNb) && bitboards::is_bit_set(self.get_checkers_bb(!color), target_sq_west) {
+            bitboards::set_bit(&mut valid_moves, target_sq_west);
+        }
+
+        // TODO: capture en passant
+
+        return valid_moves;
     }
 
     fn compute_rook_moves(&self, sq: Square) -> Bitboard {
-        let mut valid_moves = Bitboard::default();
-
         let rank = Square::rank_of(sq);
         let file = Square::file_of(sq);
 
@@ -74,12 +144,12 @@ impl Position {
         let move_mask = (h_mask | v_mask) & !(1u64 << (sq as u64));
 
         let blocker_key = self.get_checkers_bb(Color::ColorNb) & move_mask;
-        valid_moves = self.rook_moves_db[sq as usize]
+        let valid_moves = ROOK_MOVES_DB[sq as usize]
             .get(&blocker_key)
             .unwrap_or(&Bitboard::default())
             .clone();
 
-        valid_moves
+        return valid_moves;
     }
 
     pub fn compute_valid_moves(&mut self, color: Color) {
@@ -89,24 +159,27 @@ impl Position {
             let piece = self.board[sq];
             if Piece::color_of(piece) == color {
                 match Piece::type_of(piece) {
-                    PieceType::Pawn => {}
+                    PieceType::Pawn => {
+                        self.bitboards.valid_moves[sq as usize] = self.compute_pawn_moves(sq);
+                    }
                     PieceType::Knight => {
-                        self.valid_moves[sq as usize] = self.compute_knight_moves(sq);
+                        self.bitboards.valid_moves[sq as usize] = self.compute_knight_moves(sq);
                     }
                     PieceType::King => {}
                     PieceType::Queen => {}
                     PieceType::Bishop => {}
                     PieceType::Rook => {
-                        self.valid_moves[sq as usize] = self.compute_rook_moves(sq);
+                        self.bitboards.valid_moves[sq as usize] = self.compute_rook_moves(sq);
                     }
                     _ => {}
                 }
             }
-            self.valid_moves[sq as usize] &= !self.checkers_bb[color as usize];
+
+            // can't capture own pieces
+            self.bitboards.valid_moves[sq as usize] &= !self.get_checkers_bb(color);
         }
 
-        let duration = start.elapsed();
-        println!("Time elapsed in compute_valid_moves() is: {:?}", duration);
+        self.compute_time = start.elapsed();
     }
 
     pub fn move_piece(&mut self, from: Square, to: Square) -> bool {
@@ -118,6 +191,9 @@ impl Position {
         self.board[from] = Piece::NoPiece;
         self.board[to] = piece;
 
+        bitboards::clear_bit(&mut self.bitboards.checkers[Piece::color_of(piece) as usize], from);
+        bitboards::set_bit(&mut self.bitboards.checkers[Piece::color_of(piece) as usize], to);
+
         if self.side_to_move == Color::Black {
             self.fullmove_count += 1;
         }
@@ -125,20 +201,19 @@ impl Position {
         self.side_to_move = !self.side_to_move;
         // TODO: store move history for undos
         // TODO: count halfmoves
-        true
+        return true;
     }
 }
 
-fn load_from_fen(fen: &str) -> Position {
+fn init_from_fen(fen: &str) -> Position {
     /*
     More info about fen notation: https://www.chess.com/terms/fen-chess
     */
     let mut fen_parts = fen.split_whitespace();
 
+    let mut position = Position::default();
     let mut file = File::FileA;
     let mut rank = Rank::Rank8;
-    let mut board = [Piece::NoPiece; Square::SquareNb as usize];
-    let mut checkers_bb = [Bitboard::default(); Color::ColorNb as usize];
 
     let pieces = fen_parts.next().unwrap_or("");
     for c in pieces.chars() {
@@ -155,14 +230,14 @@ fn load_from_fen(fen: &str) -> Position {
                 let color = if c.is_uppercase() { Color::White } else { Color::Black };
                 let sq = Square::make_square(file, rank);
                 let piece_type = PieceType::make_piece_type(c);
-                board[sq as usize] = Piece::make_piece(piece_type, color);
-                set_bit(&mut checkers_bb[color as usize], sq);
+                position.board[sq as usize] = Piece::make_piece(piece_type, color);
+                bitboards::set_bit(&mut position.bitboards.checkers[color as usize], sq);
                 file = file + 1;
             }
         }
     }
 
-    let side_to_move = match fen_parts.next().unwrap_or("w") {
+    position.side_to_move = match fen_parts.next().unwrap_or("w") {
         "w" => Color::White,
         "b" => Color::Black,
         _ => panic!("Invalid side to move"),
@@ -174,77 +249,8 @@ fn load_from_fen(fen: &str) -> Position {
     // TODO: en passant square
     let _ = fen_parts.next().unwrap_or("-");
 
-    let halfmove_clock = fen_parts.next().unwrap_or("0").parse::<i32>().unwrap_or(0);
-    let fullmove_count = fen_parts.next().unwrap_or("1").parse::<i32>().unwrap_or(1);
+    position.halfmove_clock = fen_parts.next().unwrap_or("0").parse::<i32>().unwrap_or(0);
+    position.fullmove_count = fen_parts.next().unwrap_or("1").parse::<i32>().unwrap_or(1);
 
-    Position {
-        board,
-        checkers_bb,
-        side_to_move,
-        halfmove_clock,
-        fullmove_count,
-        valid_moves: [Bitboard::default(); Square::SquareNb as usize], // TODO: probably a better way to default this
-        knight_moves_db: load_knight_move_db(),
-        rook_moves_db: load_rook_move_db(),
-    }
-}
-
-fn load_knight_move_db() -> KnightMoveDatabase {
-    let file = constants::DATA_DIR
-        .get_file("knight_moves.bin")
-        .expect("Failed to get file");
-    let data = file.contents();
-
-    assert_eq!(data.len(), (Square::SquareNb as usize) * 8, "Invalid data length!");
-
-    let mut knight_moves = [Bitboard::default(); Square::SquareNb as usize];
-    for (i, bb) in knight_moves.iter_mut().enumerate() {
-        let start = i * 8;
-        let end = start + 8;
-        *bb = u64::from_le_bytes(data[start..end].try_into().unwrap());
-    }
-
-    knight_moves
-}
-
-pub fn load_rook_move_db() -> RookMoveDatabase {
-    let file = constants::DATA_DIR
-        .get_file("rook_moves.bin")
-        .expect("Failed to get file");
-    let mut reader = Cursor::new(file.contents());
-
-    let mut rook_moves: RookMoveDatabase = std::array::from_fn(|_| HashMap::new());
-    for sq in Square::iter() {
-        let mut moves: HashMap<Bitboard, Bitboard> = HashMap::new();
-
-        let mut num_entries_buf = [0u8; 4];
-        reader
-            .read_exact(&mut num_entries_buf)
-            .expect("Failed to read number of entries");
-        let num_entries = u32::from_le_bytes(num_entries_buf);
-        for _ in 0..num_entries {
-            let mut blockers_buf = [0u8; 8];
-            let mut attacks_buf = [0u8; 8];
-
-            reader.read_exact(&mut blockers_buf).expect("Failed to read blockers");
-            reader.read_exact(&mut attacks_buf).expect("Failed to read attacks");
-
-            let blockers = u64::from_le_bytes(blockers_buf);
-            let attacks = u64::from_le_bytes(attacks_buf);
-
-            moves.insert(blockers, attacks);
-        }
-        rook_moves[sq as usize] = moves;
-    }
-
-    rook_moves
-}
-
-// TODO: move these to bitboard.rs
-fn set_bit(bitboard: &mut Bitboard, sq: Square) {
-    *bitboard |= 1u64 << sq as u64;
-}
-
-fn is_bit_set(bitboard: Bitboard, sq: Square) -> bool {
-    bitboard & (1u64 << sq as u64) != 0
+    return position;
 }
