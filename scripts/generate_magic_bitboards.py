@@ -18,6 +18,17 @@ KNIGHT_DIRECTIONS = [
     (-1, -2),  # SWW
 ]
 
+KING_DIRECTIONS = [
+    (1, 0),  # N
+    (1, 1),  # NE
+    (0, 1),  # E
+    (-1, 1),  # SE
+    (-1, 0),  # S
+    (-1, -1),  # SW
+    (0, -1),  # W
+    (1, -1),  # NW
+]
+
 
 def get_square(r: int, f: int) -> int:
     return r * 8 + f
@@ -81,6 +92,18 @@ def knight_attacks(sq: int) -> int:
     return attacks
 
 
+def king_attacks(sq: int) -> int:
+    attacks = 0
+    rank = get_rank(sq)
+    file = get_file(sq)
+
+    for direction in KING_DIRECTIONS:
+        r, f = rank + direction[0], file + direction[1]
+        if 0 <= r < 8 and 0 <= f < 8:
+            attacks |= 1 << get_square(r, f)
+    return attacks
+
+
 def generate_relevant_blockers(mask: int) -> Iterator[int]:
     relevant_bits = [i for i in range(64) if mask & (1 << i)]
     num_relevant_bits = len(relevant_bits)
@@ -112,6 +135,14 @@ def generate_knight_move_database() -> List[int]:
         knight_moves[sq] = knight_attacks(sq)
     print("Computed knight moves.")
     return knight_moves
+
+
+def generate_king_move_database() -> List[int]:
+    king_moves = [0 for _ in range(64)]
+    for sq in range(64):
+        king_moves[sq] = king_attacks(sq)
+    print("Computed king moves.")
+    return king_moves
 
 
 def save_rook_move_database(filename, rook_move_database) -> None:
@@ -148,3 +179,6 @@ save_rook_move_database("../data/rook_moves.bin", rook_move_database)
 
 knight_move_database = generate_knight_move_database()
 save_knight_move_database("../data/knight_moves.bin", knight_move_database)
+
+king_move_database = generate_king_move_database()
+save_knight_move_database("../data/king_moves.bin", king_move_database)

@@ -1,18 +1,20 @@
 use crate::bitboards;
 use crate::utils::constants;
 use crate::utils::types::{
-    Bitboard, Color, Direction, File, KnightMoveDatabase, Piece, PieceType, Rank, RookMoveDatabase, Square,
+    Bitboard, BlockersMoveDatabase, Color, Direction, File, Piece, PieceType, Rank, SimpleMoveDatabase, Square,
 };
 use num_traits::ToPrimitive;
 use once_cell::sync::Lazy;
 use std::time::{Duration, Instant};
 
-static KNIGHT_MOVES_DB: Lazy<KnightMoveDatabase> = Lazy::new(|| bitboards::load_knight_move_db());
-static ROOK_MOVES_DB: Lazy<RookMoveDatabase> = Lazy::new(|| bitboards::load_rook_move_db());
+static KNIGHT_MOVES_DB: Lazy<SimpleMoveDatabase> = Lazy::new(|| bitboards::load_simple_move_db("knight_moves.bin"));
+static KING_MOVES_DB: Lazy<SimpleMoveDatabase> = Lazy::new(|| bitboards::load_simple_move_db("king_moves.bin"));
+static ROOK_MOVES_DB: Lazy<BlockersMoveDatabase> = Lazy::new(|| bitboards::load_blockers_move_db("rook_moves.bin"));
 
 pub struct Bitboards {
     valid_moves: [Bitboard; Square::SquareNb as usize],
     checkers: [Bitboard; Color::ColorNb as usize],
+    attacks: [Bitboard; Color::ColorNb as usize],
 }
 
 impl Default for Bitboards {
@@ -20,6 +22,7 @@ impl Default for Bitboards {
         Bitboards {
             valid_moves: [0; Square::SquareNb as usize],
             checkers: [0; Color::ColorNb as usize],
+            attacks: [0; Color::ColorNb as usize],
         }
     }
 }
@@ -199,13 +202,13 @@ impl Position {
     }
 
     fn compute_king_moves(&self, sq: Square) -> Bitboard {
-        return 0;
+        KING_MOVES_DB[sq as usize]
     }
 
     pub fn compute_valid_moves(&mut self, color: Color) {
         let start = Instant::now();
 
-        // TODO: probably need to keep attack bitboards for each color
+        // self.bitboards.attacks[Color::]
 
         for sq in Square::iter() {
             let piece = self.board[sq];
@@ -241,9 +244,7 @@ impl Position {
             self.bitboards.valid_moves[sq as usize] &= !self.get_checkers_bb(color);
         }
 
-        let duration = start.elapsed();
-        println!("Computed moves in {:?}", duration);
-        self.compute_time = duration;
+        self.compute_time = start.elapsed();
     }
 
     pub fn move_piece(&mut self, from: Square, to: Square) -> bool {

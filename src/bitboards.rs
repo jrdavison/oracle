@@ -1,5 +1,5 @@
 use crate::utils::constants;
-use crate::utils::types::{Bitboard, File, KnightMoveDatabase, Rank, RookMoveDatabase, Square};
+use crate::utils::types::{Bitboard, BlockersMoveDatabase, File, Rank, SimpleMoveDatabase, Square};
 use std::collections::HashMap;
 use std::io::{Cursor, Read};
 
@@ -33,10 +33,8 @@ pub fn is_bit_set(bitboard: Bitboard, sq: Square) -> bool {
     return bitboard & (1u64 << sq as u64) != 0;
 }
 
-pub fn load_knight_move_db() -> KnightMoveDatabase {
-    let file = constants::DATA_DIR
-        .get_file("knight_moves.bin")
-        .expect("Failed to get file");
+pub fn load_simple_move_db(path: &str) -> SimpleMoveDatabase {
+    let file = constants::DATA_DIR.get_file(path).expect("Failed to get file");
     let data = file.contents();
 
     assert_eq!(data.len(), (Square::SquareNb as usize) * 8, "Invalid data length!");
@@ -51,13 +49,11 @@ pub fn load_knight_move_db() -> KnightMoveDatabase {
     return knight_moves;
 }
 
-pub fn load_rook_move_db() -> RookMoveDatabase {
-    let file = constants::DATA_DIR
-        .get_file("rook_moves.bin")
-        .expect("Failed to get file");
+pub fn load_blockers_move_db(path: &str) -> BlockersMoveDatabase {
+    let file = constants::DATA_DIR.get_file(path).expect("Failed to get file");
     let mut reader = Cursor::new(file.contents());
 
-    let mut rook_moves: RookMoveDatabase = std::array::from_fn(|_| HashMap::new());
+    let mut move_database: BlockersMoveDatabase = std::array::from_fn(|_| HashMap::new());
     for sq in Square::iter() {
         let mut moves: HashMap<Bitboard, Bitboard> = HashMap::new();
 
@@ -78,8 +74,8 @@ pub fn load_rook_move_db() -> RookMoveDatabase {
 
             moves.insert(blockers, attacks);
         }
-        rook_moves[sq as usize] = moves;
+        move_database[sq as usize] = moves;
     }
 
-    return rook_moves;
+    return move_database;
 }
