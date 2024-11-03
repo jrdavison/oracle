@@ -17,7 +17,7 @@ pub enum MoveType {
     Capture,
     EnPassant,
     TwoSquarePush,
-    Castle,
+    // Castle,
     Promotion,
 }
 

@@ -1,8 +1,8 @@
 use crate::bitboards;
+use crate::move_info::MoveInfo;
 use crate::utils::constants;
 use crate::utils::types::{
-    Bitboard, BlockersMoveDatabase, Color, Direction, File, MoveType, Piece, PieceType, Rank, SimpleMoveDatabase,
-    Square,
+    Bitboard, BlockersMoveDatabase, Color, Direction, File, Piece, PieceType, Rank, SimpleMoveDatabase, Square,
 };
 use num_traits::ToPrimitive;
 use once_cell::sync::Lazy;
@@ -11,82 +11,6 @@ use std::time::{Duration, Instant};
 static KNIGHT_MOVES_DB: Lazy<SimpleMoveDatabase> = Lazy::new(|| bitboards::load_simple_move_db("knight_moves.bin"));
 static KING_MOVES_DB: Lazy<SimpleMoveDatabase> = Lazy::new(|| bitboards::load_simple_move_db("king_moves.bin"));
 static ROOK_MOVES_DB: Lazy<BlockersMoveDatabase> = Lazy::new(|| bitboards::load_blockers_move_db("rook_moves.bin"));
-
-// TODO: put this someplace else
-pub struct Move {
-    from: Square,
-    to: Square,
-    moved_piece: Piece,
-    captured_piece: Piece,
-    move_type: MoveType,
-}
-
-impl Default for Move {
-    fn default() -> Self {
-        Move {
-            from: Square::Count,
-            to: Square::Count,
-            moved_piece: Piece::Empty,
-            captured_piece: Piece::Empty,
-            move_type: MoveType::Invalid,
-        }
-    }
-}
-
-impl Move {
-    fn new(from: Square, to: Square, board: &[Piece; Square::Count as usize]) -> Move {
-        let moved_piece = board[from as usize];
-        let mut captured_piece = board[to as usize];
-        let mut move_type = MoveType::Invalid;
-
-        match Piece::type_of(moved_piece) {
-            PieceType::Pawn => {
-                let color = Piece::color_of(moved_piece);
-                let from_rank = Square::rank_of(from);
-                let from_file = Square::file_of(from);
-                let to_rank = Square::rank_of(to);
-                let to_file = Square::file_of(to);
-
-                if Rank::relative_rank(color, from_rank) == Rank::Rank2 {
-                    move_type = MoveType::TwoSquarePush;
-                } else if captured_piece != Piece::Empty {
-                    move_type = MoveType::Capture;
-                } else if from_file != to_file {
-                    captured_piece = board[to + Direction::forward_direction(!color)];
-                    move_type = MoveType::EnPassant;
-                } else if Rank::relative_rank(color, to_rank) == Rank::Rank8 {
-                    // TODO: promotion
-                    move_type = MoveType::Promotion;
-                } else {
-                    move_type = MoveType::Quiet;
-                }
-            }
-            PieceType::King => {
-                // TODO: castling moves
-                println!("King move");
-            }
-            _ => {
-                if captured_piece != Piece::Empty {
-                    move_type = MoveType::Capture;
-                } else {
-                    move_type = MoveType::Quiet;
-                }
-            }
-        }
-
-        Move {
-            from,
-            to,
-            moved_piece,
-            captured_piece,
-            move_type,
-        }
-    }
-
-    pub fn is_valid(&self) -> bool {
-        self.move_type != MoveType::Invalid
-    }
-}
 
 pub struct Bitboards {
     valid_moves: [Bitboard; Square::Count as usize],
@@ -107,8 +31,7 @@ impl Default for Bitboards {
 pub struct Position {
     board: [Piece; Square::Count as usize],
     bitboards: Bitboards,
-    en_passant_square: Square,
-
+    // en_passant_square: Square,
     compute_time: Duration,
     fullmove_count: i32,
     halfmove_clock: i32,
@@ -120,7 +43,7 @@ impl Default for Position {
         Position {
             board: [Piece::Empty; Square::Count as usize],
             bitboards: Bitboards::default(),
-            en_passant_square: Square::Count,
+            // en_passant_square: Square::Count,
             compute_time: Duration::default(),
             fullmove_count: 1,
             halfmove_clock: 0,
@@ -134,27 +57,27 @@ impl Position {
         init_from_fen(fen)
     }
 
-    pub fn get_board_i32(&self) -> Vec<i32> {
+    pub fn board_i32(&self) -> Vec<i32> {
         self.board.iter().map(|&piece| Piece::to_i32(&piece).unwrap()).collect()
     }
 
-    pub fn get_side_to_move(&self) -> Color {
+    pub fn side_to_move(&self) -> Color {
         self.side_to_move
     }
 
-    pub fn get_halfmove_clock(&self) -> i32 {
+    pub fn halfmove_clock(&self) -> i32 {
         self.halfmove_clock
     }
 
-    pub fn get_fullmove_count(&self) -> i32 {
+    pub fn fullmove_count(&self) -> i32 {
         self.fullmove_count
     }
 
-    pub fn get_compute_time_string(&self) -> String {
+    pub fn compute_time(&self) -> String {
         format!("{:?}", self.compute_time)
     }
 
-    pub fn is_valid_move(&self, from: Square, to: Square) -> bool {
+    pub fn valid_move(&self, from: Square, to: Square) -> bool {
         let piece = self.board[from];
         if Piece::color_of(piece) != self.side_to_move {
             return false;
@@ -320,30 +243,31 @@ impl Position {
         self.compute_time = start.elapsed();
     }
 
-    pub fn move_piece(&mut self, from: Square, to: Square) -> Move {
+    pub fn move_piece(&mut self, from: Square, to: Square) -> MoveInfo {
         // BUG: something is freezing the UI on moves?
-        if !self.is_valid_move(from, to) {
-            return Move::default(); // defaults to invalid move
+        if !self.valid_move(from, to) {
+            return MoveInfo::default(); // defaults to invalid move
         }
 
-        let move_info = Move::new(from, to, &self.board);
+        let move_info = MoveInfo::new(from, to, &self.board);
 
         // move piece
-        self.board[move_info.to as usize] = move_info.moved_piece;
-        self.board[move_info.from as usize] = Piece::Empty;
+        self.board[move_info.to() as usize] = move_info.moved_piece();
+        self.board[move_info.from() as usize] = Piece::Empty;
         bitboards::clear_bit(
-            &mut self.bitboards.checkers[Piece::color_of(move_info.moved_piece) as usize],
+            &mut self.bitboards.checkers[Piece::color_of(move_info.moved_piece()) as usize],
             from,
         );
         bitboards::set_bit(
-            &mut self.bitboards.checkers[Piece::color_of(move_info.moved_piece) as usize],
+            &mut self.bitboards.checkers[Piece::color_of(move_info.moved_piece()) as usize],
             to,
         );
 
         // capture piece
-        if move_info.captured_piece != Piece::Empty {
+        // TODO: match instead?
+        if move_info.captured_piece() != Piece::Empty {
             bitboards::clear_bit(
-                &mut self.bitboards.checkers[Piece::color_of(move_info.captured_piece) as usize],
+                &mut self.bitboards.checkers[Piece::color_of(move_info.captured_piece()) as usize],
                 to,
             );
         }

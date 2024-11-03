@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod bitboards;
+mod move_info;
 mod position;
 mod utils;
 
@@ -34,19 +35,19 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragged_piece_sq: i32, compute_moves: bool) {
     let mut pos = position.borrow_mut();
-    let side_to_move = pos.get_side_to_move();
+    let side_to_move = pos.side_to_move();
 
     ui.set_board_state(BoardState {
-        board: Rc::new(VecModel::from(pos.get_board_i32())).into(),
+        board: Rc::new(VecModel::from(pos.board_i32())).into(),
         turn: Color::to_i32(&side_to_move).unwrap(),
-        halfmove_clock: pos.get_halfmove_clock(),
-        fullmove_count: pos.get_fullmove_count(),
+        halfmove_clock: pos.halfmove_clock(),
+        fullmove_count: pos.fullmove_count(),
     });
     ui.set_dragged_piece_sq(dragged_piece_sq);
 
     if compute_moves {
         pos.compute_valid_moves(side_to_move);
-        ui.set_compute_time(SharedString::from(pos.get_compute_time_string()));
+        ui.set_compute_time(SharedString::from(pos.compute_time()));
     }
 }
 
@@ -59,7 +60,7 @@ fn setup_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
         move |from, to| {
             let position = position_weak.upgrade().unwrap();
             let position = position.borrow();
-            position.is_valid_move(Square::from_u8(from as u8).unwrap(), Square::from_u8(to as u8).unwrap())
+            position.valid_move(Square::from_u8(from as u8).unwrap(), Square::from_u8(to as u8).unwrap())
         }
     });
 
