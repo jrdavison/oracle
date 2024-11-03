@@ -6,29 +6,41 @@ use std::ops::{Add, Sub};
 use std::ops::{Index, IndexMut, Not};
 
 pub type Bitboard = u64;
-pub type BlockersMoveDatabase = [HashMap<Bitboard, Bitboard>; Square::SquareNb as usize];
-pub type SimpleMoveDatabase = [Bitboard; Square::SquareNb as usize];
+pub type BlockersMoveDatabase = [HashMap<Bitboard, Bitboard>; Square::Count as usize];
+pub type SimpleMoveDatabase = [Bitboard; Square::Count as usize];
+
+#[repr(u8)]
+#[derive(PartialEq)]
+pub enum MoveType {
+    Invalid,
+    Quiet,
+    Capture,
+    EnPassant,
+    TwoSquarePush,
+    Castle,
+    Promotion,
+}
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq)]
 pub enum Color {
     White,
     Black,
-    ColorNb = 2,
+    Count = 2,
 }
 
 impl Not for Color {
     type Output = Color;
     fn not(self) -> Color {
         let inverted = !(self as u8) & 1;
-        Color::from_u8(inverted).unwrap_or(Color::ColorNb)
+        Color::from_u8(inverted).expect("Invalid color")
     }
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
 pub enum PieceType {
-    NoPiece,
+    Empty,
     King,
     Queen,
     Bishop,
@@ -47,15 +59,15 @@ impl PieceType {
             'n' => PieceType::Knight,
             'r' => PieceType::Rook,
             'p' => PieceType::Pawn,
-            _ => PieceType::NoPiece,
+            _ => PieceType::Empty,
         }
     }
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive)]
+#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq)]
 pub enum Piece {
-    NoPiece,
+    Empty,
     WKing = PieceType::King as u8,
     WQueen,
     WBishop,
@@ -72,15 +84,15 @@ pub enum Piece {
 
 impl Piece {
     pub fn make_piece(pt: PieceType, c: Color) -> Piece {
-        Piece::from_u8((pt as u8) + ((c as u8) << 3)).unwrap_or(Piece::NoPiece)
+        Piece::from_u8((pt as u8) + ((c as u8) << 3)).expect("Cannot make piece")
     }
 
     pub fn color_of(piece: Piece) -> Color {
-        Color::from_u8((piece as u8) >> 3).unwrap_or(Color::ColorNb)
+        Color::from_u8((piece as u8) >> 3).expect("Cannot get color of piece")
     }
 
     pub fn type_of(piece: Piece) -> PieceType {
-        PieceType::from_u8(piece as u8 & 0b111).unwrap_or(PieceType::NoPiece)
+        PieceType::from_u8(piece as u8 & 0b111).expect("Cannot get type of piece")
     }
 }
 
@@ -97,17 +109,17 @@ pub enum Square {
     SqA7, SqB7, SqC7, SqD7, SqE7, SqF7, SqG7, SqH7,
     SqA8, SqB8, SqC8, SqD8, SqE8, SqF8, SqG8, SqH8,
 
-    SquareNb = 64,
+    Count = 64,
 }
 
-impl Index<Square> for [Piece; Square::SquareNb as usize] {
+impl Index<Square> for [Piece; Square::Count as usize] {
     type Output = Piece;
     fn index(&self, index: Square) -> &Piece {
         &self[index as usize]
     }
 }
 
-impl IndexMut<Square> for [Piece; Square::SquareNb as usize] {
+impl IndexMut<Square> for [Piece; Square::Count as usize] {
     fn index_mut(&mut self, index: Square) -> &mut Piece {
         &mut self[index as usize]
     }
@@ -120,40 +132,40 @@ impl Add<Direction> for Square {
 
         // prevent wrapping north-south movement
         if !Square::is_valid(new_sq) {
-            return Square::SquareNb;
+            return Square::Count;
         }
 
         // prevent wrapping east-west movement
         let file = Square::file_of(self);
-        if file == File::FileA && rhs == Direction::West {
-            return Square::SquareNb;
-        } else if file == File::FileH && rhs == Direction::East {
-            return Square::SquareNb;
+        if (file == File::FileA && rhs == Direction::West) || (file == File::FileH && rhs == Direction::East) {
+            return Square::Count;
         }
 
-        return Square::from_i8(new_sq).unwrap_or(Square::SquareNb);
+        Square::from_i8(new_sq).expect("Cannot add direction to square")
     }
 }
 
+// impl
+
 impl Square {
     pub fn make_square(file: File, rank: Rank) -> Square {
-        Square::from_u8((rank as u8) << 3 | (file as u8)).unwrap_or(Square::SquareNb)
+        Square::from_u8((rank as u8) << 3 | (file as u8)).expect("Cannot make square")
     }
 
     pub fn rank_of(sq: Square) -> Rank {
-        Rank::from_u8((sq as u8) >> 3).unwrap_or(Rank::RankNb)
+        Rank::from_u8((sq as u8) >> 3).expect("Cannot get rank of square")
     }
 
     pub fn file_of(sq: Square) -> File {
-        File::from_u8(sq as u8 & 0b111).unwrap_or(File::FileNb)
+        File::from_u8(sq as u8 & 0b111).expect("Cannot get file of square")
     }
 
     pub fn iter() -> impl Iterator<Item = Square> {
-        (0..(Square::SquareNb as usize)).map(|i| Square::from_u8(i as u8).unwrap())
+        (0..(Square::Count as usize)).map(|i| Square::from_u8(i as u8).unwrap())
     }
 
     pub fn is_valid(sq: i8) -> bool {
-        Square::SqA1 as i8 <= sq && sq < Square::SquareNb as i8
+        Square::SqA1 as i8 <= sq && sq < Square::Count as i8
     }
 }
 
@@ -170,7 +182,7 @@ impl Not for Direction {
     type Output = Direction;
     fn not(self) -> Direction {
         let inverted = -(self as i8);
-        Direction::from_i8(inverted).unwrap()
+        Direction::from_i8(inverted).expect("Cannot invert direction")
     }
 }
 
@@ -195,31 +207,31 @@ pub enum File {
     FileF,
     FileG,
     FileH,
-    FileNb = 8,
+    Count = 8,
 }
 
 impl File {
     pub fn from_x(x: f32) -> File {
         let file = (x.floor() as i32) / 80; // TODO: don't hardcode square size
-        File::from_i32(file).unwrap_or(File::FileNb)
+        File::from_i32(file).expect("Cannot get file from x")
     }
 
     pub fn iter() -> impl Iterator<Item = File> {
-        (0..(File::FileNb as usize)).map(|i| File::from_u8(i as u8).unwrap())
+        (0..(File::Count as usize)).map(|i| File::from_u8(i as u8).unwrap())
     }
 }
 
 impl Add<u8> for File {
     type Output = File;
     fn add(self, rhs: u8) -> File {
-        File::from_u8(self as u8 + rhs).unwrap_or(File::FileNb)
+        File::from_u8(self as u8 + rhs).unwrap_or(File::Count)
     }
 }
 
 impl Sub<u8> for File {
     type Output = File;
     fn sub(self, rhs: u8) -> File {
-        File::from_u8(self as u8 - rhs).unwrap_or(File::FileNb)
+        File::from_u8(self as u8 - rhs).unwrap_or(File::Count)
     }
 }
 
@@ -234,13 +246,13 @@ pub enum Rank {
     Rank6,
     Rank7,
     Rank8,
-    RankNb = 8,
+    Count = 8,
 }
 
 impl Rank {
     pub fn from_y(y: f32) -> Rank {
         let rank = 7 - (y.floor() as i32 / 80); // TODO: don't hardcode square size
-        Rank::from_i32(rank).unwrap_or(Rank::RankNb)
+        Rank::from_i32(rank).expect("Cannot get rank from y")
     }
 
     pub fn relative_rank(color: Color, rank: Rank) -> Rank {
@@ -252,11 +264,11 @@ impl Rank {
     }
 
     pub fn iter() -> impl Iterator<Item = Rank> {
-        (0..(Rank::RankNb as usize)).map(|i| Rank::from_u8(i as u8).unwrap())
+        (0..(Rank::Count as usize)).map(|i| Rank::from_u8(i as u8).unwrap())
     }
 
     pub fn iter_reverse() -> impl Iterator<Item = Rank> {
-        (0..(Rank::RankNb as usize))
+        (0..(Rank::Count as usize))
             .rev()
             .map(|i| Rank::from_u8(i as u8).unwrap())
     }
@@ -265,13 +277,13 @@ impl Rank {
 impl Add<u8> for Rank {
     type Output = Rank;
     fn add(self, rhs: u8) -> Rank {
-        Rank::from_u8(self as u8 + rhs).unwrap_or(Rank::RankNb)
+        Rank::from_u8(self as u8 + rhs).unwrap_or(Rank::Count)
     }
 }
 
 impl Sub<u8> for Rank {
     type Output = Rank;
     fn sub(self, rhs: u8) -> Rank {
-        Rank::from_u8(self as u8 - rhs).unwrap_or(Rank::RankNb)
+        Rank::from_u8(self as u8 - rhs).unwrap_or(Rank::Count)
     }
 }

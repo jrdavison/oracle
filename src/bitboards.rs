@@ -27,26 +27,26 @@ pub fn clear_bit(bitboard: &mut Bitboard, sq: Square) {
 }
 
 pub fn is_bit_set(bitboard: Bitboard, sq: Square) -> bool {
-    if sq == Square::SquareNb {
+    if sq == Square::Count {
         return false;
     }
-    return bitboard & (1u64 << sq as u64) != 0;
+    bitboard & (1u64 << sq as u64) != 0
 }
 
 pub fn load_simple_move_db(path: &str) -> SimpleMoveDatabase {
     let file = constants::DATA_DIR.get_file(path).expect("Failed to get file");
     let data = file.contents();
 
-    assert_eq!(data.len(), (Square::SquareNb as usize) * 8, "Invalid data length!");
+    assert_eq!(data.len(), (Square::Count as usize) * 8, "Invalid data length!");
 
-    let mut knight_moves = [Bitboard::default(); Square::SquareNb as usize];
+    let mut knight_moves = [Bitboard::default(); Square::Count as usize];
     for (i, bb) in knight_moves.iter_mut().enumerate() {
         let start = i * 8;
         let end = start + 8;
         *bb = u64::from_le_bytes(data[start..end].try_into().unwrap());
     }
 
-    return knight_moves;
+    knight_moves
 }
 
 pub fn load_blockers_move_db(path: &str) -> BlockersMoveDatabase {
@@ -77,5 +77,5 @@ pub fn load_blockers_move_db(path: &str) -> BlockersMoveDatabase {
         move_database[sq as usize] = moves;
     }
 
-    return move_database;
+    move_database
 }

@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     ui.run().unwrap();
 
-    return Ok(());
+    Ok(())
 }
 
 fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragged_piece_sq: i32, compute_moves: bool) {
@@ -52,7 +52,7 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
 
 fn setup_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
     let ui_weak = ui.as_weak();
-    let position_weak = Rc::downgrade(&position);
+    let position_weak = Rc::downgrade(position);
 
     ui.global::<RustInterface>().on_highlight_valid_move_sq({
         let position_weak = position_weak.clone();
@@ -79,10 +79,13 @@ fn setup_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
             let src_sq = Square::from_u8(src as u8).unwrap();
             let dest_sq = Square::from_u8(dest as u8).unwrap();
 
-            let valid_move = position_mut.move_piece(src_sq, dest_sq);
+            let move_info = position_mut.move_piece(src_sq, dest_sq);
             drop(position_mut);
 
-            set_application_state(&ui, &position, -1, valid_move);
+            let valid_move = move_info.is_valid();
+            if valid_move {
+                set_application_state(&ui, &position, -1, valid_move);
+            }
         }
     });
 }
