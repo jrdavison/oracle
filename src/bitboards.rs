@@ -21,8 +21,8 @@ impl Bitboards {
         self.valid_moves[sq as usize] = bb;
     }
 
-    pub fn get_valid_moves(&self, sq: Square) -> Bitboard {
-        self.valid_moves[sq as usize]
+    pub fn is_valid_move(&self, from: Square, to: Square) -> bool {
+        is_bit_set(self.valid_moves[from as usize], to)
     }
 
     pub fn get_checkers(&self, color: Color) -> Bitboard {
@@ -65,16 +65,16 @@ pub fn print_bitboard(bitboard: Bitboard) {
 }
 
 pub fn set_bit(bitboard: &mut Bitboard, sq: Square) {
-    assert!(sq != Square::Count, "Invalid square: {:?}", sq);
+    assert!(sq != Square::Count, "Invalid square");
     *bitboard |= 1u64 << sq as u64;
 }
 
-pub fn clear_bit(bitboard: &mut Bitboard, sq: Square) {
-    assert!(sq != Square::Count, "Invalid square: {:?}", sq);
+fn clear_bit(bitboard: &mut Bitboard, sq: Square) {
+    assert!(sq != Square::Count, "Invalid square");
     *bitboard &= !(1u64 << sq as u64);
 }
 
-pub fn is_bit_set(bitboard: Bitboard, sq: Square) -> bool {
-    assert!(sq != Square::Count, "Invalid square: {:?}", sq);
+fn is_bit_set(bitboard: Bitboard, sq: Square) -> bool {
+    assert!(sq != Square::Count, "Invalid square");
     bitboard & (1u64 << sq as u64) != 0
 }

@@ -69,7 +69,7 @@ impl Position {
         if Piece::color_of(piece) != self.side_to_move {
             return false;
         }
-        bitboards::is_bit_set(self.bitboards.get_valid_moves(from), to)
+        self.bitboards.is_valid_move(from, to)
     }
 
     fn compute_pawn_moves(&self, sq: Square) -> Bitboard {
