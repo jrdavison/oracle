@@ -65,16 +65,16 @@ pub fn print_bitboard(bitboard: Bitboard) {
 }
 
 pub fn set_bit(bitboard: &mut Bitboard, sq: Square) {
+    assert!(sq != Square::Count, "Invalid square: {:?}", sq);
     *bitboard |= 1u64 << sq as u64;
 }
 
 pub fn clear_bit(bitboard: &mut Bitboard, sq: Square) {
+    assert!(sq != Square::Count, "Invalid square: {:?}", sq);
     *bitboard &= !(1u64 << sq as u64);
 }
 
 pub fn is_bit_set(bitboard: Bitboard, sq: Square) -> bool {
-    if sq == Square::Count {
-        return false;
-    }
+    assert!(sq != Square::Count, "Invalid square: {:?}", sq);
     bitboard & (1u64 << sq as u64) != 0
 }

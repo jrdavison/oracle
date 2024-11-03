@@ -18,7 +18,7 @@ static ROOK_MOVES_DB: Lazy<BlockersMoveDatabase> = Lazy::new(|| helpers::load_bl
 pub struct Position {
     board: [Piece; Square::Count as usize],
     bitboards: Bitboards,
-    // en_passant_square: Square,
+    en_passant_square: Square,
     compute_time: Duration,
     fullmove_count: i32,
     halfmove_clock: i32,
@@ -30,7 +30,7 @@ impl Default for Position {
         Position {
             board: [Piece::Empty; Square::Count as usize],
             bitboards: Bitboards::default(),
-            // en_passant_square: Square::Count,
+            en_passant_square: Square::Count,
             compute_time: Duration::default(),
             fullmove_count: 1,
             halfmove_clock: 0,
@@ -102,11 +102,18 @@ impl Position {
         }
 
         let target_sq_west = (sq + forward) + Direction::West;
-        if (target_sq_west != Square::Count) && self.bitboards.is_checkers_set(!color, target_sq_east) {
+        if (target_sq_west != Square::Count) && self.bitboards.is_checkers_set(!color, target_sq_west) {
             bitboards::set_bit(&mut valid_moves, target_sq_west);
         }
 
-        // TODO: capture en passant
+        // en passant
+        if self.en_passant_square != Square::Count {
+            if target_sq_east == self.en_passant_square {
+                bitboards::set_bit(&mut valid_moves, target_sq_east);
+            } else if target_sq_west == self.en_passant_square {
+                bitboards::set_bit(&mut valid_moves, target_sq_west);
+            }
+        }
 
         valid_moves
     }
@@ -224,10 +231,12 @@ impl Position {
     }
 
     pub fn move_piece(&mut self, from: Square, to: Square) -> MoveInfo {
-        // BUG: something is freezing the UI on moves?
         if !self.valid_move(from, to) {
             return MoveInfo::default(); // defaults to invalid move
         }
+
+        // reset en passant square
+        self.en_passant_square = Square::Count;
 
         let move_info = MoveInfo::new(from, to, &self.board);
         let moved_piece_color = Piece::color_of(move_info.moved_piece());
@@ -240,8 +249,21 @@ impl Position {
 
         match move_info.move_type() {
             MoveType::Capture => {
-                // capture piece}
-                self.bitboards.unset_checkers(!moved_piece_color, move_info.to());
+                let capture_color = Piece::color_of(move_info.captured_piece());
+                println!("Capture: {:?}", move_info.captured_piece());
+                println!("Capture sq: {:?}", move_info.capture_piece_sq());
+                self.bitboards
+                    .unset_checkers(capture_color, move_info.capture_piece_sq());
+            }
+            MoveType::TwoSquarePush => {
+                let enemy_forward = Direction::forward_direction(!moved_piece_color);
+                self.en_passant_square = move_info.to() + enemy_forward;
+            }
+            MoveType::EnPassant => {
+                let capture_color = Piece::color_of(move_info.captured_piece());
+                self.board[move_info.capture_piece_sq() as usize] = Piece::Empty;
+                self.bitboards
+                    .unset_checkers(capture_color, move_info.capture_piece_sq());
             }
             _ => {
                 println!("Move not handled: {:?}", move_info.move_type());

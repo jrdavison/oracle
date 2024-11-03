@@ -1,11 +1,12 @@
 use crate::utils::types::{Direction, MoveType, Piece, PieceType, Rank, Square};
 
 pub struct MoveInfo {
+    move_type: MoveType,
     from: Square,
     to: Square,
     moved_piece: Piece,
     captured_piece: Piece,
-    move_type: MoveType,
+    capture_piece_sq: Square,
 }
 
 // TODO: probably delete this
@@ -13,19 +14,21 @@ impl Default for MoveInfo {
     fn default() -> MoveInfo {
         MoveInfo {
             from: Square::Count,
+            move_type: MoveType::Invalid,
             to: Square::Count,
             moved_piece: Piece::Empty,
             captured_piece: Piece::Empty,
-            move_type: MoveType::Invalid,
+            capture_piece_sq: Square::Count,
         }
     }
 }
 
 impl MoveInfo {
     pub fn new(from: Square, to: Square, board: &[Piece; Square::Count as usize]) -> MoveInfo {
+        let mut move_type = MoveType::Invalid;
         let moved_piece = board[from as usize];
         let mut captured_piece = board[to as usize];
-        let mut move_type = MoveType::Invalid;
+        let mut capture_piece_sq = Square::Count;
 
         match Piece::type_of(moved_piece) {
             PieceType::Pawn => {
@@ -39,9 +42,11 @@ impl MoveInfo {
                     move_type = MoveType::TwoSquarePush;
                 } else if captured_piece != Piece::Empty {
                     move_type = MoveType::Capture;
+                    capture_piece_sq = to;
                 } else if from_file != to_file {
-                    captured_piece = board[to + Direction::forward_direction(!color)];
                     move_type = MoveType::EnPassant;
+                    capture_piece_sq = to + Direction::forward_direction(!color);
+                    captured_piece = board[capture_piece_sq];
                 } else if Rank::relative_rank(color, to_rank) == Rank::Rank8 {
                     // TODO: promotion
                     move_type = MoveType::Promotion;
@@ -56,6 +61,7 @@ impl MoveInfo {
             _ => {
                 if captured_piece != Piece::Empty {
                     move_type = MoveType::Capture;
+                    capture_piece_sq = to;
                 } else {
                     move_type = MoveType::Quiet;
                 }
@@ -63,12 +69,17 @@ impl MoveInfo {
         }
 
         MoveInfo {
+            move_type,
             from,
             to,
             moved_piece,
             captured_piece,
-            move_type,
+            capture_piece_sq,
         }
+    }
+
+    pub fn move_type(&self) -> MoveType {
+        self.move_type
     }
 
     pub fn from(&self) -> Square {
@@ -91,7 +102,7 @@ impl MoveInfo {
         self.move_type != MoveType::Invalid
     }
 
-    pub fn move_type(&self) -> MoveType {
-        self.move_type
+    pub fn capture_piece_sq(&self) -> Square {
+        self.capture_piece_sq
     }
 }
