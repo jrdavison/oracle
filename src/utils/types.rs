@@ -10,7 +10,7 @@ pub type BlockersMoveDatabase = [HashMap<Bitboard, Bitboard>; Square::Count as u
 pub type SimpleMoveDatabase = [Bitboard; Square::Count as usize];
 
 #[repr(u8)]
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum MoveType {
     Invalid,
     Quiet,
@@ -26,7 +26,7 @@ pub enum MoveType {
 pub enum Color {
     White,
     Black,
-    Count = 2,
+    Both = 2,
 }
 
 impl Not for Color {

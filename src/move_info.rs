@@ -90,4 +90,8 @@ impl MoveInfo {
     pub fn is_valid(&self) -> bool {
         self.move_type != MoveType::Invalid
     }
+
+    pub fn move_type(&self) -> MoveType {
+        self.move_type
+    }
 }
