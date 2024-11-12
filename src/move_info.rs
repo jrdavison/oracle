@@ -25,8 +25,8 @@ impl Default for MoveInfo {
 
 impl MoveInfo {
     pub fn new(from: Square, to: Square, board: &[Piece; Square::Count as usize]) -> MoveInfo {
-        let mut move_type = MoveType::Invalid;
         let moved_piece = board[from as usize];
+        let move_type;
         let mut captured_piece = board[to as usize];
         let mut capture_piece_sq = Square::Count;
 
@@ -56,7 +56,12 @@ impl MoveInfo {
             }
             PieceType::King => {
                 // TODO: castling moves
-                println!("King move");
+                if captured_piece != Piece::Empty {
+                    move_type = MoveType::Capture;
+                    capture_piece_sq = to;
+                } else {
+                    move_type = MoveType::Quiet;
+                }
             }
             _ => {
                 if captured_piece != Piece::Empty {

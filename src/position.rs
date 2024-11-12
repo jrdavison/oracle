@@ -19,12 +19,14 @@ pub struct Position {
     board: [Piece; Square::Count as usize],
     bitboards: Bitboards,
     en_passant_square: Square,
+
     compute_time: Duration,
     fullmove_count: i32,
     halfmove_clock: i32,
     side_to_move: Color,
 }
 
+// TODO: probably can just derive this
 impl Default for Position {
     fn default() -> Self {
         Position {
@@ -88,7 +90,7 @@ impl Position {
             }
 
             target_sq = target_sq + forward;
-            if (target_sq != Square::Count) && !self.bitboards.is_checkers_set(Color::Both, target_sq) {
+            if (target_sq != Square::Count) && !self.bitboards.is_checkers_sq_set(Color::Both, target_sq) {
                 bitboards::set_bit(&mut valid_moves, target_sq);
             } else {
                 break;
@@ -97,12 +99,12 @@ impl Position {
 
         // capture moves
         let target_sq_east = (sq + forward) + Direction::East;
-        if (target_sq_east != Square::Count) && self.bitboards.is_checkers_set(!color, target_sq_east) {
+        if (target_sq_east != Square::Count) && self.bitboards.is_checkers_sq_set(!color, target_sq_east) {
             bitboards::set_bit(&mut valid_moves, target_sq_east);
         }
 
         let target_sq_west = (sq + forward) + Direction::West;
-        if (target_sq_west != Square::Count) && self.bitboards.is_checkers_set(!color, target_sq_west) {
+        if (target_sq_west != Square::Count) && self.bitboards.is_checkers_sq_set(!color, target_sq_west) {
             bitboards::set_bit(&mut valid_moves, target_sq_west);
         }
 
@@ -143,7 +145,7 @@ impl Position {
 
         let mut target_square_ne = sq + Direction::North + Direction::East;
         while target_square_ne != Square::Count {
-            if self.bitboards.is_checkers_set(Color::Both, target_square_ne) {
+            if self.bitboards.is_checkers_sq_set(Color::Both, target_square_ne) {
                 bitboards::set_bit(&mut valid_moves, target_square_ne);
                 break;
             }
@@ -154,7 +156,7 @@ impl Position {
         let mut target_square_nw = sq + Direction::North + Direction::West;
         while target_square_nw != Square::Count {
             bitboards::set_bit(&mut valid_moves, target_square_nw);
-            if self.bitboards.is_checkers_set(Color::Both, target_square_nw) {
+            if self.bitboards.is_checkers_sq_set(Color::Both, target_square_nw) {
                 break;
             }
             target_square_nw = target_square_nw + Direction::North + Direction::West;
@@ -163,7 +165,7 @@ impl Position {
         let mut target_square_se = sq + Direction::South + Direction::East;
         while target_square_se != Square::Count {
             bitboards::set_bit(&mut valid_moves, target_square_se);
-            if self.bitboards.is_checkers_set(Color::Both, target_square_se) {
+            if self.bitboards.is_checkers_sq_set(Color::Both, target_square_se) {
                 break;
             }
             target_square_se = target_square_se + Direction::South + Direction::East;
@@ -172,7 +174,7 @@ impl Position {
         let mut target_square_sw = sq + Direction::South + Direction::West;
         while target_square_sw != Square::Count {
             bitboards::set_bit(&mut valid_moves, target_square_sw);
-            if self.bitboards.is_checkers_set(Color::Both, target_square_sw) {
+            if self.bitboards.is_checkers_sq_set(Color::Both, target_square_sw) {
                 break;
             }
             target_square_sw = target_square_sw + Direction::South + Direction::West;
@@ -182,50 +184,77 @@ impl Position {
     }
 
     fn compute_king_moves(&self, sq: Square) -> Bitboard {
-        KING_MOVES_DB[sq as usize]
+        let enemy_attacks = self.bitboards.get_attacks(Piece::color_of(self.board[sq]));
+        KING_MOVES_DB[sq as usize] & !enemy_attacks
     }
 
     pub fn compute_valid_moves(&mut self, color: Color) {
         let start = Instant::now();
 
-        // self.bitboards.attacks[Color::]
+        // clear necessary state
+        self.bitboards.set_attacks(Color::White, 0);
+        self.bitboards.set_attacks(Color::Black, 0);
 
+        let mut king_squares = [Square::Count; Color::Both as usize];
+        let mut attacks = [0; Color::Both as usize];
         for sq in Square::iter() {
-            self.bitboards.set_valid_moves(sq, 0); // clear valid moves
+            self.bitboards.set_valid_moves(sq, 0); // clear valid moves for each piece
 
-            let mut valid_moves = 0;
+            let mut valid_moves: Bitboard = 0;
             let piece = self.board[sq];
-            if Piece::color_of(piece) == color {
-                match Piece::type_of(piece) {
-                    PieceType::Pawn => {
-                        valid_moves = self.compute_pawn_moves(sq);
-                    }
-                    PieceType::Knight => {
-                        valid_moves = self.compute_knight_moves(sq);
-                    }
-                    PieceType::Rook => {
-                        valid_moves = self.compute_rook_moves(sq);
-                    }
-                    PieceType::Bishop => {
-                        valid_moves = self.compute_bishop_moves(sq);
-                    }
-                    PieceType::Queen => {
-                        valid_moves = self.compute_rook_moves(sq) | self.compute_bishop_moves(sq);
-                    }
-                    PieceType::King => {
-                        valid_moves = self.compute_king_moves(sq);
-                    }
-                    _ => {}
-                }
+            let piece_type = Piece::type_of(piece);
+            match piece_type {
+                PieceType::Pawn => valid_moves = self.compute_pawn_moves(sq),
+                PieceType::Knight => valid_moves = self.compute_knight_moves(sq),
+                PieceType::Rook => valid_moves = self.compute_rook_moves(sq),
+                PieceType::Bishop => valid_moves = self.compute_bishop_moves(sq),
+                PieceType::Queen => valid_moves = self.compute_rook_moves(sq) | self.compute_bishop_moves(sq),
+                PieceType::King => king_squares[Piece::color_of(piece) as usize] = sq,
+                _ => {}
             }
 
-            // TODO: check if king is in check
+            /*
+            TODO: check if move puts king in check (diagonal and horizontal pins)
 
-            // can't capture own pieces
-            valid_moves &= !self.bitboards.get_checkers(color);
+            we will need to copy the position and then use that to simulate the move. Then we check if the king is in
+            check
+            */
 
-            self.bitboards.set_valid_moves(sq, valid_moves);
+            // skip king for now
+            if piece_type != PieceType::King {
+                let mut piece_attacks: Bitboard = valid_moves;
+
+                // pawns can only attack diagonally
+                if piece_type == PieceType::Pawn {
+                    piece_attacks &= constants::VERTICAL_MASK << (Square::file_of(sq) as u64);
+                }
+                // can't capture own pieces
+                valid_moves &= !self.bitboards.get_checkers(color);
+
+                self.bitboards.set_valid_moves(sq, valid_moves);
+                attacks[Piece::color_of(piece) as usize] |= piece_attacks;
+            }
         }
+
+        self.bitboards.set_attacks(color, attacks[color as usize]);
+        self.bitboards.set_attacks(!color, attacks[!color as usize]);
+
+        // compute kings last so we can just bitwise AND to remove any moves that put the king in check
+        println!("Attacks {:?}:", color);
+        bitboards::print_bitboard(self.bitboards.get_attacks(color));
+        println!("Attacks {:?}:", !color);
+        bitboards::print_bitboard(self.bitboards.get_attacks(!color));
+        let enemy_king_moves =
+            self.compute_king_moves(king_squares[!color as usize]) & !self.bitboards.get_attacks(color);
+        let friendly_king_moves =
+            self.compute_king_moves(king_squares[color as usize]) & !self.bitboards.get_attacks(!color);
+
+        self.bitboards
+            .set_valid_moves(king_squares[color as usize], friendly_king_moves);
+        self.bitboards
+            .set_valid_moves(king_squares[!color as usize], enemy_king_moves);
+        self.bitboards.set_attacks(color, friendly_king_moves);
+        self.bitboards.set_attacks(!color, enemy_king_moves);
 
         self.compute_time = start.elapsed();
     }
@@ -250,8 +279,6 @@ impl Position {
         match move_info.move_type() {
             MoveType::Capture => {
                 let capture_color = Piece::color_of(move_info.captured_piece());
-                println!("Capture: {:?}", move_info.captured_piece());
-                println!("Capture sq: {:?}", move_info.capture_piece_sq());
                 self.bitboards
                     .unset_checkers(capture_color, move_info.capture_piece_sq());
             }

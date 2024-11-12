@@ -3,7 +3,7 @@ use crate::utils::types::{Bitboard, Color, File, Rank, Square};
 pub struct Bitboards {
     valid_moves: [Bitboard; Square::Count as usize],
     checkers: [Bitboard; Color::Both as usize],
-    // attacks: [Bitboard; Color::ColorNb as usize],
+    attacks: [Bitboard; Color::Both as usize],
 }
 
 impl Default for Bitboards {
@@ -11,7 +11,7 @@ impl Default for Bitboards {
         Bitboards {
             valid_moves: [0; Square::Count as usize],
             checkers: [0; Color::Both as usize],
-            // attacks: [0; Color::ColorNb as usize],
+            attacks: [0; Color::Both as usize],
         }
     }
 }
@@ -41,11 +41,23 @@ impl Bitboards {
         clear_bit(&mut self.checkers[color as usize], sq);
     }
 
-    pub fn is_checkers_set(&self, color: Color, sq: Square) -> bool {
+    pub fn is_checkers_sq_set(&self, color: Color, sq: Square) -> bool {
         if color == Color::Both {
             return is_bit_set(self.get_checkers(color), sq);
         }
         is_bit_set(self.checkers[color as usize], sq)
+    }
+
+    pub fn set_attacks(&mut self, color: Color, attacks: Bitboard) {
+        assert!(color != Color::Both, "Invalid color");
+        self.attacks[color as usize] = attacks;
+    }
+
+    pub fn get_attacks(&self, color: Color) -> Bitboard {
+        if color == Color::Both {
+            return self.attacks[Color::White as usize] | self.attacks[Color::Black as usize];
+        }
+        self.attacks[color as usize]
     }
 }
 
