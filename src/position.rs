@@ -248,24 +248,6 @@ impl Position {
         }
 
         self.bitboards.set_attacks(color, attacks);
-        // self.bitboards.set_attacks(!color, attacks[!color as usize]);
-
-        // // compute kings last so we can just bitwise AND to remove any moves that put the king in check
-        // println!("Attacks {:?}:", color);
-        // bitboards::print_bitboard(self.bitboards.get_attacks(color));
-        // println!("Attacks {:?}:", !color);
-        // bitboards::print_bitboard(self.bitboards.get_attacks(!color));
-        // let enemy_king_moves =
-        //     self.compute_king_moves(king_squares[!color as usize]) & !self.bitboards.get_attacks(color);
-        // let friendly_king_moves =
-        //     self.compute_king_moves(king_squares[color as usize]) & !self.bitboards.get_attacks(!color);
-
-        // self.bitboards
-        //     .set_valid_moves(king_squares[color as usize], friendly_king_moves);
-        // self.bitboards
-        //     .set_valid_moves(king_squares[!color as usize], enemy_king_moves);
-        // self.bitboards.set_attacks(color, friendly_king_moves);
-        // self.bitboards.set_attacks(!color, enemy_king_moves);
 
         self.compute_time = start.elapsed();
     }
@@ -320,6 +302,12 @@ impl Position {
 
         move_info
     }
+}
+
+pub fn load_move_dbs() {
+    Lazy::force(&KNIGHT_MOVES_DB);
+    Lazy::force(&KING_MOVES_DB);
+    Lazy::force(&ROOK_MOVES_DB);
 }
 
 fn init_from_fen(fen: &str) -> Position {

@@ -6,6 +6,7 @@ mod move_info;
 mod position;
 mod utils;
 
+use crate::position::load_move_dbs;
 use num_traits::FromPrimitive;
 use num_traits::ToPrimitive;
 use position::Position;
@@ -19,6 +20,8 @@ use utils::types::{Color, File, Rank, Square};
 slint::include_modules!();
 
 fn main() -> Result<(), Box<dyn Error>> {
+    load_move_dbs(); // force lazy static initialization of move databases
+
     let ui = AppWindow::new().unwrap();
 
     let position = Rc::new(RefCell::new(Position::new(
