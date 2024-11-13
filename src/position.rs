@@ -1,5 +1,5 @@
 use crate::bitboards;
-use crate::bitboards::Bitboards;
+use crate::bitboards::{Bitboards, ComputedMoves};
 use crate::move_info::MoveInfo;
 use crate::utils::constants;
 use crate::utils::helpers;
@@ -26,7 +26,6 @@ pub struct Position {
     side_to_move: Color,
 }
 
-// TODO: probably can just derive this
 impl Default for Position {
     fn default() -> Self {
         Position {
@@ -74,7 +73,7 @@ impl Position {
         self.bitboards.is_valid_move(from, to)
     }
 
-    fn compute_pawn_moves(&self, sq: Square) -> Bitboard {
+    fn compute_pawn_moves(&self, sq: Square) -> ComputedMoves {
         let mut valid_moves = 0;
 
         let piece = self.board[sq];
@@ -98,14 +97,21 @@ impl Position {
         }
 
         // capture moves
+        let mut attacks = 0; // pawns can only attack diagonally
         let target_sq_east = (sq + forward) + Direction::East;
-        if (target_sq_east != Square::Count) && self.bitboards.is_checkers_sq_set(!color, target_sq_east) {
-            bitboards::set_bit(&mut valid_moves, target_sq_east);
+        if target_sq_east != Square::Count {
+            bitboards::set_bit(&mut attacks, sq);
+            if self.bitboards.is_checkers_sq_set(!color, target_sq_east) {
+                bitboards::set_bit(&mut valid_moves, target_sq_east);
+            }
         }
 
         let target_sq_west = (sq + forward) + Direction::West;
-        if (target_sq_west != Square::Count) && self.bitboards.is_checkers_sq_set(!color, target_sq_west) {
-            bitboards::set_bit(&mut valid_moves, target_sq_west);
+        if target_sq_west != Square::Count {
+            bitboards::set_bit(&mut attacks, sq);
+            if self.bitboards.is_checkers_sq_set(!color, target_sq_west) {
+                bitboards::set_bit(&mut valid_moves, target_sq_west);
+            }
         }
 
         // en passant
@@ -117,14 +123,21 @@ impl Position {
             }
         }
 
-        valid_moves
+        ComputedMoves {
+            valid_moves,
+            attacks: valid_moves,
+        }
     }
 
-    fn compute_knight_moves(&self, sq: Square) -> Bitboard {
-        KNIGHT_MOVES_DB[sq as usize]
+    fn compute_knight_moves(&self, sq: Square) -> ComputedMoves {
+        let valid_moves = KNIGHT_MOVES_DB[sq as usize];
+        ComputedMoves {
+            valid_moves,
+            attacks: valid_moves,
+        }
     }
 
-    fn compute_rook_moves(&self, sq: Square) -> Bitboard {
+    fn compute_rook_moves(&self, sq: Square) -> ComputedMoves {
         let rank = Square::rank_of(sq);
         let file = Square::file_of(sq);
 
@@ -137,10 +150,13 @@ impl Position {
             .get(&blocker_key)
             .unwrap_or(&Bitboard::default());
 
-        valid_moves
+        ComputedMoves {
+            valid_moves,
+            attacks: valid_moves,
+        }
     }
 
-    fn compute_bishop_moves(&self, sq: Square) -> Bitboard {
+    fn compute_bishop_moves(&self, sq: Square) -> ComputedMoves {
         let mut valid_moves = 0;
 
         let mut target_square_ne = sq + Direction::North + Direction::East;
@@ -180,37 +196,43 @@ impl Position {
             target_square_sw = target_square_sw + Direction::South + Direction::West;
         }
 
-        valid_moves
+        ComputedMoves {
+            valid_moves,
+            attacks: valid_moves,
+        }
     }
 
-    fn compute_king_moves(&self, sq: Square) -> Bitboard {
-        let enemy_attacks = self.bitboards.get_attacks(Piece::color_of(self.board[sq]));
-        KING_MOVES_DB[sq as usize] & !enemy_attacks
+    fn compute_king_moves(&self, sq: Square) -> ComputedMoves {
+        let valid_moves = KING_MOVES_DB[sq as usize];
+        ComputedMoves {
+            valid_moves,
+            attacks: valid_moves,
+        }
     }
 
     pub fn compute_valid_moves(&mut self, color: Color) {
         let start = Instant::now();
 
-        // clear necessary state
-        self.bitboards.set_attacks(Color::White, 0);
-        self.bitboards.set_attacks(Color::Black, 0);
-
-        let mut king_squares = [Square::Count; Color::Both as usize];
-        let mut attacks = [0; Color::Both as usize];
+        let mut attacks = 0;
         for sq in Square::iter() {
-            self.bitboards.set_valid_moves(sq, 0); // clear valid moves for each piece
-
-            let mut valid_moves: Bitboard = 0;
             let piece = self.board[sq];
             let piece_type = Piece::type_of(piece);
-            match piece_type {
-                PieceType::Pawn => valid_moves = self.compute_pawn_moves(sq),
-                PieceType::Knight => valid_moves = self.compute_knight_moves(sq),
-                PieceType::Rook => valid_moves = self.compute_rook_moves(sq),
-                PieceType::Bishop => valid_moves = self.compute_bishop_moves(sq),
-                PieceType::Queen => valid_moves = self.compute_rook_moves(sq) | self.compute_bishop_moves(sq),
-                PieceType::King => king_squares[Piece::color_of(piece) as usize] = sq,
-                _ => {}
+            let mut computed_moves = ComputedMoves::default();
+
+            /*
+            only compute moves for pieces of the correct color.
+            Valid moves and attacks will be reset back to 0 for the enemy color
+            */
+            if color == Piece::color_of(piece) {
+                match piece_type {
+                    PieceType::Pawn => computed_moves = self.compute_pawn_moves(sq),
+                    PieceType::Knight => computed_moves = self.compute_knight_moves(sq),
+                    PieceType::Rook => computed_moves = self.compute_rook_moves(sq),
+                    PieceType::Bishop => computed_moves = self.compute_bishop_moves(sq),
+                    PieceType::Queen => computed_moves = self.compute_rook_moves(sq) | self.compute_bishop_moves(sq),
+                    PieceType::King => computed_moves = self.compute_king_moves(sq),
+                    _ => {}
+                }
             }
 
             /*
@@ -220,41 +242,30 @@ impl Position {
             check
             */
 
-            // skip king for now
-            if piece_type != PieceType::King {
-                let mut piece_attacks: Bitboard = valid_moves;
-
-                // pawns can only attack diagonally
-                if piece_type == PieceType::Pawn {
-                    piece_attacks &= constants::VERTICAL_MASK << (Square::file_of(sq) as u64);
-                }
-                // can't capture own pieces
-                valid_moves &= !self.bitboards.get_checkers(color);
-
-                self.bitboards.set_valid_moves(sq, valid_moves);
-                attacks[Piece::color_of(piece) as usize] |= piece_attacks;
-            }
+            computed_moves.valid_moves &= !self.bitboards.get_checkers(color);
+            self.bitboards.set_valid_moves(sq, computed_moves.valid_moves);
+            attacks |= computed_moves.attacks;
         }
 
-        self.bitboards.set_attacks(color, attacks[color as usize]);
-        self.bitboards.set_attacks(!color, attacks[!color as usize]);
+        self.bitboards.set_attacks(color, attacks);
+        // self.bitboards.set_attacks(!color, attacks[!color as usize]);
 
-        // compute kings last so we can just bitwise AND to remove any moves that put the king in check
-        println!("Attacks {:?}:", color);
-        bitboards::print_bitboard(self.bitboards.get_attacks(color));
-        println!("Attacks {:?}:", !color);
-        bitboards::print_bitboard(self.bitboards.get_attacks(!color));
-        let enemy_king_moves =
-            self.compute_king_moves(king_squares[!color as usize]) & !self.bitboards.get_attacks(color);
-        let friendly_king_moves =
-            self.compute_king_moves(king_squares[color as usize]) & !self.bitboards.get_attacks(!color);
+        // // compute kings last so we can just bitwise AND to remove any moves that put the king in check
+        // println!("Attacks {:?}:", color);
+        // bitboards::print_bitboard(self.bitboards.get_attacks(color));
+        // println!("Attacks {:?}:", !color);
+        // bitboards::print_bitboard(self.bitboards.get_attacks(!color));
+        // let enemy_king_moves =
+        //     self.compute_king_moves(king_squares[!color as usize]) & !self.bitboards.get_attacks(color);
+        // let friendly_king_moves =
+        //     self.compute_king_moves(king_squares[color as usize]) & !self.bitboards.get_attacks(!color);
 
-        self.bitboards
-            .set_valid_moves(king_squares[color as usize], friendly_king_moves);
-        self.bitboards
-            .set_valid_moves(king_squares[!color as usize], enemy_king_moves);
-        self.bitboards.set_attacks(color, friendly_king_moves);
-        self.bitboards.set_attacks(!color, enemy_king_moves);
+        // self.bitboards
+        //     .set_valid_moves(king_squares[color as usize], friendly_king_moves);
+        // self.bitboards
+        //     .set_valid_moves(king_squares[!color as usize], enemy_king_moves);
+        // self.bitboards.set_attacks(color, friendly_king_moves);
+        // self.bitboards.set_attacks(!color, enemy_king_moves);
 
         self.compute_time = start.elapsed();
     }

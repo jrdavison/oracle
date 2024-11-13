@@ -1,4 +1,22 @@
 use crate::utils::types::{Bitboard, Color, File, Rank, Square};
+use std::ops::BitOr;
+
+#[derive(Default)]
+pub struct ComputedMoves {
+    pub valid_moves: Bitboard,
+    pub attacks: Bitboard,
+}
+
+impl BitOr for ComputedMoves {
+    type Output = ComputedMoves;
+
+    fn bitor(self, rhs: ComputedMoves) -> ComputedMoves {
+        ComputedMoves {
+            valid_moves: self.valid_moves | rhs.valid_moves,
+            attacks: self.attacks | rhs.attacks,
+        }
+    }
+}
 
 pub struct Bitboards {
     valid_moves: [Bitboard; Square::Count as usize],
