@@ -203,6 +203,7 @@ impl Position {
     }
 
     fn compute_king_moves(&self, sq: Square) -> ComputedMoves {
+        // TODO: castling
         let valid_moves = KING_MOVES_DB[sq as usize];
         ComputedMoves {
             valid_moves,
