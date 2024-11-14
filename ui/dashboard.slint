@@ -1,20 +1,7 @@
-import { Button, HorizontalBox, VerticalBox } from "std-widgets.slint";
+import { VerticalBox, StandardTableView } from "std-widgets.slint";
 
 import { Palette, Font } from "./globals.slint";
-
-component EvalBar inherits VerticalLayout {
-    in property <percent> b_eval: 50%;
-    in property <percent> w_eval: 50%;
-
-    Rectangle {
-        height: b_eval;
-        background: black;
-    }
-    Rectangle {
-        height: w_eval;
-        background: white;
-    }
-}
+import { Dimensions } from "globals.slint";
 
 export component Dashboard inherits Rectangle {
     in property <int> turn: 0;  // 0 for white, 1 for black
@@ -24,46 +11,37 @@ export component Dashboard inherits Rectangle {
     in property <percent> b_eval: 50%;
     in property <percent> w_eval: 50%;
 
-    HorizontalLayout {
-        EvalBar {
-            width: 20px;
-            b_eval: b_eval;
-            w_eval: w_eval;
-        }
-        HorizontalBox {
-            VerticalLayout {
-                Rectangle {
-                    height: 50px;
-                    background: turn == 0 ? white : black;
-                    border-radius: 5px;
+    VerticalBox {
+        Rectangle {
+            height: 50px;
+            width: 100%;
+            background: turn == 0 ? white : black;
+            border-radius: 5px;
 
-                    Text {
-                        text: (turn == 0 ? "White" : "Black") + "'s Turn";
-                        color: turn == 0 ? black : white;
-                        horizontal-alignment: center;
-                        font-size: Font.font_size_lg;
-                        font-weight: Font.bold;
-                    }
-                }
-                VerticalLayout {
-                    // TODO: fix this layout
-                    Text {
-                        text: "Fullmove Count: " + fullmove_count;
-                        font-size: Font.font_size_sm;
-                        font-weight: Font.semi_bold;
-                    }
-                    Text {
-                        text: "Halfmove Clock: " + halfmove_clock;
-                        font-size: Font.font_size_sm;
-                        font-weight: Font.semi_bold;
-                    }
-                    Text {
-                        text: "Compute Time: " + compute_time;
-                        font-size: Font.font_size_sm;
-                        font-weight: Font.semi_bold;
-                    }
-                }
+            Text {
+                text: (turn == 0 ? "White" : "Black") + " to move";
+                color: turn == 0 ? black : white;
+                horizontal-alignment: center;
+                font-size: Font.font_size_lg;
+                font-weight: Font.bold;
             }
         }
+    }
+    StandardTableView {
+        x: 0;
+        height: 147px;
+        y: Dimensions.board_size - 147px;
+        width: 100%;
+        rows: [
+            [
+                { text: "Fullmove Count:" }, { text: fullmove_count },
+            ],
+            [
+                { text: "Halfmove Clock:" }, { text: halfmove_clock },
+            ],
+            [
+                { text: "Time to compute valid moves:" }, { text: compute_time },
+            ]
+        ];
     }
 }
