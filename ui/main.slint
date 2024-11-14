@@ -1,5 +1,6 @@
 import { Board } from "./board.slint";
 import { Dashboard } from "./dashboard.slint";
+import { EvalBar } from "./eval.slint";
 import { Dimensions, Palette, RustInterface } from "./globals.slint";
 
 export { RustInterface } // export to use in rust code
@@ -20,24 +21,29 @@ export component AppWindow inherits Window {
 
     height: Dimensions.board_size;
     width:  Dimensions.board_size * 2;
-    background: Palette.window_bg;
+    // background: Palette.window_bg;
 
-    HorizontalLayout {
-        Board {
-            board_state: board_state.board;
-            dragged_piece_sq: dragged_piece_sq;
+    Board {
+        board_state: board_state.board;
+        dragged_piece_sq: dragged_piece_sq;
 
-            width: parent.width / 2;
-            height: parent.height;
-        }
-        Dashboard {
-            width: parent.width / 2;
-            height: parent.height;
+        x: 0;
+        height: parent.height;
+        width: parent.width / 2;
+    }
+    eval := EvalBar {
+        x: parent.width / 2;
+        b_eval: 50%;
+        w_eval: 50%;
+    }
+    Dashboard {
+        x: parent.width / 2 + eval.width;
+        width: Dimensions.board_size - eval.width;
+        height: parent.height;
 
-            turn: board_state.turn;
-            halfmove_clock: board_state.halfmove_clock;
-            fullmove_count: board_state.fullmove_count;
-            compute_time: compute_time;
-        }
+        turn: board_state.turn;
+        halfmove_clock: board_state.halfmove_clock;
+        fullmove_count: board_state.fullmove_count;
+        compute_time: compute_time;
     }
 }
