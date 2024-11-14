@@ -102,10 +102,12 @@ fn setup_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
             let ui = ui_weak.upgrade().unwrap();
             let mut position_mut = position.borrow_mut();
 
-            position_mut.undo_move();
+            let undo_success = position_mut.undo_move();
             drop(position_mut);
 
-            set_application_state(&ui, &position, -1, true);
+            if undo_success {
+                set_application_state(&ui, &position, -1, true);
+            }
         }
     });
 }

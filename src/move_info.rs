@@ -1,27 +1,13 @@
 use crate::utils::types::{Direction, MoveType, Piece, PieceType, Rank, Square};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MoveInfo {
-    move_type: MoveType,
-    from: Square,
-    to: Square,
-    moved_piece: Piece,
-    captured_piece: Piece,
-    capture_piece_sq: Square,
-}
-
-// TODO: probably delete this
-impl Default for MoveInfo {
-    fn default() -> MoveInfo {
-        MoveInfo {
-            from: Square::Count,
-            move_type: MoveType::Invalid,
-            to: Square::Count,
-            moved_piece: Piece::Empty,
-            captured_piece: Piece::Empty,
-            capture_piece_sq: Square::Count,
-        }
-    }
+    pub move_type: MoveType,
+    pub from: Square,
+    pub to: Square,
+    pub moved_piece: Piece,
+    pub captured_piece: Piece,
+    pub capture_piece_sq: Square,
 }
 
 impl MoveInfo {
@@ -84,31 +70,7 @@ impl MoveInfo {
         }
     }
 
-    pub fn move_type(&self) -> MoveType {
-        self.move_type
-    }
-
-    pub fn from(&self) -> Square {
-        self.from
-    }
-
-    pub fn to(&self) -> Square {
-        self.to
-    }
-
-    pub fn moved_piece(&self) -> Piece {
-        self.moved_piece
-    }
-
-    pub fn captured_piece(&self) -> Piece {
-        self.captured_piece
-    }
-
     pub fn is_valid(&self) -> bool {
         self.move_type != MoveType::Invalid
-    }
-
-    pub fn capture_piece_sq(&self) -> Square {
-        self.capture_piece_sq
     }
 }

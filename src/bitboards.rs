@@ -70,13 +70,6 @@ impl Bitboards {
         assert!(color != Color::Both, "Invalid color");
         self.attacks[color as usize] = attacks;
     }
-
-    pub fn get_attacks(&self, color: Color) -> Bitboard {
-        if color == Color::Both {
-            return self.attacks[Color::White as usize] | self.attacks[Color::Black as usize];
-        }
-        self.attacks[color as usize]
-    }
 }
 
 #[allow(dead_code)]
