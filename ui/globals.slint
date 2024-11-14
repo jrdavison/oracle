@@ -1,17 +1,22 @@
+import "./fonts/SourceCodePro-Regular.ttf";
+
 export global Dimensions {
     out property <length> board_size: 640px;
     out property <length> sq_size: 80px;
 }
 
 export global Palette {
-    out property <color> light_sq: #f0d9B5;
-    out property <color> dark_sq: #b58863;
-    out property <color> window_bg: #11151c;
+    out property <color> light_sq: rgb(240, 217, 181);
+    out property <color> dark_sq: rgb(181, 136, 99);
+    out property <color> valid_sq: rgba(35, 64, 153, 0.45);
+    out property <color> window_bg: rgb(17, 21, 28);
+    out property <color> yellow: #ffdfB3;
 }
 
 export global Font {
     out property <int> semi_bold: 600;
     out property <int> bold: 800;
+    out property <length> font_size_xsm: 12px;
     out property <length> font_size_sm: 16px;
     out property <length> font_size_lg: 24px;
 }
@@ -62,5 +67,6 @@ export global Utils {
 
 export global RustInterface {
     pure callback square_from_xy(length, length) -> int;
+    pure callback highlight_valid_move_sq(int, int) -> bool;
     callback move_piece(int, int);
 }
