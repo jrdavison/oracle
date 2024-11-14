@@ -75,6 +75,7 @@ fn setup_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
 
     ui.global::<RustInterface>().on_move_piece({
         let position_weak = position_weak.clone();
+        let ui_weak = ui_weak.clone();
         move |src: i32, dest: i32| {
             let ui = ui_weak.upgrade().unwrap();
             let position = position_weak.upgrade().unwrap();
@@ -90,6 +91,21 @@ fn setup_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
             if valid_move {
                 set_application_state(&ui, &position, -1, valid_move);
             }
+        }
+    });
+
+    ui.global::<RustInterface>().on_undo_move({
+        let position_weak = position_weak.clone();
+        let ui_weak = ui_weak.clone();
+        move || {
+            let position = position_weak.upgrade().unwrap();
+            let ui = ui_weak.upgrade().unwrap();
+            let mut position_mut = position.borrow_mut();
+
+            position_mut.undo_move();
+            drop(position_mut);
+
+            set_application_state(&ui, &position, -1, true);
         }
     });
 }

@@ -19,6 +19,7 @@ pub struct Position {
     board: [Piece; Square::Count as usize],
     bitboards: Bitboards,
     en_passant_square: Square,
+    move_history: Vec<MoveInfo>,
 
     compute_time: Duration,
     fullmove_count: i32,
@@ -32,6 +33,7 @@ impl Default for Position {
             board: [Piece::Empty; Square::Count as usize],
             bitboards: Bitboards::default(),
             en_passant_square: Square::Count,
+            move_history: Vec::new(),
             compute_time: Duration::default(),
             fullmove_count: 1,
             halfmove_clock: 0,
@@ -122,6 +124,8 @@ impl Position {
                 bitboards::set_bit(&mut valid_moves, target_sq_west);
             }
         }
+
+        // TODO: promotion
 
         ComputedMoves {
             valid_moves,
@@ -297,11 +301,16 @@ impl Position {
 
         self.side_to_move = !self.side_to_move;
 
-        // TODO: store move history for undos
         // TODO: count halfmoves
-        // TODO: promotion moves
 
+        self.move_history.push(move_info.clone());
         move_info
+    }
+
+    pub fn undo_move(&mut self) {
+        if let Some(last_move) = self.move_history.pop() {
+            println!("Undo move: {:?}", last_move);
+        }
     }
 }
 

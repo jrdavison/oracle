@@ -21,9 +21,8 @@ export component AppWindow inherits Window {
 
     height: Dimensions.board_size;
     width:  Dimensions.board_size * 2;
-    // background: Palette.window_bg;
 
-    Board {
+    board := Board {
         board_state: board_state.board;
         dragged_piece_sq: dragged_piece_sq;
 
@@ -32,18 +31,32 @@ export component AppWindow inherits Window {
         width: parent.width / 2;
     }
     eval := EvalBar {
-        x: parent.width / 2;
+        x: board.width;
         b_eval: 50%;
         w_eval: 50%;
     }
-    Dashboard {
-        x: parent.width / 2 + eval.width;
-        width: Dimensions.board_size - eval.width;
-        height: parent.height;
+    dash := Dashboard {
+        x: board.width + eval.width;
+        width: board.width - eval.width;
+        height: board.height;
 
         turn: board_state.turn;
         halfmove_clock: board_state.halfmove_clock;
         fullmove_count: board_state.fullmove_count;
         compute_time: compute_time;
+    }
+
+    key_handler := FocusScope {
+        key-pressed(event) => {
+            if (!event.repeat) {
+                if (event.text == Key.LeftArrow) {
+                    RustInterface.undo_move();
+                }
+                if (event.text == Key.RightArrow) {
+                    RustInterface.redo_move();
+                }
+            }
+            accept
+        }
     }
 }
