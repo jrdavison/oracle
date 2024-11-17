@@ -20,6 +20,9 @@ pub struct Position {
     bitboards: Bitboards,
     en_passant_square: Square,
 
+    move_history: Vec<MoveInfo>,
+    redo_history: Vec<MoveInfo>,
+
     compute_time: Duration,
     fullmove_count: i32,
     halfmove_clock: i32,
@@ -32,6 +35,8 @@ impl Default for Position {
             board: [Piece::Empty; Square::Count as usize],
             bitboards: Bitboards::default(),
             en_passant_square: Square::Count,
+            move_history: Vec::new(),
+            redo_history: Vec::new(),
             compute_time: Duration::default(),
             fullmove_count: 1,
             halfmove_clock: 0,
@@ -122,6 +127,8 @@ impl Position {
                 bitboards::set_bit(&mut valid_moves, target_sq_west);
             }
         }
+
+        // TODO: promotion
 
         ComputedMoves {
             valid_moves,
@@ -262,33 +269,31 @@ impl Position {
         self.en_passant_square = Square::Count;
 
         let move_info = MoveInfo::new(from, to, &self.board);
-        let moved_piece_color = Piece::color_of(move_info.moved_piece());
+        let moved_piece_color = Piece::color_of(move_info.moved_piece);
 
         // move piece
-        self.board[move_info.to() as usize] = move_info.moved_piece();
-        self.board[move_info.from() as usize] = Piece::Empty;
-        self.bitboards.unset_checkers(moved_piece_color, move_info.from());
-        self.bitboards.set_checkers(moved_piece_color, move_info.to());
+        self.board[move_info.to as usize] = move_info.moved_piece;
+        self.board[move_info.from as usize] = Piece::Empty;
+        self.bitboards.unset_checkers(moved_piece_color, move_info.from);
+        self.bitboards.set_checkers(moved_piece_color, move_info.to);
 
-        match move_info.move_type() {
+        match move_info.move_type {
             MoveType::Capture => {
-                let capture_color = Piece::color_of(move_info.captured_piece());
-                self.bitboards
-                    .unset_checkers(capture_color, move_info.capture_piece_sq());
+                let capture_color = Piece::color_of(move_info.captured_piece);
+                self.bitboards.unset_checkers(capture_color, move_info.capture_piece_sq);
             }
             MoveType::TwoSquarePush => {
                 let enemy_forward = Direction::forward_direction(!moved_piece_color);
-                self.en_passant_square = move_info.to() + enemy_forward;
+                self.en_passant_square = move_info.to + enemy_forward;
             }
             MoveType::EnPassant => {
-                let capture_color = Piece::color_of(move_info.captured_piece());
-                self.board[move_info.capture_piece_sq() as usize] = Piece::Empty;
-                self.bitboards
-                    .unset_checkers(capture_color, move_info.capture_piece_sq());
+                let capture_color = Piece::color_of(move_info.captured_piece);
+                self.board[move_info.capture_piece_sq as usize] = Piece::Empty;
+                self.bitboards.unset_checkers(capture_color, move_info.capture_piece_sq);
             }
-            _ => {
-                println!("Move not handled: {:?}", move_info.move_type());
-            }
+            MoveType::Promotion => println!("Promotion not handled"),
+            MoveType::Invalid => panic!("Invalid move"),
+            MoveType::Quiet => {}
         }
 
         if self.side_to_move == Color::Black {
@@ -297,11 +302,60 @@ impl Position {
 
         self.side_to_move = !self.side_to_move;
 
-        // TODO: store move history for undos
         // TODO: count halfmoves
-        // TODO: promotion moves
 
+        self.move_history.push(move_info);
         move_info
+    }
+
+    pub fn undo_move(&mut self) -> bool {
+        if let Some(last_move) = self.move_history.pop() {
+            match last_move.move_type {
+                MoveType::Quiet | MoveType::TwoSquarePush | MoveType::Capture => {
+                    let color = Piece::color_of(last_move.moved_piece);
+                    self.board[last_move.from as usize] = last_move.moved_piece;
+                    self.board[last_move.to as usize] = last_move.captured_piece;
+                    self.bitboards.set_checkers(color, last_move.from);
+                    self.bitboards.unset_checkers(color, last_move.to);
+
+                    if last_move.move_type == MoveType::Capture {
+                        self.bitboards.set_checkers(!color, last_move.capture_piece_sq);
+                    }
+                }
+                MoveType::EnPassant => {
+                    let color = Piece::color_of(last_move.moved_piece);
+                    self.board[last_move.from as usize] = last_move.moved_piece;
+                    self.board[last_move.to as usize] = Piece::Empty;
+                    self.board[last_move.capture_piece_sq as usize] = last_move.captured_piece;
+                    self.bitboards.set_checkers(color, last_move.from);
+                    self.bitboards.unset_checkers(color, last_move.to);
+                    self.bitboards.set_checkers(!color, last_move.capture_piece_sq);
+                }
+                MoveType::Invalid => panic!("Invalid move"),
+                _ => {
+                    println!("Move not handled: {:?}", last_move.move_type);
+                }
+            }
+
+            self.side_to_move = !self.side_to_move;
+            if self.side_to_move == Color::Black {
+                self.fullmove_count -= 1;
+            }
+
+            self.redo_history.push(last_move);
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn redo_move(&mut self) -> bool {
+        if let Some(last_move) = self.redo_history.pop() {
+            self.move_piece(last_move.from, last_move.to);
+            true
+        } else {
+            false
+        }
     }
 }
 

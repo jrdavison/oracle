@@ -10,9 +10,11 @@ pub type BlockersMoveDatabase = [HashMap<Bitboard, Bitboard>; Square::Count as u
 pub type SimpleMoveDatabase = [Bitboard; Square::Count as usize];
 
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub enum MoveType {
+    #[default]
     Invalid,
+
     Quiet,
     Capture,
     EnPassant,
@@ -65,9 +67,11 @@ impl PieceType {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq)]
+#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq, Default)]
 pub enum Piece {
+    #[default]
     Empty,
+
     WKing = PieceType::King as u8,
     WQueen,
     WBishop,
@@ -98,7 +102,7 @@ impl Piece {
 
 #[repr(u8)]
 #[rustfmt::skip]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, PartialOrd, Default)]
 pub enum Square {
     SqA1, SqB1, SqC1, SqD1, SqE1, SqF1, SqG1, SqH1,
     SqA2, SqB2, SqC2, SqD2, SqE2, SqF2, SqG2, SqH2,
@@ -109,6 +113,7 @@ pub enum Square {
     SqA7, SqB7, SqC7, SqD7, SqE7, SqF7, SqG7, SqH7,
     SqA8, SqB8, SqC8, SqD8, SqE8, SqF8, SqG8, SqH8,
 
+    #[default]
     Count = 64,
 }
 
