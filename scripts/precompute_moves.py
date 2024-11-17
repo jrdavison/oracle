@@ -137,7 +137,7 @@ def generate_relevant_blockers(mask: int) -> Iterator[int]:
         yield blockers
 
 
-def generate_rook_move_database() -> List[Dict[int, int]]:
+def generate_rook_attack_db() -> List[Dict[int, int]]:
     print("Generating rook move database...")
     rook_moves = [{} for _ in range(64)]
     for sq in range(64):
@@ -152,7 +152,7 @@ def generate_rook_move_database() -> List[Dict[int, int]]:
     return rook_moves
 
 
-def generate_bishop_move_databases() -> BishopDbs:
+def generate_bishop_attack_dbs() -> BishopDbs:
     print("Generating bishop move databases...")
     bishop_moves = [{} for _ in range(64)]
     diagonal_masks = [0 for _ in range(64)]
@@ -169,7 +169,7 @@ def generate_bishop_move_databases() -> BishopDbs:
     return BishopDbs(mask=diagonal_masks, blockers=bishop_moves)
 
 
-def generate_knight_move_database() -> List[int]:
+def generate_knight_attack_db() -> List[int]:
     knight_moves = [0 for _ in range(64)]
     for sq in range(64):
         knight_moves[sq] = jumping_attacks(sq, KNIGHT_DIRECTIONS)
@@ -177,7 +177,7 @@ def generate_knight_move_database() -> List[int]:
     return knight_moves
 
 
-def generate_king_move_database() -> List[int]:
+def generate_king_attack_db() -> List[int]:
     king_moves = [0 for _ in range(64)]
     for sq in range(64):
         king_moves[sq] = jumping_attacks(sq, KING_DIRECTIONS)
@@ -187,7 +187,7 @@ def generate_king_move_database() -> List[int]:
     return king_moves
 
 
-def save_blockers_move_db(filename: str, move_db: List[Dict[int, int]]) -> None:
+def save_blockers_db(filename: str, move_db: List[Dict[int, int]]) -> None:
     full_path = os.path.join(SAVE_PATH, filename)
     with open(full_path, "wb") as f:
         for square in range(64):
@@ -200,7 +200,7 @@ def save_blockers_move_db(filename: str, move_db: List[Dict[int, int]]) -> None:
                 f.write(struct.pack("Q", attacks))  # Write the attack bitboard
 
 
-def save_simple_move_db(filename: str, move_db: List[int]) -> None:
+def save_attack_db(filename: str, move_db: List[int]) -> None:
     full_path = os.path.join(SAVE_PATH, filename)
     with open(full_path, "wb") as f:
         for move in move_db:
@@ -218,15 +218,15 @@ def print_bitboard(bb: int) -> None:
     print()
 
 
-rook_move_database = generate_rook_move_database()
-save_blockers_move_db("rook_moves.bin", rook_move_database)
+rook_move_database = generate_rook_attack_db()
+save_blockers_db("rook_moves.bin", rook_move_database)
 
-knight_move_database = generate_knight_move_database()
-save_simple_move_db("knight_moves.bin", knight_move_database)
+knight_move_database = generate_knight_attack_db()
+save_attack_db("knight_moves.bin", knight_move_database)
 
-king_move_database = generate_king_move_database()
-save_simple_move_db("king_moves.bin", king_move_database)
+king_move_database = generate_king_attack_db()
+save_attack_db("king_moves.bin", king_move_database)
 
-bishop_move_databases = generate_bishop_move_databases()
-save_blockers_move_db("bishop_moves.bin", bishop_move_databases.blockers)
-save_simple_move_db("diagonal_masks.bin", bishop_move_databases.mask)
+bishop_move_databases = generate_bishop_attack_dbs()
+save_blockers_db("bishop_moves.bin", bishop_move_databases.blockers)
+save_attack_db("diagonal_masks.bin", bishop_move_databases.mask)

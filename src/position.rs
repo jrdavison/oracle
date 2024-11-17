@@ -4,20 +4,17 @@ use crate::move_info::MoveInfo;
 use crate::utils::constants;
 use crate::utils::helpers;
 use crate::utils::types::{
-    Bitboard, BlockersAttackDatabase, Color, Direction, File, MoveType, Piece, PieceType, Rank, SimpleAttackDatabase,
-    Square,
+    AttackDatabase, Bitboard, BlockersDatabase, Color, Direction, File, MoveType, Piece, PieceType, Rank, Square,
 };
 use num_traits::ToPrimitive;
 use once_cell::sync::Lazy;
 use std::time::{Duration, Instant};
 
-static KNIGHT_ATTACKS_DB: Lazy<SimpleAttackDatabase> = Lazy::new(|| helpers::load_simple_attack_db("knight_moves.bin"));
-static KING_ATTACKS_DB: Lazy<SimpleAttackDatabase> = Lazy::new(|| helpers::load_simple_attack_db("king_moves.bin"));
-static ROOK_ATTACKS_DB: Lazy<BlockersAttackDatabase> = Lazy::new(|| helpers::load_blockers_attack_db("rook_moves.bin"));
-static DIAGONAL_MASKS_DB: Lazy<SimpleAttackDatabase> =
-    Lazy::new(|| helpers::load_simple_attack_db("diagonal_masks.bin"));
-static BISHOP_ATTACKS_DB: Lazy<BlockersAttackDatabase> =
-    Lazy::new(|| helpers::load_blockers_attack_db("bishop_moves.bin"));
+static KNIGHT_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| helpers::load_attack_db("knight_moves.bin"));
+static KING_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| helpers::load_attack_db("king_moves.bin"));
+static ROOK_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| helpers::load_blockers_db("rook_moves.bin"));
+static DIAGONAL_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| helpers::load_attack_db("diagonal_masks.bin"));
+static BISHOP_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| helpers::load_blockers_db("bishop_moves.bin"));
 
 pub struct Position {
     board: [Piece; Square::Count as usize],

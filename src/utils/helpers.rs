@@ -1,9 +1,9 @@
 use crate::utils::constants;
-use crate::utils::types::{Bitboard, BlockersAttackDatabase, SimpleAttackDatabase, Square};
+use crate::utils::types::{AttackDatabase, Bitboard, BlockersDatabase, Square};
 use std::collections::HashMap;
 use std::io::{Cursor, Read};
 
-pub fn load_simple_attack_db(path: &str) -> SimpleAttackDatabase {
+pub fn load_attack_db(path: &str) -> AttackDatabase {
     let file = constants::DATA_DIR.get_file(path).expect("Failed to get file");
     let data = file.contents();
 
@@ -19,11 +19,11 @@ pub fn load_simple_attack_db(path: &str) -> SimpleAttackDatabase {
     knight_moves
 }
 
-pub fn load_blockers_attack_db(path: &str) -> BlockersAttackDatabase {
+pub fn load_blockers_db(path: &str) -> BlockersDatabase {
     let file = constants::DATA_DIR.get_file(path).expect("Failed to get file");
     let mut reader = Cursor::new(file.contents());
 
-    let mut move_database: BlockersAttackDatabase = std::array::from_fn(|_| HashMap::new());
+    let mut move_database: BlockersDatabase = std::array::from_fn(|_| HashMap::new());
     for sq in Square::iter() {
         let mut moves: HashMap<Bitboard, Bitboard> = HashMap::new();
 

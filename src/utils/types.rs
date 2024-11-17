@@ -6,8 +6,8 @@ use std::ops::{Add, Sub};
 use std::ops::{Index, IndexMut, Not};
 
 pub type Bitboard = u64;
-pub type BlockersAttackDatabase = [HashMap<Bitboard, Bitboard>; Square::Count as usize];
-pub type SimpleAttackDatabase = [Bitboard; Square::Count as usize];
+pub type BlockersDatabase = [HashMap<Bitboard, Bitboard>; Square::Count as usize];
+pub type AttackDatabase = [Bitboard; Square::Count as usize];
 
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
