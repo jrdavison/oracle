@@ -4,18 +4,20 @@ use crate::move_info::MoveInfo;
 use crate::utils::constants;
 use crate::utils::helpers;
 use crate::utils::types::{
-    Bitboard, BlockersMoveDatabase, Color, Direction, File, MoveType, Piece, PieceType, Rank, SimpleMoveDatabase,
+    Bitboard, BlockersAttackDatabase, Color, Direction, File, MoveType, Piece, PieceType, Rank, SimpleAttackDatabase,
     Square,
 };
 use num_traits::ToPrimitive;
 use once_cell::sync::Lazy;
 use std::time::{Duration, Instant};
 
-static KNIGHT_MOVES_DB: Lazy<SimpleMoveDatabase> = Lazy::new(|| helpers::load_simple_move_db("knight_moves.bin"));
-static KING_MOVES_DB: Lazy<SimpleMoveDatabase> = Lazy::new(|| helpers::load_simple_move_db("king_moves.bin"));
-static ROOK_MOVES_DB: Lazy<BlockersMoveDatabase> = Lazy::new(|| helpers::load_blockers_move_db("rook_moves.bin"));
-static DIAGONAL_MASK_DB: Lazy<SimpleMoveDatabase> = Lazy::new(|| helpers::load_simple_move_db("diagonal_masks.bin"));
-static BISHOP_MOVES_DB: Lazy<BlockersMoveDatabase> = Lazy::new(|| helpers::load_blockers_move_db("bishop_moves.bin"));
+static KNIGHT_ATTACKS_DB: Lazy<SimpleAttackDatabase> = Lazy::new(|| helpers::load_simple_attack_db("knight_moves.bin"));
+static KING_ATTACKS_DB: Lazy<SimpleAttackDatabase> = Lazy::new(|| helpers::load_simple_attack_db("king_moves.bin"));
+static ROOK_ATTACKS_DB: Lazy<BlockersAttackDatabase> = Lazy::new(|| helpers::load_blockers_attack_db("rook_moves.bin"));
+static DIAGONAL_MASKS_DB: Lazy<SimpleAttackDatabase> =
+    Lazy::new(|| helpers::load_simple_attack_db("diagonal_masks.bin"));
+static BISHOP_ATTACKS_DB: Lazy<BlockersAttackDatabase> =
+    Lazy::new(|| helpers::load_blockers_attack_db("bishop_moves.bin"));
 
 pub struct Position {
     board: [Piece; Square::Count as usize],
@@ -139,7 +141,7 @@ impl Position {
     }
 
     fn compute_knight_moves(&self, sq: Square) -> ComputedMoves {
-        let valid_moves = KNIGHT_MOVES_DB[sq as usize];
+        let valid_moves = KNIGHT_ATTACKS_DB[sq as usize];
         ComputedMoves {
             valid_moves,
             attacks: valid_moves,
@@ -155,7 +157,7 @@ impl Position {
         let move_mask = (h_mask | v_mask) & !(1u64 << (sq as u64));
 
         let blocker_key = self.bitboards.get_checkers(Color::Both) & move_mask;
-        let valid_moves = *ROOK_MOVES_DB[sq as usize]
+        let valid_moves = *ROOK_ATTACKS_DB[sq as usize]
             .get(&blocker_key)
             .unwrap_or(&Bitboard::default());
 
@@ -166,9 +168,9 @@ impl Position {
     }
 
     fn compute_bishop_moves(&self, sq: Square) -> ComputedMoves {
-        let diagonal_mask = DIAGONAL_MASK_DB[sq as usize];
+        let diagonal_mask = DIAGONAL_MASKS_DB[sq as usize];
         let blocker_key = self.bitboards.get_checkers(Color::Both) & diagonal_mask;
-        let valid_moves = *BISHOP_MOVES_DB[sq as usize]
+        let valid_moves = *BISHOP_ATTACKS_DB[sq as usize]
             .get(&blocker_key)
             .unwrap_or(&Bitboard::default());
 
@@ -180,7 +182,7 @@ impl Position {
 
     fn compute_king_moves(&self, sq: Square) -> ComputedMoves {
         // TODO: castling
-        let valid_moves = KING_MOVES_DB[sq as usize];
+        let valid_moves = KING_ATTACKS_DB[sq as usize];
         ComputedMoves {
             valid_moves,
             attacks: valid_moves,
@@ -329,11 +331,11 @@ impl Position {
 }
 
 pub fn load_move_dbs() {
-    Lazy::force(&KNIGHT_MOVES_DB);
-    Lazy::force(&KING_MOVES_DB);
-    Lazy::force(&ROOK_MOVES_DB);
-    Lazy::force(&DIAGONAL_MASK_DB);
-    Lazy::force(&BISHOP_MOVES_DB);
+    Lazy::force(&KNIGHT_ATTACKS_DB);
+    Lazy::force(&KING_ATTACKS_DB);
+    Lazy::force(&ROOK_ATTACKS_DB);
+    Lazy::force(&DIAGONAL_MASKS_DB);
+    Lazy::force(&BISHOP_ATTACKS_DB);
 }
 
 fn init_from_fen(fen: &str) -> Position {

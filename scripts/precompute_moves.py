@@ -160,8 +160,6 @@ def generate_bishop_move_databases() -> BishopDbs:
         start_time = time.perf_counter()
         mask = bishop_attacks(sq, 0)
         diagonal_masks[sq] = mask
-        print(f"Diagonal mask for square {sq}:")
-        print_bitboard(mask)
         for blockers in generate_relevant_blockers(mask):
             attacks = bishop_attacks(sq, blockers)
             bishop_moves[sq][blockers] = attacks
@@ -183,6 +181,8 @@ def generate_king_move_database() -> List[int]:
     king_moves = [0 for _ in range(64)]
     for sq in range(64):
         king_moves[sq] = jumping_attacks(sq, KING_DIRECTIONS)
+        if sq == 33:
+            print_bitboard(king_moves[sq])
     print("Computed king moves.")
     return king_moves
 
