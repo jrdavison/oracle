@@ -19,7 +19,9 @@ pub struct Position {
     board: [Piece; Square::Count as usize],
     bitboards: Bitboards,
     en_passant_square: Square,
+
     move_history: Vec<MoveInfo>,
+    redo_history: Vec<MoveInfo>,
 
     compute_time: Duration,
     fullmove_count: i32,
@@ -34,6 +36,7 @@ impl Default for Position {
             bitboards: Bitboards::default(),
             en_passant_square: Square::Count,
             move_history: Vec::new(),
+            redo_history: Vec::new(),
             compute_time: Duration::default(),
             fullmove_count: 1,
             halfmove_clock: 0,
@@ -339,6 +342,16 @@ impl Position {
                 self.fullmove_count -= 1;
             }
 
+            self.redo_history.push(last_move);
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn redo_move(&mut self) -> bool {
+        if let Some(last_move) = self.redo_history.pop() {
+            self.move_piece(last_move.from, last_move.to);
             true
         } else {
             false

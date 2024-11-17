@@ -110,4 +110,21 @@ fn setup_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
             }
         }
     });
+
+    ui.global::<RustInterface>().on_redo_move({
+        let position_weak = position_weak.clone();
+        let ui_weak = ui_weak.clone();
+        move || {
+            let position = position_weak.upgrade().unwrap();
+            let ui = ui_weak.upgrade().unwrap();
+            let mut position_mut = position.borrow_mut();
+
+            let redo_success = position_mut.redo_move();
+            drop(position_mut);
+
+            if redo_success {
+                set_application_state(&ui, &position, -1, true);
+            }
+        }
+    });
 }
