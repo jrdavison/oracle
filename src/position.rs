@@ -14,6 +14,8 @@ use std::time::{Duration, Instant};
 static KNIGHT_MOVES_DB: Lazy<SimpleMoveDatabase> = Lazy::new(|| helpers::load_simple_move_db("knight_moves.bin"));
 static KING_MOVES_DB: Lazy<SimpleMoveDatabase> = Lazy::new(|| helpers::load_simple_move_db("king_moves.bin"));
 static ROOK_MOVES_DB: Lazy<BlockersMoveDatabase> = Lazy::new(|| helpers::load_blockers_move_db("rook_moves.bin"));
+static DIAGONAL_MASK_DB: Lazy<SimpleMoveDatabase> = Lazy::new(|| helpers::load_simple_move_db("diagonal_masks.bin"));
+static BISHOP_MOVES_DB: Lazy<BlockersMoveDatabase> = Lazy::new(|| helpers::load_blockers_move_db("bishop_moves.bin"));
 
 pub struct Position {
     board: [Piece; Square::Count as usize],
@@ -66,8 +68,8 @@ impl Position {
         self.fullmove_count
     }
 
-    pub fn compute_time(&self) -> String {
-        format!("{:?}", self.compute_time)
+    pub fn compute_time_ms(&self) -> String {
+        format!("{:.4} ms", self.compute_time.as_secs_f64() * 1000.0)
     }
 
     pub fn valid_move(&self, from: Square, to: Square) -> bool {
@@ -164,44 +166,11 @@ impl Position {
     }
 
     fn compute_bishop_moves(&self, sq: Square) -> ComputedMoves {
-        let mut valid_moves = 0;
-
-        let mut target_square_ne = sq + Direction::North + Direction::East;
-        while target_square_ne != Square::Count {
-            if self.bitboards.is_checkers_sq_set(Color::Both, target_square_ne) {
-                bitboards::set_bit(&mut valid_moves, target_square_ne);
-                break;
-            }
-            bitboards::set_bit(&mut valid_moves, target_square_ne);
-            target_square_ne = target_square_ne + Direction::North + Direction::East;
-        }
-
-        let mut target_square_nw = sq + Direction::North + Direction::West;
-        while target_square_nw != Square::Count {
-            bitboards::set_bit(&mut valid_moves, target_square_nw);
-            if self.bitboards.is_checkers_sq_set(Color::Both, target_square_nw) {
-                break;
-            }
-            target_square_nw = target_square_nw + Direction::North + Direction::West;
-        }
-
-        let mut target_square_se = sq + Direction::South + Direction::East;
-        while target_square_se != Square::Count {
-            bitboards::set_bit(&mut valid_moves, target_square_se);
-            if self.bitboards.is_checkers_sq_set(Color::Both, target_square_se) {
-                break;
-            }
-            target_square_se = target_square_se + Direction::South + Direction::East;
-        }
-
-        let mut target_square_sw = sq + Direction::South + Direction::West;
-        while target_square_sw != Square::Count {
-            bitboards::set_bit(&mut valid_moves, target_square_sw);
-            if self.bitboards.is_checkers_sq_set(Color::Both, target_square_sw) {
-                break;
-            }
-            target_square_sw = target_square_sw + Direction::South + Direction::West;
-        }
+        let diagonal_mask = DIAGONAL_MASK_DB[sq as usize];
+        let blocker_key = self.bitboards.get_checkers(Color::Both) & diagonal_mask;
+        let valid_moves = *BISHOP_MOVES_DB[sq as usize]
+            .get(&blocker_key)
+            .unwrap_or(&Bitboard::default());
 
         ComputedMoves {
             valid_moves,
@@ -363,6 +332,8 @@ pub fn load_move_dbs() {
     Lazy::force(&KNIGHT_MOVES_DB);
     Lazy::force(&KING_MOVES_DB);
     Lazy::force(&ROOK_MOVES_DB);
+    Lazy::force(&DIAGONAL_MASK_DB);
+    Lazy::force(&BISHOP_MOVES_DB);
 }
 
 fn init_from_fen(fen: &str) -> Position {
