@@ -1,7 +1,6 @@
 use crate::bitboards;
 use crate::bitboards::{Bitboards, ComputedMoves};
 use crate::move_info::MoveInfo;
-use crate::utils::constants;
 use crate::utils::helpers;
 use crate::utils::types::{
     AttackDatabase, Bitboard, BlockersDatabase, Color, Direction, File, MoveType, Piece, PieceType, Rank, Square,
@@ -13,8 +12,11 @@ use std::time::{Duration, Instant};
 static KNIGHT_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| helpers::load_attack_db("knight_moves.bin"));
 static KING_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| helpers::load_attack_db("king_moves.bin"));
 static ROOK_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| helpers::load_blockers_db("rook_moves.bin"));
-static DIAGONAL_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| helpers::load_attack_db("diagonal_masks.bin"));
 static BISHOP_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| helpers::load_blockers_db("bishop_moves.bin"));
+
+static DIAGONAL_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| helpers::load_attack_db("diagonal_masks.bin"));
+static HORIZONTAL_VERTICAL_MASKS_DB: Lazy<AttackDatabase> =
+    Lazy::new(|| helpers::load_attack_db("horizontal_vertical_masks.bin"));
 
 pub struct Position {
     board: [Piece; Square::Count as usize],
@@ -146,13 +148,7 @@ impl Position {
     }
 
     fn compute_rook_moves(&self, sq: Square) -> ComputedMoves {
-        let rank = Square::rank_of(sq);
-        let file = Square::file_of(sq);
-
-        let h_mask = constants::HORIZONTAL_MASK << (rank as u64 * 8);
-        let v_mask = constants::VERTICAL_MASK << (file as u64);
-        let move_mask = (h_mask | v_mask) & !(1u64 << (sq as u64));
-
+        let move_mask = HORIZONTAL_VERTICAL_MASKS_DB[sq as usize];
         let blocker_key = self.bitboards.get_checkers(Color::Both) & move_mask;
         let valid_moves = *ROOK_ATTACKS_DB[sq as usize]
             .get(&blocker_key)
@@ -199,17 +195,18 @@ impl Position {
             only compute moves for pieces of the correct color.
             Valid moves and attacks will be reset back to 0 for the enemy color
             */
-            if color == Piece::color_of(piece) {
-                match piece_type {
-                    PieceType::Pawn => computed_moves = self.compute_pawn_moves(sq),
-                    PieceType::Knight => computed_moves = self.compute_knight_moves(sq),
-                    PieceType::Rook => computed_moves = self.compute_rook_moves(sq),
-                    PieceType::Bishop => computed_moves = self.compute_bishop_moves(sq),
-                    PieceType::Queen => computed_moves = self.compute_rook_moves(sq) | self.compute_bishop_moves(sq),
-                    PieceType::King => computed_moves = self.compute_king_moves(sq),
-                    _ => {}
-                }
+            // if color == Piece::color_of(piece) {
+            let p_start = Instant::now();
+            match piece_type {
+                PieceType::Pawn => computed_moves = self.compute_pawn_moves(sq),
+                PieceType::Knight => computed_moves = self.compute_knight_moves(sq),
+                PieceType::Rook => computed_moves = self.compute_rook_moves(sq),
+                PieceType::Bishop => computed_moves = self.compute_bishop_moves(sq),
+                PieceType::Queen => computed_moves = self.compute_rook_moves(sq) | self.compute_bishop_moves(sq),
+                PieceType::King => computed_moves = self.compute_king_moves(sq),
+                _ => {}
             }
+            // }
 
             /*
             TODO: check if move puts king in check (diagonal and horizontal pins)
@@ -221,6 +218,11 @@ impl Position {
             computed_moves.valid_moves &= !self.bitboards.get_checkers(color);
             self.bitboards.set_valid_moves(sq, computed_moves.valid_moves);
             attacks |= computed_moves.attacks;
+            println!(
+                "Computed moves for {:?} in {:.4} ms",
+                piece,
+                p_start.elapsed().as_secs_f64() * 1000.0
+            );
         }
 
         self.bitboards.set_attacks(color, attacks);
@@ -331,8 +333,9 @@ pub fn load_move_dbs() {
     Lazy::force(&KNIGHT_ATTACKS_DB);
     Lazy::force(&KING_ATTACKS_DB);
     Lazy::force(&ROOK_ATTACKS_DB);
-    Lazy::force(&DIAGONAL_MASKS_DB);
     Lazy::force(&BISHOP_ATTACKS_DB);
+    Lazy::force(&DIAGONAL_MASKS_DB);
+    Lazy::force(&HORIZONTAL_VERTICAL_MASKS_DB);
 }
 
 fn init_from_fen(fen: &str) -> Position {

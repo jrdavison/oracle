@@ -1,16 +1,22 @@
-from collections import namedtuple
 import os
 import struct
 import time
+from collections import namedtuple
+
+import perfection
 
 from typing import Iterator, List, Dict, Tuple
 
 SAVE_PATH = os.path.join(os.path.dirname(__file__), "..", "data")
 
-BishopDbs = namedtuple("BishopDbs", ["mask", "blockers"])
+MaskBlockerDbs = namedtuple("MaskBlockerDbs", ["masks", "blockers"])
 
 HORIZONTAL_MASK = 0xFF
 VERTICAL_MASK = 0x0101010101010101
+FRIST_RANK_MASK = 0xFF
+LAST_RANK_MASK = 0xFF00000000000000
+FIRST_FILE_MASK = 0x0101010101010101
+LAST_FILE_MASK = 0x8080808080808080
 
 KNIGHT_DIRECTIONS = [
     (2, 1),  # NNW
@@ -48,11 +54,21 @@ def get_file(sq: int) -> int:
 
 
 def mask_rook_attacks(sq: int) -> int:
-    h_mask = HORIZONTAL_MASK << get_rank(sq) * 8
+    h_mask = HORIZONTAL_MASK << (get_rank(sq) * 8)
     v_mask = VERTICAL_MASK << get_file(sq)
+    attack_mask = h_mask | v_mask
 
-    # clear square that the rook is on
-    return (h_mask | v_mask) & ~(1 << sq)
+    if get_rank(sq) != 0:
+        attack_mask &= ~FRIST_RANK_MASK
+    if get_rank(sq) != 7:
+        attack_mask &= ~LAST_RANK_MASK
+    if get_file(sq) != 0:
+        attack_mask &= ~FIRST_FILE_MASK
+    if get_file(sq) != 7:
+        attack_mask &= ~LAST_FILE_MASK
+
+    # Combine horizontal and vertical, and clear the rook's square
+    return attack_mask & ~(1 << sq)
 
 
 def bishop_attacks(sq: int, blockers: int) -> int:
@@ -137,22 +153,25 @@ def generate_relevant_blockers(mask: int) -> Iterator[int]:
         yield blockers
 
 
-def generate_rook_attack_db() -> List[Dict[int, int]]:
+def generate_rook_attack_db() -> MaskBlockerDbs:
     print("Generating rook move database...")
     rook_moves = [{} for _ in range(64)]
+    horizontal_masks = [0 for _ in range(64)]
     for sq in range(64):
         start_time = time.perf_counter()
         mask = mask_rook_attacks(sq)
+        horizontal_masks[sq] = mask
         for blockers in generate_relevant_blockers(mask):
             attacks = rook_attacks(sq, blockers)
             rook_moves[sq][blockers] = attacks
         print(
             f"Computed {len(rook_moves[sq])} moves for square {sq}. Done in {time.perf_counter() - start_time:.2f} seconds."
         )
-    return rook_moves
+
+    return MaskBlockerDbs(masks=horizontal_masks, blockers=rook_moves)
 
 
-def generate_bishop_attack_dbs() -> BishopDbs:
+def generate_bishop_attack_dbs() -> MaskBlockerDbs:
     print("Generating bishop move databases...")
     bishop_moves = [{} for _ in range(64)]
     diagonal_masks = [0 for _ in range(64)]
@@ -166,7 +185,7 @@ def generate_bishop_attack_dbs() -> BishopDbs:
         print(
             f"Computed {len(bishop_moves)} moves for square {sq}. Done in {time.perf_counter() - start_time:.2f} seconds."
         )
-    return BishopDbs(mask=diagonal_masks, blockers=bishop_moves)
+    return MaskBlockerDbs(masks=diagonal_masks, blockers=bishop_moves)
 
 
 def generate_knight_attack_db() -> List[int]:
@@ -181,8 +200,6 @@ def generate_king_attack_db() -> List[int]:
     king_moves = [0 for _ in range(64)]
     for sq in range(64):
         king_moves[sq] = jumping_attacks(sq, KING_DIRECTIONS)
-        if sq == 33:
-            print_bitboard(king_moves[sq])
     print("Computed king moves.")
     return king_moves
 
@@ -218,15 +235,16 @@ def print_bitboard(bb: int) -> None:
     print()
 
 
-rook_move_database = generate_rook_attack_db()
-save_blockers_db("rook_moves.bin", rook_move_database)
+rook_move_dbs = generate_rook_attack_db()
+save_blockers_db("rook_moves.bin", rook_move_dbs.blockers)
+save_attack_db("horizontal_vertical_masks.bin", rook_move_dbs.masks)
 
-knight_move_database = generate_knight_attack_db()
-save_attack_db("knight_moves.bin", knight_move_database)
+knight_move_db = generate_knight_attack_db()
+save_attack_db("knight_moves.bin", knight_move_db)
 
-king_move_database = generate_king_attack_db()
-save_attack_db("king_moves.bin", king_move_database)
+king_move_db = generate_king_attack_db()
+save_attack_db("king_moves.bin", king_move_db)
 
-bishop_move_databases = generate_bishop_attack_dbs()
-save_blockers_db("bishop_moves.bin", bishop_move_databases.blockers)
-save_attack_db("diagonal_masks.bin", bishop_move_databases.mask)
+bishop_move_dbs = generate_bishop_attack_dbs()
+save_blockers_db("bishop_moves.bin", bishop_move_dbs.blockers)
+save_attack_db("diagonal_masks.bin", bishop_move_dbs.masks)
