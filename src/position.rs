@@ -14,9 +14,8 @@ static KING_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| helpers::load_attack
 static ROOK_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| helpers::load_blockers_db("rook_moves.bin"));
 static BISHOP_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| helpers::load_blockers_db("bishop_moves.bin"));
 
-static DIAGONAL_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| helpers::load_attack_db("diagonal_masks.bin"));
-static HORIZONTAL_VERTICAL_MASKS_DB: Lazy<AttackDatabase> =
-    Lazy::new(|| helpers::load_attack_db("horizontal_vertical_masks.bin"));
+static BISHOP_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| helpers::load_attack_db("diagonal_masks.bin"));
+static ROOK_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| helpers::load_attack_db("horizontal_vertical_masks.bin"));
 
 pub struct Position {
     board: [Piece; Square::Count as usize],
@@ -148,7 +147,7 @@ impl Position {
     }
 
     fn compute_rook_moves(&self, sq: Square) -> ComputedMoves {
-        let move_mask = HORIZONTAL_VERTICAL_MASKS_DB[sq as usize];
+        let move_mask = ROOK_MASKS_DB[sq as usize];
         let blocker_key = self.bitboards.get_checkers(Color::Both) & move_mask;
         let valid_moves = *ROOK_ATTACKS_DB[sq as usize]
             .get(&blocker_key)
@@ -161,7 +160,7 @@ impl Position {
     }
 
     fn compute_bishop_moves(&self, sq: Square) -> ComputedMoves {
-        let diagonal_mask = DIAGONAL_MASKS_DB[sq as usize];
+        let diagonal_mask = BISHOP_MASKS_DB[sq as usize];
         let blocker_key = self.bitboards.get_checkers(Color::Both) & diagonal_mask;
         let valid_moves = *BISHOP_ATTACKS_DB[sq as usize]
             .get(&blocker_key)
@@ -196,7 +195,7 @@ impl Position {
             Valid moves and attacks will be reset back to 0 for the enemy color
             */
             // if color == Piece::color_of(piece) {
-            let p_start = Instant::now();
+            // let p_start = Instant::now();
             match piece_type {
                 PieceType::Pawn => computed_moves = self.compute_pawn_moves(sq),
                 PieceType::Knight => computed_moves = self.compute_knight_moves(sq),
@@ -334,8 +333,8 @@ pub fn load_move_dbs() {
     Lazy::force(&KING_ATTACKS_DB);
     Lazy::force(&ROOK_ATTACKS_DB);
     Lazy::force(&BISHOP_ATTACKS_DB);
-    Lazy::force(&DIAGONAL_MASKS_DB);
-    Lazy::force(&HORIZONTAL_VERTICAL_MASKS_DB);
+    Lazy::force(&BISHOP_MASKS_DB);
+    Lazy::force(&ROOK_MASKS_DB);
 }
 
 fn init_from_fen(fen: &str) -> Position {

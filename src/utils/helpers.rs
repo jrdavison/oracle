@@ -1,10 +1,12 @@
-use crate::utils::constants;
 use crate::utils::types::{AttackDatabase, Bitboard, BlockersDatabase, Square};
+use include_dir::{include_dir, Dir};
 use std::collections::HashMap;
 use std::io::{Cursor, Read};
 
+static DATA_DIR: Dir = include_dir!("data/");
+
 pub fn load_attack_db(path: &str) -> AttackDatabase {
-    let file = constants::DATA_DIR.get_file(path).expect("Failed to get file");
+    let file = DATA_DIR.get_file(path).expect("Failed to get file");
     let data = file.contents();
 
     assert_eq!(data.len(), (Square::Count as usize) * 8, "Invalid data length!");
@@ -20,7 +22,7 @@ pub fn load_attack_db(path: &str) -> AttackDatabase {
 }
 
 pub fn load_blockers_db(path: &str) -> BlockersDatabase {
-    let file = constants::DATA_DIR.get_file(path).expect("Failed to get file");
+    let file = DATA_DIR.get_file(path).expect("Failed to get file");
     let mut reader = Cursor::new(file.contents());
 
     let mut move_database: BlockersDatabase = std::array::from_fn(|_| HashMap::new());
