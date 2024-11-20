@@ -218,11 +218,11 @@ impl Position {
             computed_moves.valid_moves &= !self.bitboards.get_checkers(color);
             self.bitboards.set_valid_moves(sq, computed_moves.valid_moves);
             attacks |= computed_moves.attacks;
-            println!(
-                "Computed moves for {:?} in {:.4} ms",
-                piece,
-                p_start.elapsed().as_secs_f64() * 1000.0
-            );
+            // println!(
+            //     "Computed moves for {:?} in {:.4} ms",
+            //     piece,
+            //     p_start.elapsed().as_secs_f64() * 1000.0
+            // );
         }
 
         self.bitboards.set_attacks(color, attacks);

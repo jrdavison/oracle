@@ -13,6 +13,7 @@ MaskBlockerDbs = namedtuple("MaskBlockerDbs", ["masks", "blockers"])
 
 HORIZONTAL_MASK = 0xFF
 VERTICAL_MASK = 0x0101010101010101
+
 FRIST_RANK_MASK = 0xFF
 LAST_RANK_MASK = 0xFF00000000000000
 FIRST_FILE_MASK = 0x0101010101010101
@@ -53,51 +54,55 @@ def get_file(sq: int) -> int:
     return sq % 8
 
 
+def remove_edge_bits(mask: int, sq) -> int:
+    if get_rank(sq) != 0:
+        mask &= ~FRIST_RANK_MASK
+    if get_rank(sq) != 7:
+        mask &= ~LAST_RANK_MASK
+    if get_file(sq) != 0:
+        mask &= ~FIRST_FILE_MASK
+    if get_file(sq) != 7:
+        mask &= ~LAST_FILE_MASK
+    return mask
+
+
 def mask_rook_attacks(sq: int) -> int:
     h_mask = HORIZONTAL_MASK << (get_rank(sq) * 8)
     v_mask = VERTICAL_MASK << get_file(sq)
     attack_mask = h_mask | v_mask
 
-    if get_rank(sq) != 0:
-        attack_mask &= ~FRIST_RANK_MASK
-    if get_rank(sq) != 7:
-        attack_mask &= ~LAST_RANK_MASK
-    if get_file(sq) != 0:
-        attack_mask &= ~FIRST_FILE_MASK
-    if get_file(sq) != 7:
-        attack_mask &= ~LAST_FILE_MASK
-
-    # Combine horizontal and vertical, and clear the rook's square
-    return attack_mask & ~(1 << sq)
+    return remove_edge_bits(attack_mask, sq) & ~(1 << sq)
 
 
-def bishop_attacks(sq: int, blockers: int) -> int:
-    attacks = 0
+def bishop_attacks(sq: int, blockers: int, remove_edges: bool = False) -> int:
+    attack_mask = 0
     rank = get_rank(sq)
     file = get_file(sq)
 
     # NE
     for r, f in zip(range(rank + 1, 8), range(file + 1, 8)):
-        attacks |= 1 << get_square(r, f)
+        attack_mask |= 1 << get_square(r, f)
         if blockers & (1 << get_square(r, f)):
             break
     # SE
     for r, f in zip(range(rank - 1, -1, -1), range(file + 1, 8)):
-        attacks |= 1 << get_square(r, f)
+        attack_mask |= 1 << get_square(r, f)
         if blockers & (1 << get_square(r, f)):
             break
     # SW
     for r, f in zip(range(rank - 1, -1, -1), range(file - 1, -1, -1)):
-        attacks |= 1 << get_square(r, f)
+        attack_mask |= 1 << get_square(r, f)
         if blockers & (1 << get_square(r, f)):
             break
     # NW
     for r, f in zip(range(rank + 1, 8), range(file - 1, -1, -1)):
-        attacks |= 1 << get_square(r, f)
+        attack_mask |= 1 << get_square(r, f)
         if blockers & (1 << get_square(r, f)):
             break
 
-    return attacks
+    if remove_edges:
+        return remove_edge_bits(attack_mask, sq)
+    return attack_mask
 
 
 def rook_attacks(sq: int, blockers: int) -> int:
@@ -177,7 +182,7 @@ def generate_bishop_attack_dbs() -> MaskBlockerDbs:
     diagonal_masks = [0 for _ in range(64)]
     for sq in range(64):
         start_time = time.perf_counter()
-        mask = bishop_attacks(sq, 0)
+        mask = bishop_attacks(sq, 0, remove_edges=True)
         diagonal_masks[sq] = mask
         for blockers in generate_relevant_blockers(mask):
             attacks = bishop_attacks(sq, blockers)
@@ -209,12 +214,10 @@ def save_blockers_db(filename: str, move_db: List[Dict[int, int]]) -> None:
     with open(full_path, "wb") as f:
         for square in range(64):
             num_entries = len(move_db[square])
-            f.write(
-                struct.pack("I", num_entries)
-            )  # Write number of entries for this square
+            f.write(struct.pack("I", num_entries))
             for blockers, attacks in move_db[square].items():
-                f.write(struct.pack("Q", blockers))  # Write the blocker bitboard
-                f.write(struct.pack("Q", attacks))  # Write the attack bitboard
+                f.write(struct.pack("Q", blockers))
+                f.write(struct.pack("Q", attacks))
 
 
 def save_attack_db(filename: str, move_db: List[int]) -> None:
