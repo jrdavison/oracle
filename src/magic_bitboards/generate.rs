@@ -1,22 +1,20 @@
 use crate::bitboards::{self, Bitboard};
-use crate::magic_bitboards::storage::{save_attack_db, save_blockers_db};
 use crate::utils::{File, Rank, Square};
 use std::collections::HashMap;
-use std::error::Error;
 use std::time::Instant;
 
 const HORIZONTAL_MASK: Bitboard = 0xFF;
 const VERTICAL_MASK: Bitboard = 0x0101010101010101;
 
-const KNIGHT_DIRECTIONS: [(i8, i8); 8] = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, 2), (-1, -2)];
-const KING_DIRECTIONS: [(i8, i8); 8] = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)];
+pub const KNIGHT_DIRECTIONS: [(i8, i8); 8] = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, 2), (-1, -2)];
+pub const KING_DIRECTIONS: [(i8, i8); 8] = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)];
 
-struct MaskBlockerDbs {
-    masks: [Bitboard; Square::Count as usize],
-    blockers: [HashMap<Bitboard, Bitboard>; Square::Count as usize],
+pub struct MaskBlockerDbs {
+    pub masks: [Bitboard; Square::Count as usize],
+    pub blockers: [HashMap<Bitboard, Bitboard>; Square::Count as usize],
 }
 
-pub fn remove_edge_bits(mask: &mut Bitboard, sq: Square) {
+fn remove_edge_bits(mask: &mut Bitboard, sq: Square) {
     let file = Square::file_of(sq);
     let rank = Square::rank_of(sq);
 
@@ -173,7 +171,7 @@ fn bishop_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboar
     attack_mask
 }
 
-fn generate_rook_attack_db() -> MaskBlockerDbs {
+pub fn generate_rook_attack_db() -> MaskBlockerDbs {
     println!("Generating rook move database...");
 
     let mut rook_moves: [HashMap<Bitboard, Bitboard>; Square::Count as usize] = std::array::from_fn(|_| HashMap::new());
@@ -201,7 +199,7 @@ fn generate_rook_attack_db() -> MaskBlockerDbs {
     }
 }
 
-fn generate_bishop_attack_dbs() -> MaskBlockerDbs {
+pub fn generate_bishop_attack_dbs() -> MaskBlockerDbs {
     println!("Generating bishop move database...");
 
     let mut bishop_moves: [HashMap<Bitboard, Bitboard>; Square::Count as usize] =
@@ -246,42 +244,10 @@ fn jumping_attacks(sq: Square, directions: &[(i8, i8)]) -> Bitboard {
     attacks
 }
 
-fn generate_jumping_attacks_db(directions: &[(i8, i8)]) -> [Bitboard; 64] {
+pub fn generate_jumping_attacks_db(directions: &[(i8, i8)]) -> [Bitboard; 64] {
     let mut attack_lookup = [Bitboard::default(); Square::Count as usize];
     for sq in Square::iter() {
         attack_lookup[sq as usize] = jumping_attacks(sq, directions);
     }
     attack_lookup
-}
-
-pub fn generate() -> Result<(), Box<dyn Error>> {
-    println!("Generating magic bitboards...");
-
-    println!();
-    println!("Generating Knight attacks...");
-    let knight_attacks = generate_jumping_attacks_db(&KNIGHT_DIRECTIONS);
-    save_attack_db("knight_attacks.bin", &knight_attacks);
-    println!("Saved knight attacks.");
-
-    println!();
-    println!("Generating King attacks...");
-    let king_attacks = generate_jumping_attacks_db(&KING_DIRECTIONS);
-    save_attack_db("king_attacks.bin", &king_attacks);
-    println!("Saved king attacks.");
-
-    println!();
-    println!("Generating Rook attacks...");
-    let rook_attacks = generate_rook_attack_db();
-    save_attack_db("rook_masks.bin", &rook_attacks.masks);
-    save_blockers_db("rook_attacks.bin", &rook_attacks.blockers);
-    println!("Saved rook attacks.");
-
-    println!();
-    println!("Generating Bishop attacks...");
-    let bishop_attacks = generate_bishop_attack_dbs();
-    save_attack_db("bishop_masks.bin", &bishop_attacks.masks);
-    save_blockers_db("bishop_attacks.bin", &bishop_attacks.blockers);
-    println!("Saved bishop attacks.");
-
-    Ok(())
 }

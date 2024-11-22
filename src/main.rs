@@ -31,7 +31,7 @@ struct Cli {
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Cli::parse();
     if args.gen_magics {
-        magic_bitboards::generate::generate()?;
+        magic_bitboards::generate()?;
     } else {
         storage::load_move_dbs(); // force lazy static initialization of move databases
 
