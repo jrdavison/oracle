@@ -1,26 +1,14 @@
-use crate::bitboards;
-use crate::bitboards::{Bitboards, ComputedMoves};
-use crate::move_info::MoveInfo;
-use crate::utils::helpers;
-use crate::utils::types::{
-    AttackDatabase, Bitboard, BlockersDatabase, Color, Direction, File, MoveType, Piece, PieceType, Rank, Square,
-};
+use crate::bitboards::Bitboards;
+use crate::moves::move_generator;
+use crate::moves::move_info::MoveInfo;
+use crate::types::{Color, Direction, File, MoveType, Piece, PieceType, Rank, Square};
 use num_traits::ToPrimitive;
-use once_cell::sync::Lazy;
 use std::time::{Duration, Instant};
 
-static KNIGHT_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| helpers::load_attack_db("knight_moves.bin"));
-static KING_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| helpers::load_attack_db("king_moves.bin"));
-static ROOK_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| helpers::load_blockers_db("rook_moves.bin"));
-static BISHOP_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| helpers::load_blockers_db("bishop_moves.bin"));
-
-static BISHOP_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| helpers::load_attack_db("diagonal_masks.bin"));
-static ROOK_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| helpers::load_attack_db("horizontal_vertical_masks.bin"));
-
 pub struct Position {
-    board: [Piece; Square::Count as usize],
-    bitboards: Bitboards,
-    en_passant_square: Square,
+    pub board: [Piece; Square::Count as usize],
+    pub bitboards: Bitboards,
+    pub en_passant_square: Square,
 
     move_history: Vec<MoveInfo>,
     redo_history: Vec<MoveInfo>,
@@ -80,152 +68,9 @@ impl Position {
         self.bitboards.is_valid_move(from, to)
     }
 
-    fn compute_pawn_moves(&self, sq: Square) -> ComputedMoves {
-        let mut valid_moves = 0;
-
-        let piece = self.board[sq];
-        let color = Piece::color_of(piece);
-        let forward = Direction::forward_direction(color);
-
-        // normal move
-        let mut target_sq = sq;
-        for i in 0..2 {
-            // only allow double move from starting rank
-            if i == 1 && (Rank::relative_rank(color, Square::rank_of(sq)) != Rank::Rank2) {
-                break;
-            }
-
-            target_sq = target_sq + forward;
-            if (target_sq != Square::Count) && !self.bitboards.is_checkers_sq_set(Color::Both, target_sq) {
-                bitboards::set_bit(&mut valid_moves, target_sq);
-            } else {
-                break;
-            }
-        }
-
-        // capture moves
-        let mut attacks = 0; // pawns can only attack diagonally
-        let target_sq_east = (sq + forward) + Direction::East;
-        if target_sq_east != Square::Count {
-            bitboards::set_bit(&mut attacks, sq);
-            if self.bitboards.is_checkers_sq_set(!color, target_sq_east) {
-                bitboards::set_bit(&mut valid_moves, target_sq_east);
-            }
-        }
-
-        let target_sq_west = (sq + forward) + Direction::West;
-        if target_sq_west != Square::Count {
-            bitboards::set_bit(&mut attacks, sq);
-            if self.bitboards.is_checkers_sq_set(!color, target_sq_west) {
-                bitboards::set_bit(&mut valid_moves, target_sq_west);
-            }
-        }
-
-        // en passant
-        if self.en_passant_square != Square::Count {
-            if target_sq_east == self.en_passant_square {
-                bitboards::set_bit(&mut valid_moves, target_sq_east);
-            } else if target_sq_west == self.en_passant_square {
-                bitboards::set_bit(&mut valid_moves, target_sq_west);
-            }
-        }
-
-        // TODO: promotion
-
-        ComputedMoves {
-            valid_moves,
-            attacks: valid_moves,
-        }
-    }
-
-    fn compute_knight_moves(&self, sq: Square) -> ComputedMoves {
-        let valid_moves = KNIGHT_ATTACKS_DB[sq as usize];
-        ComputedMoves {
-            valid_moves,
-            attacks: valid_moves,
-        }
-    }
-
-    fn compute_rook_moves(&self, sq: Square) -> ComputedMoves {
-        let move_mask = ROOK_MASKS_DB[sq as usize];
-        let blocker_key = self.bitboards.get_checkers(Color::Both) & move_mask;
-        let valid_moves = *ROOK_ATTACKS_DB[sq as usize]
-            .get(&blocker_key)
-            .unwrap_or(&Bitboard::default());
-
-        ComputedMoves {
-            valid_moves,
-            attacks: valid_moves,
-        }
-    }
-
-    fn compute_bishop_moves(&self, sq: Square) -> ComputedMoves {
-        let diagonal_mask = BISHOP_MASKS_DB[sq as usize];
-        let blocker_key = self.bitboards.get_checkers(Color::Both) & diagonal_mask;
-        let valid_moves = *BISHOP_ATTACKS_DB[sq as usize]
-            .get(&blocker_key)
-            .unwrap_or(&Bitboard::default());
-
-        ComputedMoves {
-            valid_moves,
-            attacks: valid_moves,
-        }
-    }
-
-    fn compute_king_moves(&self, sq: Square) -> ComputedMoves {
-        // TODO: castling
-        let valid_moves = KING_ATTACKS_DB[sq as usize];
-        ComputedMoves {
-            valid_moves,
-            attacks: valid_moves,
-        }
-    }
-
     pub fn compute_valid_moves(&mut self, color: Color) {
         let start = Instant::now();
-
-        let mut attacks = 0;
-        for sq in Square::iter() {
-            let piece = self.board[sq];
-            let piece_type = Piece::type_of(piece);
-            let mut computed_moves = ComputedMoves::default();
-
-            /*
-            only compute moves for pieces of the correct color.
-            Valid moves and attacks will be reset back to 0 for the enemy color
-            */
-            // if color == Piece::color_of(piece) {
-            // let p_start = Instant::now();
-            match piece_type {
-                PieceType::Pawn => computed_moves = self.compute_pawn_moves(sq),
-                PieceType::Knight => computed_moves = self.compute_knight_moves(sq),
-                PieceType::Rook => computed_moves = self.compute_rook_moves(sq),
-                PieceType::Bishop => computed_moves = self.compute_bishop_moves(sq),
-                PieceType::Queen => computed_moves = self.compute_rook_moves(sq) | self.compute_bishop_moves(sq),
-                PieceType::King => computed_moves = self.compute_king_moves(sq),
-                _ => {}
-            }
-            // }
-
-            /*
-            TODO: check if move puts king in check (diagonal and horizontal pins)
-
-            we will need to copy the position and then use that to simulate the move. Then we check if the king is in
-            check
-            */
-
-            computed_moves.valid_moves &= !self.bitboards.get_checkers(color);
-            self.bitboards.set_valid_moves(sq, computed_moves.valid_moves);
-            attacks |= computed_moves.attacks;
-            // println!(
-            //     "Computed moves for {:?} in {:.4} ms",
-            //     piece,
-            //     p_start.elapsed().as_secs_f64() * 1000.0
-            // );
-        }
-
-        self.bitboards.set_attacks(color, attacks);
-
+        move_generator::compute_valid_moves(self, color);
         self.compute_time = start.elapsed();
     }
 
@@ -328,15 +173,6 @@ impl Position {
     }
 }
 
-pub fn load_move_dbs() {
-    Lazy::force(&KNIGHT_ATTACKS_DB);
-    Lazy::force(&KING_ATTACKS_DB);
-    Lazy::force(&ROOK_ATTACKS_DB);
-    Lazy::force(&BISHOP_ATTACKS_DB);
-    Lazy::force(&BISHOP_MASKS_DB);
-    Lazy::force(&ROOK_MASKS_DB);
-}
-
 fn init_from_fen(fen: &str) -> Position {
     /*
     More info about fen notation: https://www.chess.com/terms/fen-chess
@@ -364,7 +200,7 @@ fn init_from_fen(fen: &str) -> Position {
                 let piece_type = PieceType::make_piece_type(c);
                 position.board[sq as usize] = Piece::make_piece(piece_type, color);
                 position.bitboards.set_checkers(color, sq);
-                file = file + 1;
+                file = file + 1u8;
             }
         }
     }

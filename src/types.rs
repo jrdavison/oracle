@@ -240,6 +240,13 @@ impl Sub<u8> for File {
     }
 }
 
+impl Add<i8> for File {
+    type Output = File;
+    fn add(self, rhs: i8) -> File {
+        File::from_i8(self as i8 + rhs).unwrap_or(File::Count)
+    }
+}
+
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
 pub enum Rank {
@@ -290,5 +297,12 @@ impl Sub<u8> for Rank {
     type Output = Rank;
     fn sub(self, rhs: u8) -> Rank {
         Rank::from_u8(self as u8 - rhs).unwrap_or(Rank::Count)
+    }
+}
+
+impl Add<i8> for Rank {
+    type Output = Rank;
+    fn add(self, rhs: i8) -> Rank {
+        Rank::from_i8(self as i8 + rhs).unwrap_or(Rank::Count)
     }
 }

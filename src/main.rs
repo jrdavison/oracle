@@ -2,11 +2,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod bitboards;
-mod move_info;
+mod magic_bitboards;
+mod moves;
 mod position;
-mod utils;
+mod types;
 
-use crate::position::load_move_dbs;
+use clap::Parser;
+use magic_bitboards::storage;
 use num_traits::FromPrimitive;
 use num_traits::ToPrimitive;
 use position::Position;
@@ -15,24 +17,35 @@ use slint::VecModel;
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
-use utils::types::{Color, File, Rank, Square};
+use types::{Color, File, Rank, Square};
 
 slint::include_modules!();
 
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    #[arg(long)]
+    gen_magics: bool,
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
-    load_move_dbs(); // force lazy static initialization of move databases
+    let args = Cli::parse();
+    if args.gen_magics {
+        magic_bitboards::generate::generate()?;
+    } else {
+        storage::load_move_dbs(); // force lazy static initialization of move databases
 
-    let ui = AppWindow::new().unwrap();
+        let ui = AppWindow::new().unwrap();
 
-    let position = Rc::new(RefCell::new(Position::new(
-        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-    )));
+        let position = Rc::new(RefCell::new(Position::new(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        )));
 
-    set_application_state(&ui, &position, -1, true); // -1 no piece is being dragged
-    setup_callbacks(&ui, &position);
+        set_application_state(&ui, &position, -1, true); // -1 no piece is being dragged
+        setup_callbacks(&ui, &position);
 
-    ui.run().unwrap();
-
+        ui.run()?;
+    }
     Ok(())
 }
 
