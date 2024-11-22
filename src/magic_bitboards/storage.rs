@@ -9,8 +9,8 @@ use std::io::Write;
 use std::io::{Cursor, Read};
 use std::path::Path;
 
-static DATA_DIR: Dir = include_dir!("data/");
 const SAVE_PATH: &str = "./data/";
+static DATA_DIR: Dir = include_dir!("data/");
 
 pub static KNIGHT_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("knight_attacks.bin"));
 pub static KING_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("king_attacks.bin"));
