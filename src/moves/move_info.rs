@@ -1,4 +1,4 @@
-use crate::types::{Direction, MoveType, Piece, PieceType, Rank, Square};
+use crate::utils::{Direction, MoveType, Piece, PieceType, Rank, Square};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MoveInfo {

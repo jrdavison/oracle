@@ -1,4 +1,6 @@
-use crate::types::{Bitboard, Color, File, Rank, Square};
+use crate::utils::{Color, File, Rank, Square};
+
+pub type Bitboard = u64;
 
 pub struct Bitboards {
     valid_moves: [Bitboard; Square::Count as usize],
@@ -74,12 +76,12 @@ pub fn set_bit(bitboard: &mut Bitboard, sq: Square) {
     *bitboard |= 1u64 << sq as u64;
 }
 
-fn clear_bit(bitboard: &mut Bitboard, sq: Square) {
+pub fn clear_bit(bitboard: &mut Bitboard, sq: Square) {
     assert!(sq != Square::Count, "Invalid square");
     *bitboard &= !(1u64 << sq as u64);
 }
 
-fn is_bit_set(bitboard: Bitboard, sq: Square) -> bool {
+pub fn is_bit_set(bitboard: Bitboard, sq: Square) -> bool {
     assert!(sq != Square::Count, "Invalid square");
     bitboard & (1u64 << sq as u64) != 0
 }

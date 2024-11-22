@@ -1,9 +1,9 @@
-use crate::bitboards;
+use crate::bitboards::{self, Bitboard};
 use crate::magic_bitboards::storage::{
     BISHOP_ATTACKS_DB, BISHOP_MASKS_DB, KING_ATTACKS_DB, KNIGHT_ATTACKS_DB, ROOK_ATTACKS_DB, ROOK_MASKS_DB,
 };
 use crate::position::Position;
-use crate::types::{Bitboard, Color, Direction, Piece, PieceType, Rank, Square};
+use crate::utils::{Color, Direction, Piece, PieceType, Rank, Square};
 use std::ops::BitOr;
 
 #[derive(Default)]

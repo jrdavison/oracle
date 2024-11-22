@@ -1,13 +1,8 @@
 use core::panic;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
-use std::collections::HashMap;
-use std::ops::{Add, Sub};
+use std::ops::{Add, Mul, Sub};
 use std::ops::{Index, IndexMut, Not};
-
-pub type Bitboard = u64;
-pub type BlockersDatabase = [HashMap<Bitboard, Bitboard>; Square::Count as usize];
-pub type AttackDatabase = [Bitboard; Square::Count as usize];
 
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
@@ -104,14 +99,14 @@ impl Piece {
 #[rustfmt::skip]
 #[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, PartialOrd, Default)]
 pub enum Square {
-    SqA1, SqB1, SqC1, SqD1, SqE1, SqF1, SqG1, SqH1,
-    SqA2, SqB2, SqC2, SqD2, SqE2, SqF2, SqG2, SqH2,
-    SqA3, SqB3, SqC3, SqD3, SqE3, SqF3, SqG3, SqH3,
-    SqA4, SqB4, SqC4, SqD4, SqE4, SqF4, SqG4, SqH4,
-    SqA5, SqB5, SqC5, SqD5, SqE5, SqF5, SqG5, SqH5,
-    SqA6, SqB6, SqC6, SqD6, SqE6, SqF6, SqG6, SqH6,
-    SqA7, SqB7, SqC7, SqD7, SqE7, SqF7, SqG7, SqH7,
-    SqA8, SqB8, SqC8, SqD8, SqE8, SqF8, SqG8, SqH8,
+    A1, B1, C1, D1, E1, F1, G1, H1,
+    A2, B2, C2, D2, E2, F2, G2, H2,
+    A3, B3, C3, D3, E3, F3, G3, H3,
+    A4, B4, C4, D4, E4, F4, G4, H4,
+    A5, B5, C5, D5, E5, F5, G5, H5,
+    A6, B6, C6, D6, E6, F6, G6, H6,
+    A7, B7, C7, D7, E7, F7, G7, H7,
+    A8, B8, C8, D8, E8, F8, G8, H8,
 
     #[default]
     Count = 64,
@@ -170,7 +165,7 @@ impl Square {
     }
 
     pub fn is_valid(sq: i8) -> bool {
-        Square::SqA1 as i8 <= sq && sq < Square::Count as i8
+        Square::A1 as i8 <= sq && sq < Square::Count as i8
     }
 }
 
@@ -236,7 +231,7 @@ impl Add<u8> for File {
 impl Sub<u8> for File {
     type Output = File;
     fn sub(self, rhs: u8) -> File {
-        File::from_u8(self as u8 - rhs).unwrap_or(File::Count)
+        File::from_u8((self as u8).wrapping_sub(rhs)).unwrap_or(File::Count)
     }
 }
 
@@ -296,7 +291,7 @@ impl Add<u8> for Rank {
 impl Sub<u8> for Rank {
     type Output = Rank;
     fn sub(self, rhs: u8) -> Rank {
-        Rank::from_u8(self as u8 - rhs).unwrap_or(Rank::Count)
+        Rank::from_u8((self as u8).wrapping_sub(rhs)).unwrap_or(Rank::Count)
     }
 }
 
@@ -304,5 +299,12 @@ impl Add<i8> for Rank {
     type Output = Rank;
     fn add(self, rhs: i8) -> Rank {
         Rank::from_i8(self as i8 + rhs).unwrap_or(Rank::Count)
+    }
+}
+
+impl Mul<u8> for Rank {
+    type Output = Rank;
+    fn mul(self, rhs: u8) -> Rank {
+        Rank::from_u8(self as u8 * rhs).unwrap_or(Rank::Count)
     }
 }

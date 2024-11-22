@@ -1,109 +1,145 @@
-// use crate::types::{File, Rank, Square};
-use crate::storage::save_attack_cache;
-use crate::types::{Bitboard, File, Rank, Square};
-// use std::collections::HashMap;
+use crate::bitboards::{self, Bitboard};
+use crate::magic_bitboards::storage::save_blockers_db;
+use crate::storage::save_attack_db;
+use crate::utils::{File, Rank, Square};
+use std::collections::HashMap;
 use std::error::Error;
-// use std::time::Instant;
-use crate::bitboards;
+use std::time::Instant;
 
-// Constants
-// const HORIZONTAL_MASK: u64 = 0xFF;
-// const VERTICAL_MASK: u64 = 0x0101010101010101;
-// const FIRST_RANK_MASK: u64 = 0xFF;
-// const LAST_RANK_MASK: u64 = 0xFF00000000000000;
-// const FIRST_FILE_MASK: u64 = 0x0101010101010101;
-// const LAST_FILE_MASK: u64 = 0x8080808080808080;
+const HORIZONTAL_MASK: Bitboard = 0xFF;
+const VERTICAL_MASK: Bitboard = 0x0101010101010101;
 
 const KNIGHT_DIRECTIONS: [(i8, i8); 8] = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, 2), (-1, -2)];
 const KING_DIRECTIONS: [(i8, i8); 8] = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)];
 
-// struct MaskBlockerDbs {
-//     masks: Vec<u64>,
-//     blockers: Vec<HashMap<u64, u64>>,
-// }
+struct MaskBlockerDbs {
+    masks: [Bitboard; Square::Count as usize],
+    blockers: [HashMap<Bitboard, Bitboard>; Square::Count as usize],
+}
 
-// fn remove_edge_bits(mut mask: u64, sq: usize) -> u64 {
-//     let rank = get_rank(sq);
-//     let file = get_file(sq);
+pub fn remove_edge_bits(mask: &mut Bitboard, sq: Square) {
+    let file = Square::file_of(sq);
+    let rank = Square::rank_of(sq);
 
-//     if rank != 0 {
-//         mask &= !FIRST_RANK_MASK;
-//     }
-//     if rank != 7 {
-//         mask &= !LAST_RANK_MASK;
-//     }
-//     if file != 0 {
-//         mask &= !FIRST_FILE_MASK;
-//     }
-//     if file != 7 {
-//         mask &= !LAST_FILE_MASK;
-//     }
-//     mask
-// }
+    if rank != Rank::Rank1 {
+        *mask &= !HORIZONTAL_MASK;
+    }
+    if rank != Rank::Rank8 {
+        *mask &= !(HORIZONTAL_MASK << 56);
+    }
+    if file != File::FileA {
+        *mask &= !VERTICAL_MASK;
+    }
+    if file != File::FileH {
+        *mask &= !(VERTICAL_MASK << 7);
+    }
+}
 
-// fn mask_rook_attacks(sq: usize) -> u64 {
-//     let h_mask = HORIZONTAL_MASK << (get_rank(sq) * 8);
-//     let v_mask = VERTICAL_MASK << get_file(sq);
-//     let attack_mask = h_mask | v_mask;
+fn generate_relevant_blockers(mask: Bitboard) -> impl Iterator<Item = Bitboard> {
+    let relevant_bits: Vec<usize> = (0..64).filter(|&i| mask & (1 << i) != 0).collect();
+    let num_relevant_bits = relevant_bits.len();
 
-//     remove_edge_bits(attack_mask, sq) & !(1 << sq)
-// }
+    (0..(1 << num_relevant_bits)).map(move |index| {
+        let mut blockers = 0u64;
+        for (i, &bit) in relevant_bits.iter().enumerate() {
+            if index & (1 << i) != 0 {
+                blockers |= 1 << bit;
+            }
+        }
+        blockers
+    })
+}
 
-// fn rook_attacks(sq: usize, blockers: u64) -> u64 {
-//     let mut attacks = 0;
-//     let rank = get_rank(sq) as i8;
-//     let file = get_file(sq) as i8;
+fn mask_rook_attacks(sq: Square) -> Bitboard {
+    let v_mask = VERTICAL_MASK << Square::file_of(sq) as u8;
+    let h_mask = HORIZONTAL_MASK << (Square::rank_of(sq) * 8) as u8;
+    let mut attack_mask = h_mask | v_mask;
 
-//     // Directions: E, W, N, S
-//     for &(dr, df) in &[(0, 1), (0, -1), (1, 0), (-1, 0)] {
-//         let mut r = rank;
-//         let mut f = file;
-//         loop {
-//             r += dr;
-//             f += df;
-//             if r < 0 || r >= 8 || f < 0 || f >= 8 {
-//                 break;
-//             }
-//             let sq = get_square(r as u8, f as u8);
-//             attacks |= 1 << sq;
-//             if blockers & (1 << sq) != 0 {
-//                 break;
-//             }
-//         }
-//     }
-//     attacks
-// }
+    remove_edge_bits(&mut attack_mask, sq);
+    bitboards::clear_bit(&mut attack_mask, sq);
+    attack_mask
+}
 
-// fn bishop_attacks(sq: usize, blockers: u64, remove_edges: bool) -> u64 {
-//     let mut attack_mask = 0;
-//     let rank = get_rank(sq) as i8;
-//     let file = get_file(sq) as i8;
+fn rook_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboard {
+    let mut attack_mask = 0;
+    let file = Square::file_of(sq);
+    let rank = Square::rank_of(sq);
 
-//     // Directions: NE, SE, SW, NW
-//     let directions: [(i8, i8); 4] = [(1, 1), (-1, 1), (-1, -1), (1, -1)];
-//     for &(dr, df) in &directions {
-//         let mut r = rank;
-//         let mut f = file;
-//         loop {
-//             r += dr;
-//             f += df;
-//             if r < 0 || r >= 8 || f < 0 || f >= 8 {
-//                 break;
-//             }
-//             let sq = get_square(r as u8, f as u8);
-//             attack_mask |= 1 << sq;
-//             if blockers & (1 << sq) != 0 {
-//                 break;
-//             }
-//         }
-//     }
+    // E
+    let mut east_file = file + 1u8;
+    while east_file != File::Count {
+        let dest_sq = Square::make_square(east_file, rank);
+        bitboards::set_bit(&mut attack_mask, dest_sq);
+        if bitboards::is_bit_set(blockers, dest_sq) {
+            break;
+        }
+        east_file = east_file + 1u8;
+    }
+    // W
+    let mut west_file = file - 1u8;
+    while west_file != File::Count {
+        let dest_sq = Square::make_square(west_file, rank);
+        bitboards::set_bit(&mut attack_mask, dest_sq);
+        if bitboards::is_bit_set(blockers, dest_sq) {
+            break;
+        }
+        west_file = west_file - 1;
+    }
+    // N
+    let mut north_rank = rank + 1u8;
+    while north_rank != Rank::Count {
+        let dest_sq = Square::make_square(file, north_rank);
+        bitboards::set_bit(&mut attack_mask, dest_sq);
+        if bitboards::is_bit_set(blockers, dest_sq) {
+            break;
+        }
+        north_rank = north_rank + 1u8;
+    }
+    // S
+    let mut south_rank = rank - 1u8;
+    while south_rank != Rank::Count {
+        let dest_sq = Square::make_square(file, south_rank);
+        bitboards::set_bit(&mut attack_mask, dest_sq);
+        if bitboards::is_bit_set(blockers, dest_sq) {
+            break;
+        }
+        south_rank = south_rank - 1u8;
+    }
 
-//     if remove_edges {
-//         remove_edge_bits(attack_mask, sq)
-//     } else {
-//         attack_mask
-//     }
-// }
+    if remove_edges {
+        remove_edge_bits(&mut attack_mask, sq);
+    }
+
+    attack_mask
+}
+
+fn generate_rook_attack_db() -> MaskBlockerDbs {
+    println!("Generating rook move database...");
+
+    let mut rook_moves: [HashMap<Bitboard, Bitboard>; Square::Count as usize] = std::array::from_fn(|_| HashMap::new());
+    let mut h_v_masks = [Bitboard::default(); Square::Count as usize];
+
+    for sq in Square::iter() {
+        let start = Instant::now();
+        let mask = mask_rook_attacks(sq);
+        h_v_masks[sq as usize] = mask;
+        for blockers in generate_relevant_blockers(mask) {
+            let attacks = rook_attacks(sq, blockers, false);
+            rook_moves[sq as usize].insert(blockers, attacks);
+        }
+        println!(
+            "Computed {} moves for square {:?}. Done in {:.2} seconds.",
+            rook_moves[sq as usize].len(),
+            sq,
+            start.elapsed().as_secs_f64()
+        );
+    }
+
+    MaskBlockerDbs {
+        masks: h_v_masks,
+        blockers: rook_moves,
+    }
+}
 
 fn jumping_attacks(sq: Square, directions: &[(i8, i8)]) -> Bitboard {
     let mut attacks = 0;
@@ -121,7 +157,7 @@ fn jumping_attacks(sq: Square, directions: &[(i8, i8)]) -> Bitboard {
     attacks
 }
 
-fn generate_jumping_attacks_lookup(directions: &[(i8, i8)]) -> [Bitboard; 64] {
+fn generate_jumping_attacks_db(directions: &[(i8, i8)]) -> [Bitboard; 64] {
     let mut attack_lookup = [Bitboard::default(); Square::Count as usize];
     for sq in Square::iter() {
         attack_lookup[sq as usize] = jumping_attacks(sq, directions);
@@ -129,70 +165,24 @@ fn generate_jumping_attacks_lookup(directions: &[(i8, i8)]) -> [Bitboard; 64] {
     attack_lookup
 }
 
-// fn generate_relevant_blockers(mask: u64) -> Vec<u64> {
-//     let mut relevant_bits = Vec::new();
-//     for i in 0..64 {
-//         if mask & (1 << i) != 0 {
-//             relevant_bits.push(i);
-//         }
-//     }
-//     let num_relevant_bits = relevant_bits.len();
-//     let mut blockers_list = Vec::new();
-//     for index in 0..(1 << num_relevant_bits) {
-//         let mut blockers = 0;
-//         for (i, &bit) in relevant_bits.iter().enumerate() {
-//             if index & (1 << i) != 0 {
-//                 blockers |= 1 << bit;
-//             }
-//         }
-//         blockers_list.push(blockers);
-//     }
-//     blockers_list
-// }
-
-// fn generate_rook_attack_db() -> MaskBlockerDbs {
-//     println!("Generating rook move database...");
-
-//     let mut rook_moves: [HashMap<u64, u64>; 64] = [HashMap::new(); 64];
-//     let mut h_v_masks = [0u64; 64];
-
-//     for sq in 0..64 {
-//         let start_time = Instant::now();
-
-//         let mask = mask_rook_attacks(sq);
-//         h_v_masks[sq] = mask;
-
-//         let relevant_blockers = generate_relevant_blockers(mask);
-//         for &blockers in &relevant_blockers {
-//             let attacks = rook_attacks(sq, blockers);
-//             rook_moves[sq].insert(blockers, attacks);
-//         }
-
-//         println!(
-//             "Computed {} moves for square {}. Done in {:.2} seconds.",
-//             rook_moves[sq].len(),
-//             sq,
-//             start_time.elapsed().as_secs_f64()
-//         );
-//     }
-
-//     MaskBlockerDbs {
-//         masks: h_v_masks,
-//         blockers: rook_moves,
-//     }
-// }
-
 pub fn generate() -> Result<(), Box<dyn Error>> {
-    let knight_attacks = generate_jumping_attacks_lookup(&KNIGHT_DIRECTIONS);
-    save_attack_cache("knight_attacks.bin", &knight_attacks);
+    println!("Generating magic bitboards...");
+
+    println!("Generating Knight attacks...");
+    let knight_attacks = generate_jumping_attacks_db(&KNIGHT_DIRECTIONS);
+    save_attack_db("knight_attacks.bin", &knight_attacks);
     println!("Saved knight attacks.");
-    bitboards::print_bitboard(knight_attacks[12]);
 
-    let king_attacks = generate_jumping_attacks_lookup(&KING_DIRECTIONS);
-    save_attack_cache("king_attacks.bin", &king_attacks);
-    bitboards::print_bitboard(king_attacks[12]);
+    println!("Generating King attacks...");
+    let king_attacks = generate_jumping_attacks_db(&KING_DIRECTIONS);
+    save_attack_db("king_attacks.bin", &king_attacks);
+    println!("Saved king attacks.");
 
-    // let rook_attack_dbs = generate_rook_attack_db();
+    println!("Generating Rook attacks...");
+    let rook_attacks = generate_rook_attack_db();
+    save_attack_db("rook_masks.bin", &rook_attacks.masks);
+    save_blockers_db("rook_attacks.bin", &rook_attacks.blockers);
+    println!("Saved rook attacks.");
 
     Ok(())
 }

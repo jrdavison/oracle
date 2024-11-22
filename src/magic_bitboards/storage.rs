@@ -1,21 +1,23 @@
-use crate::types::{AttackDatabase, Bitboard, BlockersDatabase, Square};
+use crate::bitboards::Bitboard;
+use crate::magic_bitboards::{AttackDatabase, BlockersDatabase};
+use crate::utils::Square;
 use include_dir::{include_dir, Dir};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::Write;
 use std::io::{Cursor, Read};
 use std::path::Path;
 
 static DATA_DIR: Dir = include_dir!("data/");
 const SAVE_PATH: &str = "./data/";
 
-pub static KNIGHT_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("knight_moves.bin"));
-pub static KING_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("king_moves.bin"));
-pub static ROOK_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| load_blockers_db("rook_moves.bin"));
+pub static KNIGHT_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("knight_attacks.bin"));
+pub static KING_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("king_attacks.bin"));
+pub static ROOK_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| load_blockers_db("rook_attacks.bin"));
+pub static ROOK_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("rook_masks.bin"));
 pub static BISHOP_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| load_blockers_db("bishop_moves.bin"));
 pub static BISHOP_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("diagonal_masks.bin"));
-pub static ROOK_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("horizontal_vertical_masks.bin"));
 
 pub fn load_move_dbs() {
     Lazy::force(&KNIGHT_ATTACKS_DB);
@@ -85,7 +87,7 @@ pub fn save_blockers_db(filename: &str, blockers_db: &BlockersDatabase) {
     }
 }
 
-pub fn save_attack_cache(filename: &str, attack_db: &AttackDatabase) {
+pub fn save_attack_db(filename: &str, attack_db: &AttackDatabase) {
     let path = Path::new(SAVE_PATH).join(filename);
     let mut file = File::create(path).expect("Failed to create attack_db file");
 

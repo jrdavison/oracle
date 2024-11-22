@@ -5,7 +5,7 @@ mod bitboards;
 mod magic_bitboards;
 mod moves;
 mod position;
-mod types;
+mod utils;
 
 use clap::Parser;
 use magic_bitboards::storage;
@@ -17,7 +17,7 @@ use slint::VecModel;
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
-use types::{Color, File, Rank, Square};
+use utils::{Color, File, Rank, Square};
 
 slint::include_modules!();
 

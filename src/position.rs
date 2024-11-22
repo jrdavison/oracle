@@ -1,7 +1,7 @@
 use crate::bitboards::Bitboards;
 use crate::moves::move_generator;
 use crate::moves::move_info::MoveInfo;
-use crate::types::{Color, Direction, File, MoveType, Piece, PieceType, Rank, Square};
+use crate::utils::{Color, Direction, File, MoveType, Piece, PieceType, Rank, Square};
 use num_traits::ToPrimitive;
 use std::time::{Duration, Instant};
 
