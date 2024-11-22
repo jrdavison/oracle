@@ -1,6 +1,5 @@
 use crate::bitboards::{self, Bitboard};
-use crate::magic_bitboards::storage::save_blockers_db;
-use crate::storage::save_attack_db;
+use crate::magic_bitboards::storage::{save_attack_db, save_blockers_db};
 use crate::utils::{File, Rank, Square};
 use std::collections::HashMap;
 use std::error::Error;
@@ -113,6 +112,67 @@ fn rook_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboard 
     attack_mask
 }
 
+fn bishop_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboard {
+    let mut attack_mask = 0;
+    let file = Square::file_of(sq);
+    let rank = Square::rank_of(sq);
+
+    // NE
+    let mut ne_file = file + 1u8;
+    let mut ne_rank = rank + 1u8;
+    while ne_file != File::Count && ne_rank != Rank::Count {
+        let dest_sq = Square::make_square(ne_file, ne_rank);
+        bitboards::set_bit(&mut attack_mask, dest_sq);
+        if bitboards::is_bit_set(blockers, dest_sq) {
+            break;
+        }
+        ne_file = ne_file + 1u8;
+        ne_rank = ne_rank + 1u8;
+    }
+    // SE
+    let mut se_file = file + 1u8;
+    let mut se_rank = rank - 1u8;
+    while se_file != File::Count && se_rank != Rank::Count {
+        let dest_sq = Square::make_square(se_file, se_rank);
+        bitboards::set_bit(&mut attack_mask, dest_sq);
+        if bitboards::is_bit_set(blockers, dest_sq) {
+            break;
+        }
+        se_file = se_file + 1u8;
+        se_rank = se_rank - 1u8;
+    }
+    // SW
+    let mut sw_file = file - 1u8;
+    let mut sw_rank = rank - 1u8;
+    while sw_file != File::Count && sw_rank != Rank::Count {
+        let dest_sq = Square::make_square(sw_file, sw_rank);
+        bitboards::set_bit(&mut attack_mask, dest_sq);
+        if bitboards::is_bit_set(blockers, dest_sq) {
+            break;
+        }
+        sw_file = sw_file - 1u8;
+        sw_rank = sw_rank - 1u8;
+    }
+    // NW
+    let mut nw_file = file - 1u8;
+    let mut nw_rank = rank + 1u8;
+    while nw_file != File::Count && nw_rank != Rank::Count {
+        let dest_sq = Square::make_square(nw_file, nw_rank);
+        bitboards::set_bit(&mut attack_mask, dest_sq);
+        if bitboards::is_bit_set(blockers, dest_sq) {
+            break;
+        }
+        nw_file = nw_file - 1u8;
+        nw_rank = nw_rank + 1u8;
+    }
+
+    if remove_edges {
+        remove_edge_bits(&mut attack_mask, sq);
+    }
+
+    attack_mask
+}
+
 fn generate_rook_attack_db() -> MaskBlockerDbs {
     println!("Generating rook move database...");
 
@@ -138,6 +198,35 @@ fn generate_rook_attack_db() -> MaskBlockerDbs {
     MaskBlockerDbs {
         masks: h_v_masks,
         blockers: rook_moves,
+    }
+}
+
+fn generate_bishop_attack_dbs() -> MaskBlockerDbs {
+    println!("Generating bishop move database...");
+
+    let mut bishop_moves: [HashMap<Bitboard, Bitboard>; Square::Count as usize] =
+        std::array::from_fn(|_| HashMap::new());
+    let mut diagonal_masks = [Bitboard::default(); Square::Count as usize];
+
+    for sq in Square::iter() {
+        let start = Instant::now();
+        let mask = bishop_attacks(sq, 0, true);
+        diagonal_masks[sq as usize] = mask;
+        for blockers in generate_relevant_blockers(mask) {
+            let attacks = bishop_attacks(sq, blockers, false);
+            bishop_moves[sq as usize].insert(blockers, attacks);
+        }
+        println!(
+            "Computed {} moves for square {:?}. Done in {:.2} seconds.",
+            bishop_moves[sq as usize].len(),
+            sq,
+            start.elapsed().as_secs_f64()
+        );
+    }
+
+    MaskBlockerDbs {
+        masks: diagonal_masks,
+        blockers: bishop_moves,
     }
 }
 
@@ -168,21 +257,31 @@ fn generate_jumping_attacks_db(directions: &[(i8, i8)]) -> [Bitboard; 64] {
 pub fn generate() -> Result<(), Box<dyn Error>> {
     println!("Generating magic bitboards...");
 
+    println!();
     println!("Generating Knight attacks...");
     let knight_attacks = generate_jumping_attacks_db(&KNIGHT_DIRECTIONS);
     save_attack_db("knight_attacks.bin", &knight_attacks);
     println!("Saved knight attacks.");
 
+    println!();
     println!("Generating King attacks...");
     let king_attacks = generate_jumping_attacks_db(&KING_DIRECTIONS);
     save_attack_db("king_attacks.bin", &king_attacks);
     println!("Saved king attacks.");
 
+    println!();
     println!("Generating Rook attacks...");
     let rook_attacks = generate_rook_attack_db();
     save_attack_db("rook_masks.bin", &rook_attacks.masks);
     save_blockers_db("rook_attacks.bin", &rook_attacks.blockers);
     println!("Saved rook attacks.");
+
+    println!();
+    println!("Generating Bishop attacks...");
+    let bishop_attacks = generate_bishop_attack_dbs();
+    save_attack_db("bishop_masks.bin", &bishop_attacks.masks);
+    save_blockers_db("bishop_attacks.bin", &bishop_attacks.blockers);
+    println!("Saved bishop attacks.");
 
     Ok(())
 }

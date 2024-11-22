@@ -16,8 +16,8 @@ pub static KNIGHT_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db
 pub static KING_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("king_attacks.bin"));
 pub static ROOK_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| load_blockers_db("rook_attacks.bin"));
 pub static ROOK_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("rook_masks.bin"));
-pub static BISHOP_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| load_blockers_db("bishop_moves.bin"));
-pub static BISHOP_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("diagonal_masks.bin"));
+pub static BISHOP_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| load_blockers_db("bishop_attacks.bin"));
+pub static BISHOP_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("bishop_masks.bin"));
 
 pub fn load_move_dbs() {
     Lazy::force(&KNIGHT_ATTACKS_DB);
