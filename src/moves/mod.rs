@@ -1,2 +1,2 @@
-pub mod move_generator;
-pub mod move_info;
+pub mod generate;
+pub mod info;
