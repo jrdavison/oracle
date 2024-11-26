@@ -1,6 +1,3 @@
-// Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
 mod bitboards;
 mod magic_bitboards;
 mod moves;
@@ -8,7 +5,6 @@ mod position;
 mod utils;
 
 use clap::Parser;
-use magic_bitboards::storage;
 use num_traits::FromPrimitive;
 use num_traits::ToPrimitive;
 use position::Position;
@@ -33,7 +29,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     if args.gen_magics {
         magic_bitboards::generate()?;
     } else {
-        storage::load_move_dbs(); // force lazy static initialization of move databases
+        magic_bitboards::load_precomputed_moves();
 
         let ui = AppWindow::new().unwrap();
 

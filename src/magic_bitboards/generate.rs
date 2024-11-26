@@ -9,7 +9,7 @@ const VERTICAL_MASK: Bitboard = 0x0101010101010101;
 pub const KNIGHT_DIRECTIONS: [(i8, i8); 8] = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, 2), (-1, -2)];
 pub const KING_DIRECTIONS: [(i8, i8); 8] = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)];
 
-pub struct MaskBlockerDbs {
+pub struct BitboardLookupTables {
     pub masks: [Bitboard; Square::Count as usize],
     pub blockers: [HashMap<Bitboard, Bitboard>; Square::Count as usize], // TODO: i think this can be a type
 }
@@ -161,14 +161,14 @@ fn bishop_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboar
     attack_mask
 }
 
-pub fn generate_rook_attack_db() -> MaskBlockerDbs {
+pub fn generate_rook_attack_tables() -> BitboardLookupTables {
     let mut rook_moves: [HashMap<Bitboard, Bitboard>; Square::Count as usize] = std::array::from_fn(|_| HashMap::new());
-    let mut h_v_masks = [Bitboard::default(); Square::Count as usize];
+    let mut orthog_masks = [Bitboard::default(); Square::Count as usize];
 
     for sq in Square::iter() {
         let start = Instant::now();
         let mask = rook_attacks(sq, 0, true);
-        h_v_masks[sq as usize] = mask;
+        orthog_masks[sq as usize] = mask;
         for blockers in generate_relevant_blockers(mask) {
             let attacks = rook_attacks(sq, blockers, false);
             rook_moves[sq as usize].insert(blockers, attacks);
@@ -181,13 +181,13 @@ pub fn generate_rook_attack_db() -> MaskBlockerDbs {
         );
     }
 
-    MaskBlockerDbs {
-        masks: h_v_masks,
+    BitboardLookupTables {
+        masks: orthog_masks,
         blockers: rook_moves,
     }
 }
 
-pub fn generate_bishop_attack_dbs() -> MaskBlockerDbs {
+pub fn generate_bishop_attack_tables() -> BitboardLookupTables {
     let mut bishop_moves: [HashMap<Bitboard, Bitboard>; Square::Count as usize] =
         std::array::from_fn(|_| HashMap::new());
     let mut diagonal_masks = [Bitboard::default(); Square::Count as usize];
@@ -208,7 +208,7 @@ pub fn generate_bishop_attack_dbs() -> MaskBlockerDbs {
         );
     }
 
-    MaskBlockerDbs {
+    BitboardLookupTables {
         masks: diagonal_masks,
         blockers: bishop_moves,
     }

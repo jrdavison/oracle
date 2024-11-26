@@ -1,9 +1,7 @@
 use crate::bitboards::Bitboard;
-// use crate::magic_bitboards::{AttackMaskTable, BlockersDatabase, MagicsDatabase, PerfectHashMap};
-use crate::magic_bitboards::{AttackMaskTable, BlockersDatabase};
+use crate::magic_bitboards::{AttackMaskTable, BlockersTable};
 use crate::utils::Square;
 use include_dir::{include_dir, Dir};
-use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
@@ -13,28 +11,11 @@ use std::path::Path;
 const SAVE_PATH: &str = "./data/";
 static DATA_DIR: Dir = include_dir!("data/");
 
-pub static KNIGHT_ATTACK_MASKS: Lazy<AttackMaskTable> = Lazy::new(|| load_attack_masks_bin("knight_attacks.bin"));
-pub static KING_ATTACK_MASKS: Lazy<AttackMaskTable> = Lazy::new(|| load_attack_masks_bin("king_attacks.bin"));
-pub static ROOK_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| load_blockers_db("rook_attacks.bin"));
-pub static ROOK_MASKS_DB: Lazy<AttackMaskTable> = Lazy::new(|| load_attack_masks_bin("rook_masks.bin"));
-pub static BISHOP_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| load_blockers_db("bishop_attacks.bin"));
-pub static BISHOP_MASKS_DB: Lazy<AttackMaskTable> = Lazy::new(|| load_attack_masks_bin("bishop_masks.bin"));
-
-pub fn load_move_dbs() {
-    // TODO: better name
-    Lazy::force(&KNIGHT_ATTACK_MASKS);
-    Lazy::force(&KING_ATTACK_MASKS);
-    Lazy::force(&ROOK_ATTACKS_DB);
-    Lazy::force(&BISHOP_ATTACKS_DB);
-    Lazy::force(&BISHOP_MASKS_DB);
-    Lazy::force(&ROOK_MASKS_DB);
-}
-
-fn load_blockers_db(path: &str) -> BlockersDatabase {
+pub fn load_blockers_lookup_bin(path: &str) -> BlockersTable {
     let file = DATA_DIR.get_file(path).expect("Failed to get file");
     let mut reader = Cursor::new(file.contents());
 
-    let mut move_database: BlockersDatabase = std::array::from_fn(|_| HashMap::new());
+    let mut move_database: BlockersTable = std::array::from_fn(|_| HashMap::new());
     for sq in Square::iter() {
         let mut moves: HashMap<Bitboard, Bitboard> = HashMap::new();
 
@@ -58,11 +39,11 @@ fn load_blockers_db(path: &str) -> BlockersDatabase {
     move_database
 }
 
-pub fn save_blockers_db(filename: &str, blockers_db: &BlockersDatabase) {
+pub fn save_blockers_table_bin(filename: &str, blockers_table: &BlockersTable) {
     let full_path = Path::new(SAVE_PATH).join(filename);
     let mut file = File::create(full_path).expect("Failed to create blockers_db file");
 
-    for square_data in blockers_db.iter() {
+    for square_data in blockers_table.iter() {
         let num_entries = square_data.len() as u32;
         file.write_all(&num_entries.to_le_bytes()).unwrap();
 
@@ -82,7 +63,7 @@ pub fn save_attack_masks_bin(filename: &str, attack_db: &AttackMaskTable) {
     }
 }
 
-fn load_attack_masks_bin(path: &str) -> AttackMaskTable {
+pub fn load_attack_masks_bin(path: &str) -> AttackMaskTable {
     let file = DATA_DIR.get_file(path).expect("Failed to get file");
     let data = file.contents();
 

@@ -1,6 +1,6 @@
 use crate::bitboards::{self, Bitboard};
-use crate::magic_bitboards::storage::{
-    BISHOP_ATTACKS_DB, BISHOP_MASKS_DB, KING_ATTACK_MASKS, KNIGHT_ATTACK_MASKS, ROOK_ATTACKS_DB, ROOK_MASKS_DB,
+use crate::magic_bitboards::{
+    BISHOP_BLOCKERS_LOOKUP, DIAGONAL_MASKS, KING_MASKS, KNIGHT_MASKS, ORTHOGONAL_MASKS, ROOK_BLOCKERS_LOOKUP,
 };
 use crate::position::Position;
 use crate::utils::{Color, Direction, Piece, PieceType, Rank, Square};
@@ -126,7 +126,7 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
 }
 
 fn compute_knight_moves(sq: Square) -> ComputedMoves {
-    let valid_moves = KNIGHT_ATTACK_MASKS[sq as usize];
+    let valid_moves = KNIGHT_MASKS[sq as usize];
     ComputedMoves {
         valid_moves,
         attacks: valid_moves,
@@ -134,9 +134,9 @@ fn compute_knight_moves(sq: Square) -> ComputedMoves {
 }
 
 fn compute_rook_moves(pos: &Position, sq: Square) -> ComputedMoves {
-    let move_mask = ROOK_MASKS_DB[sq as usize];
+    let move_mask = ORTHOGONAL_MASKS[sq as usize];
     let blocker_key = pos.bitboards.get_checkers(Color::Both) & move_mask;
-    let valid_moves = *ROOK_ATTACKS_DB[sq as usize]
+    let valid_moves = *ROOK_BLOCKERS_LOOKUP[sq as usize]
         .get(&blocker_key)
         .unwrap_or(&Bitboard::default());
 
@@ -147,21 +147,21 @@ fn compute_rook_moves(pos: &Position, sq: Square) -> ComputedMoves {
 }
 
 fn compute_bishop_moves(pos: &Position, sq: Square) -> ComputedMoves {
-    let diagonal_mask = BISHOP_MASKS_DB[sq as usize];
+    let diagonal_mask = DIAGONAL_MASKS[sq as usize];
     let blocker_key = pos.bitboards.get_checkers(Color::Both) & diagonal_mask;
-    let valid_moves = *BISHOP_ATTACKS_DB[sq as usize]
+    let attacks = *BISHOP_BLOCKERS_LOOKUP[sq as usize]
         .get(&blocker_key)
         .unwrap_or(&Bitboard::default());
 
     ComputedMoves {
-        valid_moves,
-        attacks: valid_moves,
+        valid_moves: attacks,
+        attacks,
     }
 }
 
 fn compute_king_moves(sq: Square) -> ComputedMoves {
     // TODO: castling
-    let valid_moves = KING_ATTACK_MASKS[sq as usize];
+    let valid_moves = KING_MASKS[sq as usize];
     ComputedMoves {
         valid_moves,
         attacks: valid_moves,
