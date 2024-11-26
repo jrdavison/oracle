@@ -11,7 +11,7 @@ pub const KING_DIRECTIONS: [(i8, i8); 8] = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1
 
 pub struct MaskBlockerDbs {
     pub masks: [Bitboard; Square::Count as usize],
-    pub blockers: [HashMap<Bitboard, Bitboard>; Square::Count as usize],
+    pub blockers: [HashMap<Bitboard, Bitboard>; Square::Count as usize], // TODO: i think this can be a type
 }
 
 fn remove_edge_bits(mask: &mut Bitboard, sq: Square) {
@@ -45,16 +45,6 @@ fn generate_relevant_blockers(mask: Bitboard) -> impl Iterator<Item = Bitboard> 
         }
         blockers
     })
-}
-
-fn mask_rook_attacks(sq: Square) -> Bitboard {
-    let v_mask = VERTICAL_MASK << Square::file_of(sq) as u8;
-    let h_mask = HORIZONTAL_MASK << (Square::rank_of(sq) * 8) as u8;
-    let mut attack_mask = h_mask | v_mask;
-
-    remove_edge_bits(&mut attack_mask, sq);
-    bitboards::clear_bit(&mut attack_mask, sq);
-    attack_mask
 }
 
 fn rook_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboard {
@@ -172,14 +162,12 @@ fn bishop_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboar
 }
 
 pub fn generate_rook_attack_db() -> MaskBlockerDbs {
-    println!("Generating rook move database...");
-
     let mut rook_moves: [HashMap<Bitboard, Bitboard>; Square::Count as usize] = std::array::from_fn(|_| HashMap::new());
     let mut h_v_masks = [Bitboard::default(); Square::Count as usize];
 
     for sq in Square::iter() {
         let start = Instant::now();
-        let mask = mask_rook_attacks(sq);
+        let mask = rook_attacks(sq, 0, true);
         h_v_masks[sq as usize] = mask;
         for blockers in generate_relevant_blockers(mask) {
             let attacks = rook_attacks(sq, blockers, false);
@@ -200,8 +188,6 @@ pub fn generate_rook_attack_db() -> MaskBlockerDbs {
 }
 
 pub fn generate_bishop_attack_dbs() -> MaskBlockerDbs {
-    println!("Generating bishop move database...");
-
     let mut bishop_moves: [HashMap<Bitboard, Bitboard>; Square::Count as usize] =
         std::array::from_fn(|_| HashMap::new());
     let mut diagonal_masks = [Bitboard::default(); Square::Count as usize];

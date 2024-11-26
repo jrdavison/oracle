@@ -1,6 +1,6 @@
 use crate::bitboards::{self, Bitboard};
 use crate::magic_bitboards::storage::{
-    BISHOP_ATTACKS_DB, BISHOP_MASKS_DB, KING_ATTACKS_DB, KNIGHT_ATTACKS_DB, ROOK_ATTACKS_DB, ROOK_MASKS_DB,
+    BISHOP_ATTACKS_DB, BISHOP_MASKS_DB, KING_ATTACK_MASKS, KNIGHT_ATTACK_MASKS, ROOK_ATTACKS_DB, ROOK_MASKS_DB,
 };
 use crate::position::Position;
 use crate::utils::{Color, Direction, Piece, PieceType, Rank, Square};
@@ -126,7 +126,7 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
 }
 
 fn compute_knight_moves(sq: Square) -> ComputedMoves {
-    let valid_moves = KNIGHT_ATTACKS_DB[sq as usize];
+    let valid_moves = KNIGHT_ATTACK_MASKS[sq as usize];
     ComputedMoves {
         valid_moves,
         attacks: valid_moves,
@@ -161,7 +161,7 @@ fn compute_bishop_moves(pos: &Position, sq: Square) -> ComputedMoves {
 
 fn compute_king_moves(sq: Square) -> ComputedMoves {
     // TODO: castling
-    let valid_moves = KING_ATTACKS_DB[sq as usize];
+    let valid_moves = KING_ATTACK_MASKS[sq as usize];
     ComputedMoves {
         valid_moves,
         attacks: valid_moves,

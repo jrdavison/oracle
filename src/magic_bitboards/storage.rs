@@ -1,5 +1,6 @@
 use crate::bitboards::Bitboard;
-use crate::magic_bitboards::{AttackDatabase, BlockersDatabase};
+// use crate::magic_bitboards::{AttackMaskTable, BlockersDatabase, MagicsDatabase, PerfectHashMap};
+use crate::magic_bitboards::{AttackMaskTable, BlockersDatabase};
 use crate::utils::Square;
 use include_dir::{include_dir, Dir};
 use once_cell::sync::Lazy;
@@ -12,36 +13,21 @@ use std::path::Path;
 const SAVE_PATH: &str = "./data/";
 static DATA_DIR: Dir = include_dir!("data/");
 
-pub static KNIGHT_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("knight_attacks.bin"));
-pub static KING_ATTACKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("king_attacks.bin"));
+pub static KNIGHT_ATTACK_MASKS: Lazy<AttackMaskTable> = Lazy::new(|| load_attack_masks_bin("knight_attacks.bin"));
+pub static KING_ATTACK_MASKS: Lazy<AttackMaskTable> = Lazy::new(|| load_attack_masks_bin("king_attacks.bin"));
 pub static ROOK_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| load_blockers_db("rook_attacks.bin"));
-pub static ROOK_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("rook_masks.bin"));
+pub static ROOK_MASKS_DB: Lazy<AttackMaskTable> = Lazy::new(|| load_attack_masks_bin("rook_masks.bin"));
 pub static BISHOP_ATTACKS_DB: Lazy<BlockersDatabase> = Lazy::new(|| load_blockers_db("bishop_attacks.bin"));
-pub static BISHOP_MASKS_DB: Lazy<AttackDatabase> = Lazy::new(|| load_attack_db("bishop_masks.bin"));
+pub static BISHOP_MASKS_DB: Lazy<AttackMaskTable> = Lazy::new(|| load_attack_masks_bin("bishop_masks.bin"));
 
 pub fn load_move_dbs() {
-    Lazy::force(&KNIGHT_ATTACKS_DB);
-    Lazy::force(&KING_ATTACKS_DB);
+    // TODO: better name
+    Lazy::force(&KNIGHT_ATTACK_MASKS);
+    Lazy::force(&KING_ATTACK_MASKS);
     Lazy::force(&ROOK_ATTACKS_DB);
     Lazy::force(&BISHOP_ATTACKS_DB);
     Lazy::force(&BISHOP_MASKS_DB);
     Lazy::force(&ROOK_MASKS_DB);
-}
-
-fn load_attack_db(path: &str) -> AttackDatabase {
-    let file = DATA_DIR.get_file(path).expect("Failed to get file");
-    let data = file.contents();
-
-    assert_eq!(data.len(), (Square::Count as usize) * 8, "Invalid data length!");
-
-    let mut attack_moves = [Bitboard::default(); Square::Count as usize];
-    for (i, bb) in attack_moves.iter_mut().enumerate() {
-        let start = i * 8;
-        let end = start + 8;
-        *bb = u64::from_le_bytes(data[start..end].try_into().unwrap());
-    }
-
-    attack_moves
 }
 
 fn load_blockers_db(path: &str) -> BlockersDatabase {
@@ -87,11 +73,27 @@ pub fn save_blockers_db(filename: &str, blockers_db: &BlockersDatabase) {
     }
 }
 
-pub fn save_attack_db(filename: &str, attack_db: &AttackDatabase) {
+pub fn save_attack_masks_bin(filename: &str, attack_db: &AttackMaskTable) {
     let path = Path::new(SAVE_PATH).join(filename);
     let mut file = File::create(path).expect("Failed to create attack_db file");
 
     for &value in attack_db {
         file.write_all(&value.to_le_bytes()).unwrap();
     }
+}
+
+fn load_attack_masks_bin(path: &str) -> AttackMaskTable {
+    let file = DATA_DIR.get_file(path).expect("Failed to get file");
+    let data = file.contents();
+
+    assert_eq!(data.len(), (Square::Count as usize) * 8, "Invalid data length!");
+
+    let mut attack_moves = [Bitboard::default(); Square::Count as usize];
+    for (i, bb) in attack_moves.iter_mut().enumerate() {
+        let start = i * 8;
+        let end = start + 8;
+        *bb = u64::from_le_bytes(data[start..end].try_into().unwrap());
+    }
+
+    attack_moves
 }
