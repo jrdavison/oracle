@@ -27,7 +27,7 @@ struct Cli {
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Cli::parse();
     if args.gen_magics {
-        magic_bitboards::generate()?;
+        magic_bitboards::precompute()?;
     } else {
         magic_bitboards::load_precomputed_moves();
 

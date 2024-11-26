@@ -1,8 +1,8 @@
-pub mod generate;
-pub mod storage;
+mod precompute;
+mod storage;
 
 use crate::bitboards::Bitboard;
-use crate::magic_bitboards::generate::{
+use crate::magic_bitboards::precompute::{
     generate_bishop_attack_tables, generate_jumping_attacks_db, generate_rook_attack_tables, KING_DIRECTIONS,
     KNIGHT_DIRECTIONS,
 };
@@ -37,7 +37,7 @@ pub fn load_precomputed_moves() {
     Lazy::force(&BISHOP_BLOCKERS_LOOKUP);
 }
 
-pub fn generate() -> Result<(), Box<dyn Error>> {
+pub fn precompute() -> Result<(), Box<dyn Error>> {
     println!("Precomputing moves...");
 
     println!();
