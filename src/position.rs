@@ -56,8 +56,8 @@ impl Position {
         self.fullmove_count
     }
 
-    pub fn compute_time_ms(&self) -> String {
-        format!("{:.4} ms", self.compute_time.as_secs_f64() * 1000.0)
+    pub fn compute_time(&self) -> String {
+        format!("{:?}", self.compute_time)
     }
 
     pub fn valid_move(&self, from: Square, to: Square) -> bool {

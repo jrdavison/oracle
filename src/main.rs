@@ -59,7 +59,7 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
 
     if compute_moves {
         pos.compute_valid_moves(side_to_move);
-        ui.set_compute_time(SharedString::from(pos.compute_time_ms()));
+        ui.set_compute_time(SharedString::from(pos.compute_time()));
     }
 }
 
