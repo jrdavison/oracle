@@ -22,10 +22,13 @@ impl MoveInfo {
                 let color = Piece::color_of(moved_piece);
                 let from_rank = Square::rank_of(from);
                 let from_file = Square::file_of(from);
-                let to_rank = Square::rank_of(to);
                 let to_file = Square::file_of(to);
 
-                if Rank::relative_rank(color, from_rank) == Rank::Rank2 {
+                let relative_from_rank = Rank::relative_rank(color, from_rank);
+                if relative_from_rank == Rank::Rank7 {
+                    move_type = MoveType::Promotion;
+                    capture_piece_sq = to;
+                } else if relative_from_rank == Rank::Rank2 {
                     move_type = MoveType::TwoSquarePush;
                 } else if captured_piece != Piece::Empty {
                     move_type = MoveType::Capture;
@@ -34,9 +37,6 @@ impl MoveInfo {
                     move_type = MoveType::EnPassant;
                     capture_piece_sq = to + Direction::forward_direction(!color);
                     captured_piece = board[capture_piece_sq];
-                } else if Rank::relative_rank(color, to_rank) == Rank::Rank8 {
-                    // TODO: promotion
-                    move_type = MoveType::Promotion;
                 } else {
                     move_type = MoveType::Quiet;
                 }
