@@ -1,6 +1,7 @@
 use crate::bitboards::{self, Bitboard};
 use crate::magic_bitboards::{
-    BISHOP_BLOCKERS_LOOKUP, DIAGONAL_MASKS, KING_MASKS, KNIGHT_MASKS, ORTHOGONAL_MASKS, ROOK_BLOCKERS_LOOKUP,
+    BISHOP_BLOCKERS_LOOKUP, DIAGONAL_MASKS, KING_MASKS, KNIGHT_MASKS, ORTHOGONAL_MASKS, PAWN_ATTACK_MASKS,
+    ROOK_BLOCKERS_LOOKUP,
 };
 use crate::position::Position;
 use crate::utils::{Color, Direction, Piece, PieceType, Rank, Square};
@@ -74,7 +75,6 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
     let color = Piece::color_of(piece);
     let forward = Direction::forward_direction(color);
 
-    // normal move
     let mut target_sq = sq;
     for i in 0..2 {
         // only allow double move from starting rank
@@ -90,39 +90,16 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
         }
     }
 
-    // capture moves
-    let mut attacks = 0; // pawns can only attack diagonally
-    let target_sq_east = (sq + forward) + Direction::East;
-    if target_sq_east != Square::Count {
-        bitboards::set_bit(&mut attacks, sq);
-        if pos.bitboards.is_checkers_sq_set(!color, target_sq_east) {
-            bitboards::set_bit(&mut valid_moves, target_sq_east);
-        }
-    }
-
-    let target_sq_west = (sq + forward) + Direction::West;
-    if target_sq_west != Square::Count {
-        bitboards::set_bit(&mut attacks, sq);
-        if pos.bitboards.is_checkers_sq_set(!color, target_sq_west) {
-            bitboards::set_bit(&mut valid_moves, target_sq_west);
-        }
-    }
-
-    // en passant
+    let mut enemy_checkers = pos.bitboards.get_checkers(!color);
     if pos.en_passant_square != Square::Count {
-        if target_sq_east == pos.en_passant_square {
-            bitboards::set_bit(&mut valid_moves, target_sq_east);
-        } else if target_sq_west == pos.en_passant_square {
-            bitboards::set_bit(&mut valid_moves, target_sq_west);
-        }
+        bitboards::set_bit(&mut enemy_checkers, pos.en_passant_square);
     }
+    let attacks = PAWN_ATTACK_MASKS[color as usize][sq as usize] & enemy_checkers;
+    valid_moves |= attacks;
 
     // TODO: promotion
 
-    ComputedMoves {
-        valid_moves,
-        attacks: valid_moves,
-    }
+    ComputedMoves { valid_moves, attacks }
 }
 
 fn compute_knight_moves(sq: Square) -> ComputedMoves {

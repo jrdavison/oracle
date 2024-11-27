@@ -24,7 +24,7 @@ impl Bitboards {
     }
 
     pub fn is_valid_move(&self, from: Square, to: Square) -> bool {
-        is_bit_set(self.valid_moves[from as usize], to)
+        is_bit_set(&self.valid_moves[from as usize], to)
     }
 
     pub fn get_checkers(&self, color: Color) -> Bitboard {
@@ -45,9 +45,9 @@ impl Bitboards {
 
     pub fn is_checkers_sq_set(&self, color: Color, sq: Square) -> bool {
         if color == Color::Both {
-            return is_bit_set(self.get_checkers(color), sq);
+            return is_bit_set(&self.get_checkers(color), sq);
         }
-        is_bit_set(self.checkers[color as usize], sq)
+        is_bit_set(&self.checkers[color as usize], sq)
     }
 
     pub fn set_attacks(&mut self, color: Color, attacks: Bitboard) {
@@ -61,7 +61,7 @@ pub fn print_bitboard(bitboard: Bitboard) {
     for rank in Rank::iter_reverse() {
         for file in File::iter() {
             let sq = Square::make_square(file, rank);
-            if is_bit_set(bitboard, sq) {
+            if is_bit_set(&bitboard, sq) {
                 print!("1 ");
             } else {
                 print!("0 ");
@@ -81,7 +81,7 @@ pub fn clear_bit(bitboard: &mut Bitboard, sq: Square) {
     *bitboard &= !(1u64 << sq as u64);
 }
 
-pub fn is_bit_set(bitboard: Bitboard, sq: Square) -> bool {
+pub fn is_bit_set(bitboard: &Bitboard, sq: Square) -> bool {
     assert!(sq != Square::Count, "Invalid square");
     bitboard & (1u64 << sq as u64) != 0
 }
