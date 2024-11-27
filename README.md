@@ -174,6 +174,7 @@ Orthogonal mask for piece `x` on square E6 (`ORTHOGONAL_MASKS[44]`):
 
 Valid attacks for rook on square D6 with the following checkers bitboard representing all pieces on the board:
 
+```text
 8: 1 1 0 0 0 1 1 1
 7: 1 0 1 0 1 0 0 0
 6: 1 0 0 1 0 1 1 0
@@ -183,6 +184,7 @@ Valid attacks for rook on square D6 with the following checkers bitboard represe
 2: 0 0 1 0 0 0 1 1
 1: 0 1 1 0 1 0 0 1
    A B C D E F G H
+```
 
 First we need to get the orthogonal mask for the square the rook is on.
 
@@ -234,6 +236,7 @@ Then we use the relevant blockers bitboard as the key to the hashmap at the D6 s
 
 Valid attacks for rook on square E8 with the following checkers bitboard representing all pieces on the board:
 
+```text
 8: 1 1 0 0 1 1 1 1
 7: 1 0 1 0 1 0 0 0
 6: 1 0 0 1 0 1 1 0
@@ -243,6 +246,7 @@ Valid attacks for rook on square E8 with the following checkers bitboard represe
 2: 0 0 1 0 0 0 1 1
 1: 0 1 1 0 1 0 0 1
    A B C D E F G H
+```
 
 First we need to get the orthogonal mask for the square the rook is on.
 
