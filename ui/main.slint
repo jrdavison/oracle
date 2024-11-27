@@ -1,16 +1,9 @@
 import { Board, BoardState } from "./board.slint";
-import { Dashboard } from "./dashboard.slint";
+import { Dashboard, DashboardState } from "./dashboard.slint";
 import { EvalBar } from "./eval.slint";
 import { Dimensions, Palette, RustInterface } from "./globals.slint";
 
-export { RustInterface } // export to use in rust code
-
-struct DashboardState {
-    turn: int,
-    halfmove_clock: int,
-    fullmove_count: int,
-    compute_time: string,
-}
+export { RustInterface, BoardState, DashboardState } // export to use in rust code
 
 export component AppWindow inherits Window {
     in-out property <BoardState> board_state;
