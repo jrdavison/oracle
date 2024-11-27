@@ -8,7 +8,6 @@ use clap::Parser;
 use num_traits::FromPrimitive;
 use num_traits::ToPrimitive;
 use position::Position;
-use slint::SharedString;
 use slint::VecModel;
 use std::cell::RefCell;
 use std::error::Error;
@@ -51,15 +50,17 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
 
     ui.set_board_state(BoardState {
         board: Rc::new(VecModel::from(pos.board_i32())).into(),
-        turn: Color::to_i32(&side_to_move).unwrap(),
-        halfmove_clock: pos.halfmove_clock(),
-        fullmove_count: pos.fullmove_count(),
     });
     ui.set_dragged_piece_sq(dragged_piece_sq);
 
     if compute_moves {
         pos.compute_valid_moves(side_to_move);
-        ui.set_compute_time(SharedString::from(pos.compute_time()));
+        ui.set_dashboard_state(DashboardState {
+            turn: Color::to_i32(&side_to_move).unwrap(),
+            halfmove_clock: pos.halfmove_clock(),
+            fullmove_count: pos.fullmove_count(),
+            compute_time: pos.compute_time().into(),
+        });
     }
 }
 

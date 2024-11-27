@@ -7,15 +7,19 @@ export { RustInterface } // export to use in rust code
 
 struct BoardState {
     board: [int],
+}
+
+struct DashboardState {
     turn: int,
     halfmove_clock: int,
     fullmove_count: int,
+    compute_time: string,
 }
 
 export component AppWindow inherits Window {
     in-out property <BoardState> board_state;
+    in-out property <DashboardState> dashboard_state;
     in-out property <int> dragged_piece_sq;
-    in-out property <string> compute_time;
 
     title: "Oracle";
 
@@ -40,13 +44,15 @@ export component AppWindow inherits Window {
         width: board.width - eval.width;
         height: board.height;
 
-        turn: board_state.turn;
-        halfmove_clock: board_state.halfmove_clock;
-        fullmove_count: board_state.fullmove_count;
-        compute_time: compute_time;
+        turn: dashboard_state.turn;
+        halfmove_clock: dashboard_state.halfmove_clock;
+        fullmove_count: dashboard_state.fullmove_count;
+        compute_time: dashboard_state.compute_time;
     }
 
     key_handler := FocusScope {
+        init() => { self.focus(); }
+
         key-pressed(event) => {
             if (!event.repeat) {
                 if (event.text == Key.LeftArrow) {
