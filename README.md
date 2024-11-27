@@ -6,13 +6,13 @@ A chess agent built using Rust.
 
 ## Usage
 
-1. Run binary for development:
+Run binary for development:
 
 ```bash
 cargo run
-```
+````
 
-2. Build optimized release binary:
+Build optimized release binary:
 
 ```bash
 cargo build --release
@@ -26,13 +26,13 @@ We precompute attacks for knights, kings, pawns, bishops, and rooks. The attacks
 
 There are precomputed lookup tables in the `data/` folder. If you wish to recompute these do one of the following:
 
-1. Run after build using `cargo`
+Run after build using `cargo`:
 
 ```bash
 cargo run -- --gen-magics
 ```
 
-1. Using the executable
+Using the executable:
 
 ```bash
 ./oracle --gen-magics
