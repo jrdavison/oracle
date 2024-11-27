@@ -109,7 +109,12 @@ impl Position {
                 self.board[move_info.capture_piece_sq as usize] = Piece::Empty;
                 self.bitboards.unset_checkers(capture_color, move_info.capture_piece_sq);
             }
-            MoveType::Promotion => println!("Promotion not handled"),
+            MoveType::Promotion => {
+                // TODO: give user option to choose promotion piece
+                self.board[move_info.to as usize] = Piece::make_piece(PieceType::Queen, moved_piece_color);
+                self.bitboards
+                    .unset_checkers(Piece::color_of(move_info.captured_piece), move_info.capture_piece_sq);
+            }
             MoveType::Invalid => panic!("Invalid move"),
             MoveType::Quiet => {}
         }
@@ -129,7 +134,7 @@ impl Position {
     pub fn undo_move(&mut self) -> bool {
         if let Some(last_move) = self.move_history.pop() {
             match last_move.move_type {
-                MoveType::Quiet | MoveType::TwoSquarePush | MoveType::Capture => {
+                MoveType::Quiet | MoveType::TwoSquarePush | MoveType::Capture | MoveType::Promotion => {
                     let color = Piece::color_of(last_move.moved_piece);
                     self.board[last_move.from as usize] = last_move.moved_piece;
                     self.board[last_move.to as usize] = last_move.captured_piece;
@@ -150,9 +155,6 @@ impl Position {
                     self.bitboards.set_checkers(!color, last_move.capture_piece_sq);
                 }
                 MoveType::Invalid => panic!("Invalid move"),
-                _ => {
-                    println!("Move not handled: {:?}", last_move.move_type);
-                }
             }
 
             self.side_to_move = !self.side_to_move;

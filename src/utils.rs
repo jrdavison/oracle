@@ -145,8 +145,6 @@ impl Add<Direction> for Square {
     }
 }
 
-// impl
-
 impl Square {
     pub fn make_square(file: File, rank: Rank) -> Square {
         Square::from_u8((rank as u8) << 3 | (file as u8)).expect("Cannot make square")
