@@ -60,6 +60,10 @@ impl Position {
         format!("{:?}", self.compute_time)
     }
 
+    pub fn last_move(&self) -> MoveInfo {
+        self.move_history.last().cloned().unwrap_or_default()
+    }
+
     pub fn valid_move(&self, from: Square, to: Square) -> bool {
         let piece = self.board[from];
         if Piece::color_of(piece) != self.side_to_move {

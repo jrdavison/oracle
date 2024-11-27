@@ -46,10 +46,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragged_piece_sq: i32, compute_moves: bool) {
     let mut pos = position.borrow_mut();
+
     let side_to_move = pos.side_to_move();
+    let last_move = pos.last_move();
 
     ui.set_board_state(BoardState {
         board: Rc::new(VecModel::from(pos.board_i32())).into(),
+        last_move_from: last_move.from as i32,
+        last_move_to: last_move.to as i32,
     });
     ui.set_dragged_piece_sq(dragged_piece_sq);
 

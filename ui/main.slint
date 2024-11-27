@@ -1,13 +1,9 @@
-import { Board } from "./board.slint";
+import { Board, BoardState } from "./board.slint";
 import { Dashboard } from "./dashboard.slint";
 import { EvalBar } from "./eval.slint";
 import { Dimensions, Palette, RustInterface } from "./globals.slint";
 
 export { RustInterface } // export to use in rust code
-
-struct BoardState {
-    board: [int],
-}
 
 struct DashboardState {
     turn: int,
@@ -27,7 +23,7 @@ export component AppWindow inherits Window {
     width:  Dimensions.board_size * 2;
 
     board := Board {
-        board_state: board_state.board;
+        board_state: board_state;
         dragged_piece_sq: dragged_piece_sq;
 
         x: 0;

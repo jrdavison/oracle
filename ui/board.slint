@@ -1,10 +1,16 @@
 import { VerticalBox } from "std-widgets.slint";
 
 import { Font,  Palette, Utils, RustInterface } from "./globals.slint";
-import { Dimensions } from "globals.slint";
+import { Dimensions } from "./globals.slint";
+
+export struct BoardState {
+    board: [int],
+    last_move_from: int,
+    last_move_to: int,
+}
 
 export component Board inherits TouchArea {
-    in property <[int]> board_state;
+    in property <BoardState> board_state;
     in-out property <int> dragged_piece_sq;
 
     for i in 64: Rectangle {
@@ -40,15 +46,19 @@ export component Board inherits TouchArea {
             background: Palette.valid_sq;
         }
 
-        if (board_state[i] != 0 && dragged_piece_sq != i) : Image {
-            source: Utils.piece_urls[board_state[i]];
+        if (board_state.last_move_from == i || board_state.last_move_to == i) : Rectangle {
+            background: Palette.last_move_sq;
+        }
+
+        if (board_state.board[i] != 0 && dragged_piece_sq != i) : Image {
+            source: Utils.piece_urls[board_state.board[i]];
             width: parent.width;
             height: parent.height;
         }
     }
 
     if (dragged_piece_sq != -1) : Image {
-        source: Utils.piece_urls[board_state[dragged_piece_sq]];
+        source: Utils.piece_urls[board_state.board[dragged_piece_sq]];
         height: Dimensions.sq_size;
         width: Dimensions.sq_size;
         x: Utils.constrain_mouse_x(parent.mouse-x) - (Dimensions.sq_size / 2);
@@ -65,7 +75,7 @@ export component Board inherits TouchArea {
     clicked => {
         if (self.dragged_piece_sq != -1)
         {
-            if (self.board_state[self.dragged_piece_sq] != 0) {
+            if (self.board_state.board[self.dragged_piece_sq] != 0) {
                 RustInterface.move_piece(self.dragged_piece_sq, RustInterface.square_from_xy(self.mouse-x, self.mouse-y));
             }
         }
