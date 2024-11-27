@@ -1,21 +1,14 @@
-import { Board } from "./board.slint";
-import { Dashboard } from "./dashboard.slint";
+import { Board, BoardState } from "./board.slint";
+import { Dashboard, DashboardState } from "./dashboard.slint";
 import { EvalBar } from "./eval.slint";
 import { Dimensions, Palette, RustInterface } from "./globals.slint";
 
-export { RustInterface } // export to use in rust code
-
-struct BoardState {
-    board: [int],
-    turn: int,
-    halfmove_clock: int,
-    fullmove_count: int,
-}
+export { RustInterface, BoardState, DashboardState } // export to use in rust code
 
 export component AppWindow inherits Window {
     in-out property <BoardState> board_state;
+    in-out property <DashboardState> dashboard_state;
     in-out property <int> dragged_piece_sq;
-    in-out property <string> compute_time;
 
     title: "Oracle";
 
@@ -23,7 +16,7 @@ export component AppWindow inherits Window {
     width:  Dimensions.board_size * 2;
 
     board := Board {
-        board_state: board_state.board;
+        board_state: board_state;
         dragged_piece_sq: dragged_piece_sq;
 
         x: 0;
@@ -40,13 +33,15 @@ export component AppWindow inherits Window {
         width: board.width - eval.width;
         height: board.height;
 
-        turn: board_state.turn;
-        halfmove_clock: board_state.halfmove_clock;
-        fullmove_count: board_state.fullmove_count;
-        compute_time: compute_time;
+        turn: dashboard_state.turn;
+        halfmove_clock: dashboard_state.halfmove_clock;
+        fullmove_count: dashboard_state.fullmove_count;
+        compute_time: dashboard_state.compute_time;
     }
 
     key_handler := FocusScope {
+        init() => { self.focus(); }
+
         key-pressed(event) => {
             if (!event.repeat) {
                 if (event.text == Key.LeftArrow) {

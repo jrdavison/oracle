@@ -1,56 +1,70 @@
-// Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
 mod bitboards;
-mod move_info;
+mod magic_bitboards;
+mod moves;
 mod position;
 mod utils;
 
-use crate::position::load_move_dbs;
+use clap::Parser;
 use num_traits::FromPrimitive;
 use num_traits::ToPrimitive;
 use position::Position;
-use slint::SharedString;
 use slint::VecModel;
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
-use utils::types::{Color, File, Rank, Square};
+use utils::{Color, File, Rank, Square};
 
 slint::include_modules!();
 
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    #[arg(long)]
+    gen_magics: bool,
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
-    load_move_dbs(); // force lazy static initialization of move databases
+    let args = Cli::parse();
+    if args.gen_magics {
+        magic_bitboards::precompute()?;
+    } else {
+        magic_bitboards::load_precomputed_moves();
 
-    let ui = AppWindow::new().unwrap();
+        let ui = AppWindow::new().unwrap();
 
-    let position = Rc::new(RefCell::new(Position::new(
-        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-    )));
+        let position = Rc::new(RefCell::new(Position::new(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        )));
 
-    set_application_state(&ui, &position, -1, true); // -1 no piece is being dragged
-    setup_callbacks(&ui, &position);
+        set_application_state(&ui, &position, -1, true); // -1 no piece is being dragged
+        setup_callbacks(&ui, &position);
 
-    ui.run().unwrap();
-
+        ui.run()?;
+    }
     Ok(())
 }
 
 fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragged_piece_sq: i32, compute_moves: bool) {
     let mut pos = position.borrow_mut();
+
     let side_to_move = pos.side_to_move();
+    let last_move = pos.last_move();
 
     ui.set_board_state(BoardState {
         board: Rc::new(VecModel::from(pos.board_i32())).into(),
-        turn: Color::to_i32(&side_to_move).unwrap(),
-        halfmove_clock: pos.halfmove_clock(),
-        fullmove_count: pos.fullmove_count(),
+        last_move_from: last_move.from as i32,
+        last_move_to: last_move.to as i32,
     });
     ui.set_dragged_piece_sq(dragged_piece_sq);
 
     if compute_moves {
         pos.compute_valid_moves(side_to_move);
-        ui.set_compute_time(SharedString::from(pos.compute_time_ms()));
+        ui.set_dashboard_state(DashboardState {
+            turn: Color::to_i32(&side_to_move).unwrap(),
+            halfmove_clock: pos.halfmove_clock(),
+            fullmove_count: pos.fullmove_count(),
+            compute_time: pos.compute_time().into(),
+        });
     }
 }
 

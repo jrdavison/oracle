@@ -3,6 +3,13 @@ import { VerticalBox, StandardTableView } from "std-widgets.slint";
 import { Palette, Font } from "./globals.slint";
 import { Dimensions } from "globals.slint";
 
+export struct DashboardState {
+    turn: int,
+    halfmove_clock: int,
+    fullmove_count: int,
+    compute_time: string,
+}
+
 export component Dashboard inherits Rectangle {
     in property <int> turn: 0;  // 0 for white, 1 for black
     in property <int> fullmove_count: 0;

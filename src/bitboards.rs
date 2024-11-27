@@ -1,22 +1,6 @@
-use crate::utils::types::{Bitboard, Color, File, Rank, Square};
-use std::ops::BitOr;
+use crate::utils::{Color, File, Rank, Square};
 
-#[derive(Default)]
-pub struct ComputedMoves {
-    pub valid_moves: Bitboard,
-    pub attacks: Bitboard,
-}
-
-impl BitOr for ComputedMoves {
-    type Output = ComputedMoves;
-
-    fn bitor(self, rhs: ComputedMoves) -> ComputedMoves {
-        ComputedMoves {
-            valid_moves: self.valid_moves | rhs.valid_moves,
-            attacks: self.attacks | rhs.attacks,
-        }
-    }
-}
+pub type Bitboard = u64;
 
 pub struct Bitboards {
     valid_moves: [Bitboard; Square::Count as usize],
@@ -92,12 +76,12 @@ pub fn set_bit(bitboard: &mut Bitboard, sq: Square) {
     *bitboard |= 1u64 << sq as u64;
 }
 
-fn clear_bit(bitboard: &mut Bitboard, sq: Square) {
+pub fn clear_bit(bitboard: &mut Bitboard, sq: Square) {
     assert!(sq != Square::Count, "Invalid square");
     *bitboard &= !(1u64 << sq as u64);
 }
 
-fn is_bit_set(bitboard: Bitboard, sq: Square) -> bool {
+pub fn is_bit_set(bitboard: Bitboard, sq: Square) -> bool {
     assert!(sq != Square::Count, "Invalid square");
     bitboard & (1u64 << sq as u64) != 0
 }
