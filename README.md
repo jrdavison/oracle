@@ -20,7 +20,7 @@ cargo build --release
 
 ## Move Generation
 
-We precompute attacks for knights, kings, bishops, and rooks. The attacks are loaded into look up table in rust and used to get valid attack squares in one-shot
+We precompute attacks for knights, kings, pawns, bishops, and rooks. The attacks are loaded into look up table in rust and used to get valid attack squares in one-shot
 
 ### Precompute Magicbitboards
 
