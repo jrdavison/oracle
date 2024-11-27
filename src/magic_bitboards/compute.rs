@@ -13,7 +13,7 @@ pub const BLACK_PAWN_ATTACKS: [(i8, i8); 2] = [(-1, 1), (-1, -1)];
 
 pub struct BitboardLookupTables {
     pub masks: [Bitboard; Square::Count as usize],
-    pub blockers: [HashMap<Bitboard, Bitboard>; Square::Count as usize], // TODO: i think this can be a type
+    pub blockers: [HashMap<Bitboard, Bitboard>; Square::Count as usize],
 }
 
 fn remove_edge_bits(mask: &mut Bitboard, sq: Square) {

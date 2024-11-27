@@ -97,8 +97,6 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
     let attacks = PAWN_ATTACK_MASKS[color as usize][sq as usize] & enemy_checkers;
     valid_moves |= attacks;
 
-    // TODO: promotion
-
     ComputedMoves { valid_moves, attacks }
 }
 
