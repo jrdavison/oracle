@@ -200,6 +200,7 @@ Orthogonal mask for rook `r` on square D6 (`ORTHOGONAL_MASKS[43]`):
 2: - 0 0 1 0 0 0 -
 1: - - - - - - - -
    A B C D E F G H
+```
 
 Then we bitwise `&` the checkers bitboard and orthogonal mask together to get a bitboard representing all blocking pieces
 
@@ -262,6 +263,7 @@ Orthogonal mask for bishop `b` on square D6 (`ORTHOGONAL_MASKS[60]`):
 2: - 0 0 0 0 0 0 -
 1: - - - - - - - -
    A B C D E F G H
+```
 
 Then we bitwise `&` the checkers bitboard and orthogonal mask together to get a bitboard representing all blocking pieces
 
