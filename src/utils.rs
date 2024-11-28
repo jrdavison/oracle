@@ -1,6 +1,7 @@
 use core::panic;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
+use std::fmt;
 use std::ops::{Add, Mul, Sub};
 use std::ops::{Index, IndexMut, Not};
 
@@ -304,5 +305,11 @@ impl Mul<u8> for Rank {
     type Output = Rank;
     fn mul(self, rhs: u8) -> Rank {
         Rank::from_u8(self as u8 * rhs).unwrap_or(Rank::Count)
+    }
+}
+
+impl fmt::Display for Rank {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", *self as u8 + 1)
     }
 }

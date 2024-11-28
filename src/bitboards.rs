@@ -57,11 +57,12 @@ impl Bitboards {
 }
 
 #[allow(dead_code)]
-pub fn print_bitboard(bitboard: Bitboard) {
+pub fn print_bitboard(bitboard: &Bitboard) {
     for rank in Rank::iter_reverse() {
+        print!("{}: ", rank);
         for file in File::iter() {
             let sq = Square::make_square(file, rank);
-            if is_bit_set(&bitboard, sq) {
+            if is_bit_set(bitboard, sq) {
                 print!("1 ");
             } else {
                 print!("0 ");
@@ -69,6 +70,7 @@ pub fn print_bitboard(bitboard: Bitboard) {
         }
         println!();
     }
+    println!("   A B C D E F G H");
 }
 
 pub fn set_bit(bitboard: &mut Bitboard, sq: Square) {
