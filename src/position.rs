@@ -91,11 +91,10 @@ impl Position {
             return MoveInfo::default();
         }
 
-        let mut move_info = MoveInfo::new(from, to, &self.board);
+        let move_info = MoveInfo::new(from, to, &self.board, self.halfmove_clock);
         let moved_piece_color = Piece::color_of(move_info.moved_piece);
 
-        // save en passant square before resetting it
-        move_info.en_passant_square = self.en_passant_square;
+        // en passant only valid for one move
         self.en_passant_square = Square::Count;
 
         // move piece
@@ -138,9 +137,6 @@ impl Position {
             self.halfmove_clock += 1;
         }
 
-        move_info.halfmove_clock = self.halfmove_clock;
-        move_info.fullmove_count = self.fullmove_count;
-
         self.side_to_move = !self.side_to_move;
         self.move_history.push(move_info);
 
@@ -154,9 +150,9 @@ impl Position {
 
     pub fn undo_move(&mut self) -> bool {
         if let Some(last_move) = self.move_history.pop() {
+            let color = Piece::color_of(last_move.moved_piece);
             match last_move.move_type {
                 MoveType::Quiet | MoveType::TwoSquarePush | MoveType::Capture | MoveType::Promotion => {
-                    let color = Piece::color_of(last_move.moved_piece);
                     self.board[last_move.from as usize] = last_move.moved_piece;
                     self.board[last_move.to as usize] = last_move.captured_piece;
                     self.bitboards.set_checkers(color, last_move.from);
@@ -174,14 +170,22 @@ impl Position {
                     self.bitboards.set_checkers(color, last_move.from);
                     self.bitboards.unset_checkers(color, last_move.to);
                     self.bitboards.set_checkers(!color, last_move.capture_piece_sq);
+                    self.en_passant_square = last_move.to;
                 }
                 MoveType::Invalid => panic!("Invalid move"),
             }
 
             self.side_to_move = !self.side_to_move;
-            self.fullmove_count = last_move.fullmove_count;
-            self.halfmove_clock = last_move.halfmove_clock;
-            self.en_passant_square = last_move.en_passant_square;
+
+            // reset clocks
+            if color == Color::Black {
+                self.fullmove_count -= 1;
+            }
+            if last_move.move_type == MoveType::Capture || Piece::type_of(last_move.moved_piece) == PieceType::Pawn {
+                self.halfmove_clock = last_move.halfmove_clock;
+            } else {
+                self.halfmove_clock -= 1;
+            }
 
             self.redo_history.push(last_move);
             true
