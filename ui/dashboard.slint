@@ -5,29 +5,28 @@ import { Dimensions } from "globals.slint";
 
 export struct DashboardState {
     turn: int,
+    en_passant_square: string,
     halfmove_clock: int,
     fullmove_count: int,
     compute_time: string,
 }
 
 export component Dashboard inherits Rectangle {
-    in property <int> turn: 0;  // 0 for white, 1 for black
-    in property <int> fullmove_count: 0;
-    in property <int> halfmove_clock: 0;
-    in property <string> compute_time: "0.0";
+    in property <DashboardState> dashboard_state;
     in property <percent> b_eval: 50%;
     in property <percent> w_eval: 50%;
 
     VerticalBox {
+        padding-bottom: 0px;
         Rectangle {
             height: 50px;
             width: 100%;
-            background: turn == 0 ? white : black;
+            background: dashboard_state.turn == 0 ? white : black;
             border-radius: 5px;
 
             Text {
-                text: (turn == 0 ? "White" : "Black") + " to move";
-                color: turn == 0 ? black : white;
+                text: (dashboard_state.turn == 0 ? "White" : "Black") + " to move";
+                color: dashboard_state.turn == 0 ? black : white;
                 horizontal-alignment: center;
                 font-size: Font.font_size_lg;
                 font-weight: Font.bold;
@@ -36,18 +35,21 @@ export component Dashboard inherits Rectangle {
     }
     StandardTableView {
         x: 0;
-        height: 147px;
-        y: Dimensions.board_size - 147px;
+        height: 182px;
+        y: Dimensions.board_size - 182px;
         width: 100%;
         rows: [
             [
-                { text: "Fullmove Count:" }, { text: fullmove_count },
+                { text: "Fullmove Count:" }, { text: dashboard_state.fullmove_count },
             ],
             [
-                { text: "Halfmove Clock:" }, { text: halfmove_clock },
+                { text: "Halfmove Clock:" }, { text: dashboard_state.halfmove_clock },
             ],
             [
-                { text: "Time to compute valid moves:" }, { text: compute_time },
+                { text: "En Passant Square:" }, { text: dashboard_state.en_passant_square },
+            ],
+            [
+                { text: "Time to compute valid moves:" }, { text: dashboard_state.compute_time },
             ]
         ];
     }

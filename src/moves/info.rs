@@ -8,6 +8,9 @@ pub struct MoveInfo {
     pub moved_piece: Piece,
     pub captured_piece: Piece,
     pub capture_piece_sq: Square,
+    pub en_passant_square: Square,
+    pub halfmove_clock: i32,
+    pub fullmove_count: i32,
 }
 
 impl MoveInfo {
@@ -67,6 +70,9 @@ impl MoveInfo {
             moved_piece,
             captured_piece,
             capture_piece_sq,
+            en_passant_square: Square::Count,
+            halfmove_clock: 0,
+            fullmove_count: 0,
         }
     }
 

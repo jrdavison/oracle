@@ -60,6 +60,14 @@ impl Position {
         format!("{:?}", self.compute_time)
     }
 
+    pub fn en_passant_square(&self) -> String {
+        if self.en_passant_square == Square::Count {
+            "-".to_string()
+        } else {
+            format!("{:?}", self.en_passant_square)
+        }
+    }
+
     pub fn last_move(&self) -> MoveInfo {
         self.move_history.last().cloned().unwrap_or_default()
     }
@@ -78,16 +86,17 @@ impl Position {
         self.compute_time = start.elapsed();
     }
 
-    pub fn move_piece(&mut self, from: Square, to: Square) -> MoveInfo {
+    pub fn move_piece(&mut self, from: Square, to: Square, clear_redo: bool) -> MoveInfo {
         if !self.valid_move(from, to) {
-            return MoveInfo::default(); // defaults to invalid move
+            return MoveInfo::default();
         }
 
-        // reset en passant square
-        self.en_passant_square = Square::Count;
-
-        let move_info = MoveInfo::new(from, to, &self.board);
+        let mut move_info = MoveInfo::new(from, to, &self.board);
         let moved_piece_color = Piece::color_of(move_info.moved_piece);
+
+        // save en passant square before resetting it
+        move_info.en_passant_square = self.en_passant_square;
+        self.en_passant_square = Square::Count;
 
         // move piece
         self.board[move_info.to as usize] = move_info.moved_piece;
@@ -123,11 +132,23 @@ impl Position {
             self.fullmove_count += 1;
         }
 
+        if move_info.move_type == MoveType::Capture || Piece::type_of(move_info.moved_piece) == PieceType::Pawn {
+            self.halfmove_clock = 0;
+        } else {
+            self.halfmove_clock += 1;
+        }
+
+        move_info.halfmove_clock = self.halfmove_clock;
+        move_info.fullmove_count = self.fullmove_count;
+
         self.side_to_move = !self.side_to_move;
-
-        // TODO: count halfmoves
-
         self.move_history.push(move_info);
+
+        // clear redo history if move is not a redo
+        if clear_redo {
+            self.redo_history.clear();
+        }
+
         move_info
     }
 
@@ -158,9 +179,9 @@ impl Position {
             }
 
             self.side_to_move = !self.side_to_move;
-            if self.side_to_move == Color::Black {
-                self.fullmove_count -= 1;
-            }
+            self.fullmove_count = last_move.fullmove_count;
+            self.halfmove_clock = last_move.halfmove_clock;
+            self.en_passant_square = last_move.en_passant_square;
 
             self.redo_history.push(last_move);
             true
@@ -171,7 +192,7 @@ impl Position {
 
     pub fn redo_move(&mut self) -> bool {
         if let Some(last_move) = self.redo_history.pop() {
-            self.move_piece(last_move.from, last_move.to);
+            self.move_piece(last_move.from, last_move.to, false);
             true
         } else {
             false

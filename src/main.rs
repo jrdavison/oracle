@@ -63,6 +63,7 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
             turn: Color::to_i32(&side_to_move).unwrap(),
             halfmove_clock: pos.halfmove_clock(),
             fullmove_count: pos.fullmove_count(),
+            en_passant_square: pos.en_passant_square().into(),
             compute_time: pos.compute_time().into(),
         });
     }
@@ -98,7 +99,7 @@ fn setup_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
             let src_sq = Square::from_u8(src as u8).unwrap();
             let dest_sq = Square::from_u8(dest as u8).unwrap();
 
-            let move_info = position_mut.move_piece(src_sq, dest_sq);
+            let move_info = position_mut.move_piece(src_sq, dest_sq, true);
             drop(position_mut);
 
             let valid_move = move_info.is_valid();

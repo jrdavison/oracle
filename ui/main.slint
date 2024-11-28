@@ -33,10 +33,7 @@ export component AppWindow inherits Window {
         width: board.width - eval.width;
         height: board.height;
 
-        turn: dashboard_state.turn;
-        halfmove_clock: dashboard_state.halfmove_clock;
-        fullmove_count: dashboard_state.fullmove_count;
-        compute_time: dashboard_state.compute_time;
+        dashboard_state: dashboard_state;
     }
 
     key_handler := FocusScope {
