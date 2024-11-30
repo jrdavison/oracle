@@ -31,12 +31,6 @@ pub fn compute_valid_moves(pos: &mut Position, color: Color) {
         let piece_type = Piece::type_of(piece);
         let mut computed_moves = ComputedMoves::default();
 
-        /*
-        only compute moves for pieces of the correct color.
-        Valid moves and attacks will be reset back to 0 for the enemy color
-        */
-        // if color == Piece::color_of(piece) {
-        // let p_start = Instant::now();
         match piece_type {
             PieceType::Pawn => computed_moves = compute_pawn_moves(pos, sq),
             PieceType::Knight => computed_moves = compute_knight_moves(sq),
@@ -46,23 +40,17 @@ pub fn compute_valid_moves(pos: &mut Position, color: Color) {
             PieceType::King => computed_moves = compute_king_moves(sq),
             _ => {}
         }
-        // }
 
         /*
         TODO: check if move puts king in check (diagonal and horizontal pins)
 
         we will need to copy the position and then use that to simulate the move. Then we check if the king is in
-        check
+        check. We can probably do this without having to recalculate the moves for the entire board though...
         */
 
         computed_moves.valid_moves &= !pos.bitboards.get_checkers(color);
         pos.bitboards.set_valid_moves(sq, computed_moves.valid_moves);
         attacks |= computed_moves.attacks;
-        // println!(
-        //     "Computed moves for {:?} in {:.4} ms",
-        //     piece,
-        //     p_start.elapsed().as_secs_f64() * 1000.0
-        // );
     }
 
     pos.bitboards.set_attacks(color, attacks);
