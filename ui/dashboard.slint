@@ -1,6 +1,6 @@
-import { VerticalBox, StandardTableView } from "std-widgets.slint";
+import { VerticalBox, ListView, Palette, StandardTableView, HorizontalBox } from "std-widgets.slint";
 
-import { Palette, Font } from "./globals.slint";
+import { OraclePalette, Font } from "./globals.slint";
 import { Dimensions } from "globals.slint";
 
 export struct DashboardState {
@@ -13,8 +13,13 @@ export struct DashboardState {
 
 export component Dashboard inherits Rectangle {
     in property <DashboardState> dashboard_state;
-    in property <percent> b_eval: 50%;
-    in property <percent> w_eval: 50%;
+
+    property <[{text: string, value: string}]> info : [
+        {text: "Fullmove Count:", value: dashboard_state.fullmove_count, bg: Palette.background},
+        {text: "Halfmove Clock:", value: dashboard_state.halfmove_clock, bg: Palette.alternate-background},
+        {text: "En Passant Square:", value: dashboard_state.en_passant_square, bg: Palette.background},
+        {text: "Time to compute valid moves:", value: dashboard_state.compute_time, bg: Palette.alternate-background}
+    ];
 
     VerticalBox {
         padding-bottom: 0px;
@@ -32,25 +37,69 @@ export component Dashboard inherits Rectangle {
                 font-weight: Font.bold;
             }
         }
+
+        HorizontalLayout {
+            padding: 50px;
+            StandardTableView {
+                width: 100%;
+                height: 100%;
+                max-height: 150px;
+                columns: [
+                    {title: "#", width: self.width * (1/5)},
+                    {title: "White", width: self.width * (2/5)},
+                    {title: "Black", width: self.width * (2/5)}
+                ];
+                rows: [
+                    [
+                        {text: "1."}, {text: "d4"}, {text: "d5"}
+                    ],
+                    [
+                        {text: "2."}, {text: "c4"}, {text: "dxc4"}
+                    ],
+                    [
+                        {text: "3."}, {text: "e4"}, {text: "b5"}
+                    ],
+                    [
+                        {text: "4."}, {text: "a4"}, {text: "c6"}
+                    ],
+                    [
+                        {text: "5."}, {text: "axb5"}, {text: "Nc3"}
+                    ],
+                ];
+            }
+        }
     }
-    StandardTableView {
+
+
+    info_table := ListView {
         x: 0;
-        height: 182px;
-        y: Dimensions.board_size - 182px;
+        y: Dimensions.board_size - self.height;
+        height: 128px;
         width: 100%;
-        rows: [
-            [
-                { text: "Fullmove Count:" }, { text: dashboard_state.fullmove_count },
-            ],
-            [
-                { text: "Halfmove Clock:" }, { text: dashboard_state.halfmove_clock },
-            ],
-            [
-                { text: "En Passant Square:" }, { text: dashboard_state.en_passant_square },
-            ],
-            [
-                { text: "Time to compute valid moves:" }, { text: dashboard_state.compute_time },
-            ]
-        ];
+        for row[i] in root.info : Rectangle {
+            background: Math.mod(i, 2) == 0 ? Palette.background : Palette.alternate-background;
+            width: info_table.width;
+            HorizontalLayout {
+                padding: 8px;
+                Text {
+                    min-width: info_table.width / 2;
+                    text: row.text;
+                    font-size: Font.font_size_sm;
+                }
+                Text {
+                    min-width: info_table.width / 2;
+                    text: row.value;
+                    font-size: Font.font_size_sm;
+                }
+            }
+        }
+    }
+    info_border := Rectangle {
+        border-width: 2px;
+        border-color: Palette.border;
+        x: info_table.x - self.border-width;
+        y: info_table.y - self.border-width;
+        width: info_table.width + (self.border-width * 2);
+        height: info_table.height + (self.border-width * 2);
     }
 }

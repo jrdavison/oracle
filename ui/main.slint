@@ -1,7 +1,7 @@
 import { Board, BoardState } from "./board.slint";
 import { Dashboard, DashboardState } from "./dashboard.slint";
 import { EvalBar } from "./eval.slint";
-import { Dimensions, Palette, RustInterface } from "./globals.slint";
+import { Dimensions, RustInterface } from "./globals.slint";
 
 export { RustInterface, BoardState, DashboardState } // export to use in rust code
 
@@ -23,17 +23,17 @@ export component AppWindow inherits Window {
         height: parent.height;
         width: parent.width / 2;
     }
-    eval := EvalBar {
-        x: board.width;
-        b_eval: 50%;
-        w_eval: 50%;
-    }
     dash := Dashboard {
         x: board.width + eval.width;
         width: board.width - eval.width;
         height: board.height;
 
         dashboard_state: dashboard_state;
+    }
+    eval := EvalBar {
+        x: board.width;
+        b_eval: 50%;
+        w_eval: 50%;
     }
 
     key_handler := FocusScope {
