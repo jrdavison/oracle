@@ -2,6 +2,7 @@ import { Board, BoardState } from "./board.slint";
 import { Dashboard, DashboardState } from "./dashboard.slint";
 import { EvalBar } from "./eval.slint";
 import { Dimensions, RustInterface } from "./globals.slint";
+import { Palette } from "globals.slint";
 
 export { RustInterface, BoardState, DashboardState } // export to use in rust code
 
@@ -14,6 +15,7 @@ export component AppWindow inherits Window {
 
     height: Dimensions.board_size;
     width:  Dimensions.board_size * 2;
+    background: Palette.dashboard_bg;
 
     board := Board {
         board_state: board_state;

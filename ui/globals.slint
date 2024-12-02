@@ -3,18 +3,23 @@ export global Dimensions {
     out property <length> sq_size: 80px;
 }
 
-export global OraclePalette {
+export global Palette {
+    // board
     out property <color> light_sq: rgb(240, 217, 181);
     out property <color> dark_sq: rgb(181, 136, 99);
     out property <color> valid_sq: rgba(35, 64, 153, 0.45);
     out property <color> last_move_sq: rgba(255, 204, 0, 0.45);
+
+    // dashboard
+    out property <color> dashboard_bg: rgb(25, 25, 25);
+    out property <color> alternate_bg: rgb(40, 40, 40);
+    out property <color> border: rgb(60, 60, 60);
 }
 
 export global Font {
     out property <int> semi_bold: 600;
     out property <int> bold: 800;
-    out property <length> font_size_xsm: 12px;
-    out property <length> font_size_sm: 14px;
+    out property <length> font_size_sm: 13px;
     out property <length> font_size_md: 16px;
     out property <length> font_size_lg: 24px;
 }
