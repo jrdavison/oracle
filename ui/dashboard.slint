@@ -15,10 +15,10 @@ export component Dashboard inherits Rectangle {
     in property <DashboardState> dashboard_state;
 
     property <[{text: string, value: string}]> info : [
-        {text: "Fullmove Count:", value: dashboard_state.fullmove_count, bg: Palette.dashboard_bg},
-        {text: "Halfmove Clock:", value: dashboard_state.halfmove_clock, bg: Palette.alternate_bg},
-        {text: "En Passant Square:", value: dashboard_state.en_passant_square, bg: Palette.dashboard_bg},
-        {text: "Time to compute valid moves:", value: dashboard_state.compute_time, bg: Palette.alternate_bg}
+        {text: "Fullmove Count:", value: dashboard_state.fullmove_count},
+        {text: "Halfmove Clock:", value: dashboard_state.halfmove_clock},
+        {text: "En Passant Square:", value: dashboard_state.en_passant_square},
+        {text: "Time to compute valid moves:", value: dashboard_state.compute_time}
     ];
 
     VerticalBox {
@@ -34,7 +34,7 @@ export component Dashboard inherits Rectangle {
                 color: dashboard_state.turn == 0 ? black : white;
                 horizontal-alignment: center;
                 font-size: Font.font_size_lg;
-                font-weight: Font.bold;
+                font-weight: Font.semi_bold;
             }
         }
 
