@@ -1,4 +1,5 @@
 use crate::utils::{Direction, MoveType, Piece, PieceType, Rank, Square};
+use slint::SharedString;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MoveInfo {
@@ -74,5 +75,35 @@ impl MoveInfo {
 
     pub fn is_valid(&self) -> bool {
         self.move_type != MoveType::Invalid
+    }
+
+    pub fn to_algebraic_notation(&self) -> SharedString {
+        let to_square = format!("{:?}", self.to).to_lowercase();
+        let piece_type = Piece::type_of(self.moved_piece);
+
+        let move_string = match self.move_type {
+            MoveType::Quiet | MoveType::TwoSquarePush => {
+                format!("{}{}", piece_type.to_string(), to_square)
+            }
+            MoveType::Capture | MoveType::EnPassant => {
+                if piece_type == PieceType::Pawn {
+                    format!("{}x{}", Square::file_of(self.from).to_string(), to_square)
+                } else {
+                    format!("{}x{}", piece_type.to_string(), to_square)
+                }
+            }
+            MoveType::Promotion => {
+                if self.captured_piece != Piece::Empty {
+                    format!("{}x{}={}", Square::file_of(self.from).to_string(), to_square, PieceType::Queen.to_string())
+                } else {
+                    format!("{}={}", to_square, PieceType::Queen.to_string())
+                }
+            }
+            _ => "not handled".into(),
+        };
+
+        // TODO: handle check/checkmate/ambiguous moves
+
+        SharedString::from(move_string)
     }
 }

@@ -68,6 +68,10 @@ impl Position {
         }
     }
 
+    pub fn move_history(&self) -> Vec<MoveInfo> {
+        self.move_history.clone()
+    }
+
     pub fn last_move(&self) -> MoveInfo {
         self.move_history.last().cloned().unwrap_or_default()
     }

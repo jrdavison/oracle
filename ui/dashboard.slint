@@ -3,7 +3,13 @@ import { VerticalBox, ListView, StandardTableView, HorizontalBox } from "std-wid
 import { Palette, Font } from "./globals.slint";
 import { Dimensions } from "globals.slint";
 
+export struct SlintMoveInfo {
+    white: string,
+    black: string,
+}
+
 export struct DashboardState {
+    move_history: [SlintMoveInfo],
     turn: int,
     en_passant_square: string,
     halfmove_clock: int,
@@ -19,14 +25,6 @@ export component Dashboard inherits Rectangle {
         {text: "Halfmove Clock:", value: dashboard_state.halfmove_clock},
         {text: "En Passant Square:", value: dashboard_state.en_passant_square},
         {text: "Time to compute valid moves:", value: dashboard_state.compute_time}
-    ];
-
-    property <[{white: string, black: string}]> moves: [
-        {white: "d4", black: "d5"},
-        {white: "c4", black: "dxc4"},
-        {white: "e4", black: "b5"},
-        {white: "a4", black: "c6"},
-        {white: "axb5", black: "Nc3"},
     ];
 
     VerticalBox {
@@ -63,7 +61,7 @@ export component Dashboard inherits Rectangle {
                 move_history := ListView {
                     height: move_history_border.height - (move_history_border.border_width * 2);
                     width: move_history_border.width - (move_history_border.border_width * 2);
-                    for row[i] in root.moves : Rectangle {
+                    for move[i] in root.dashboard_state.move-history : Rectangle {
                         background: Math.mod(i, 2) == 0 ? Palette.dashboard_bg : Palette.alternate_bg;
                         width: move_history.width;
                         HorizontalLayout {
@@ -77,13 +75,13 @@ export component Dashboard inherits Rectangle {
                             Text {
                                 color: white;
                                 min-width: move_history.width * (2/5);
-                                text: row.white;
+                                text: move.white;
                                 font-size: Font.font_size_sm;
                             }
                             Text {
                                 color: white;
                                 min-width: move_history.width  * (2/5);
-                                text: row.black;
+                                text: move.black;
                                 font-size: Font.font_size_sm;
                             }
                         }

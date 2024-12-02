@@ -60,6 +60,17 @@ impl PieceType {
             _ => PieceType::Empty,
         }
     }
+
+    pub fn to_string(&self) -> &str {
+        match self {
+            PieceType::Pawn | PieceType::Empty => "",
+            PieceType::King => "K",
+            PieceType::Queen => "Q",
+            PieceType::Bishop => "B",
+            PieceType::Knight => "N",
+            PieceType::Rook => "R",
+        }
+    }
 }
 
 #[repr(u8)]
@@ -217,6 +228,20 @@ impl File {
 
     pub fn iter() -> impl Iterator<Item = File> {
         (0..(File::Count as usize)).map(|i| File::from_u8(i as u8).unwrap())
+    }
+
+    pub fn to_string(&self) -> &str {
+        match self {
+            File::FileA => "a",
+            File::FileB => "b",
+            File::FileC => "c",
+            File::FileD => "d",
+            File::FileE => "e",
+            File::FileF => "f",
+            File::FileG => "g",
+            File::FileH => "h",
+            _ => panic!("Invalid file"),
+        }
     }
 }
 

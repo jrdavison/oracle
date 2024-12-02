@@ -5,6 +5,7 @@ mod position;
 mod utils;
 
 use clap::Parser;
+use moves::info::MoveInfo;
 use num_traits::FromPrimitive;
 use num_traits::ToPrimitive;
 use position::Position;
@@ -58,9 +59,11 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
     ui.set_dragged_piece_sq(dragged_piece_sq);
 
     if compute_moves {
+        let move_history = format_move_history(&pos.move_history());
         pos.compute_valid_moves(side_to_move);
         ui.set_dashboard_state(DashboardState {
             turn: Color::to_i32(&side_to_move).unwrap(),
+            move_history: Rc::new(VecModel::from(move_history)).into(),
             halfmove_clock: pos.halfmove_clock(),
             fullmove_count: pos.fullmove_count(),
             en_passant_square: pos.en_passant_square().into(),
@@ -142,4 +145,27 @@ fn setup_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
             }
         }
     });
+}
+
+fn format_move_history(history: &Vec<MoveInfo>) -> Vec<SlintMoveInfo> {
+    let mut slint_move_info: Vec<SlintMoveInfo> = Vec::new();
+
+    let mut iter = history.chunks(2);
+    while let Some(chunk) = iter.next() {
+        match chunk.len() {
+            2 => {
+                slint_move_info.push(SlintMoveInfo {
+                    white: chunk[0].to_algebraic_notation(),
+                    black: chunk[1].to_algebraic_notation(),
+                });
+            }
+            1 => slint_move_info.push(SlintMoveInfo {
+                white: chunk[0].to_algebraic_notation(),
+                black: "".into(),
+            }),
+            _ => {}
+        }
+    }
+
+    slint_move_info
 }

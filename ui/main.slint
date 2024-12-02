@@ -1,10 +1,10 @@
 import { Board, BoardState } from "./board.slint";
-import { Dashboard, DashboardState } from "./dashboard.slint";
+import { Dashboard, DashboardState, SlintMoveInfo } from "./dashboard.slint";
 import { EvalBar } from "./eval.slint";
 import { Dimensions, RustInterface } from "./globals.slint";
 import { Palette } from "globals.slint";
 
-export { RustInterface, BoardState, DashboardState } // export to use in rust code
+export { RustInterface, BoardState, DashboardState, SlintMoveInfo } // export to use in rust code
 
 export component AppWindow inherits Window {
     in-out property <BoardState> board_state;
