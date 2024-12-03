@@ -95,7 +95,7 @@ impl Position {
             return MoveInfo::default();
         }
 
-        let move_info = MoveInfo::new(from, to, &self);
+        let move_info = MoveInfo::new(self, from, to);
         let moved_piece_color = Piece::color_of(move_info.moved_piece);
 
         // en passant only valid for one move

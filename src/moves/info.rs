@@ -16,7 +16,7 @@ pub struct MoveInfo {
 }
 
 impl MoveInfo {
-    pub fn new(from: Square, to: Square, position: &Position) -> MoveInfo {
+    pub fn new(position: &Position, from: Square, to: Square) -> MoveInfo {
         let moved_piece = position.board[from as usize];
         let move_type;
         let mut captured_piece = position.board[to as usize];
@@ -147,6 +147,6 @@ fn disambiguate_move(info: &MoveInfo, position: &Position) -> String {
             format!("{}{}", piece_type.to_notation_string(), from)
         }
     } else {
-        format!("{}", piece_type.to_notation_string())
+        piece_type.to_notation_string().to_string()
     }
 }
