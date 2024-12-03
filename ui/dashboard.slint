@@ -34,30 +34,45 @@ export component Dashboard inherits Rectangle {
         padding-bottom: 0px;
         spacing: 20px;
 
-        Rectangle {
-            height: 50px;
-            width: 100%;
-            background: dashboard_state.turn == 0 ? white : black;
-            border-radius: 5px;
+        HorizontalLayout {
+            move_columns := Rectangle {
+                height: 350px;
+                width: 80%;
 
-            Text {
-                text: (dashboard_state.turn == 0 ? "White" : "Black") + " to move";
-                color: dashboard_state.turn == 0 ? black : white;
-                horizontal-alignment: center;
-                font-size: Font.font_size_lg;
-                font-weight: Font.semi_bold;
+                HorizontalLayout {
+                    padding: 8px;
+                    Text {
+                        color: white;
+                        min-width: move_columns.width * (1/5);
+                        text: "#";
+                        font-size: Font.font_size_sm;
+                    }
+                    Text {
+                        color: white;
+                        min-width: move_columns.width * (2/5);
+                        text: "White";
+                        font-size: Font.font_size_sm;
+                    }
+                    Text {
+                        color: white;
+                        min-width: move_columns.width  * (2/5);
+                        text: "Black";
+                        font-size: Font.font_size_sm;
+                    }
+                }
             }
         }
 
         HorizontalLayout {
             alignment: center;
+
             move_history_border := Rectangle {
-                height: 350px;
-                width: 80%;
+                height: move_columns.height;
+                width: move_columns.width;
                 border-color: Palette.border;
                 border-width: 2px;
                 border-radius: 2px;
-
+            
                 move_history := ListView {
                     height: move_history_border.height - (move_history_border.border_width * 2);
                     width: move_history_border.width - (move_history_border.border_width * 2);
