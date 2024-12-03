@@ -61,16 +61,15 @@ impl PieceType {
         }
     }
 
-    pub fn to_notation_string(self) -> String {
-        let notation = match self {
+    pub fn make_notation_string(&self) -> &str {
+        match self {
             PieceType::Pawn | PieceType::Empty => "",
             PieceType::King => "K",
             PieceType::Queen => "Q",
             PieceType::Bishop => "B",
             PieceType::Knight => "N",
             PieceType::Rook => "R",
-        };
-        notation.to_string()
+        }
     }
 }
 
@@ -234,7 +233,7 @@ impl File {
         (0..(File::Count as usize)).map(|i| File::from_u8(i as u8).unwrap())
     }
 
-    pub fn to_notation_string(&self) -> &str {
+    pub fn make_notation_string(&self) -> &str {
         match self {
             File::FileA => "a",
             File::FileB => "b",
@@ -308,7 +307,7 @@ impl Rank {
             .map(|i| Rank::from_u8(i as u8).unwrap())
     }
 
-    pub fn to_notation_string(&self) -> &str {
+    pub fn make_notation_string(&self) -> &str {
         match self {
             Rank::Rank1 => "1",
             Rank::Rank2 => "2",

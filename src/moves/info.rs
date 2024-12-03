@@ -95,12 +95,12 @@ impl MoveInfo {
                 if self.captured_piece != Piece::Empty {
                     format!(
                         "{}x{}={}",
-                        Square::file_of(self.from).to_notation_string(),
+                        Square::file_of(self.from).make_notation_string(),
                         to_square,
-                        PieceType::Queen.to_notation_string()
+                        PieceType::Queen.make_notation_string()
                     )
                 } else {
-                    format!("{}={}", to_square, PieceType::Queen.to_notation_string())
+                    format!("{}={}", to_square, PieceType::Queen.make_notation_string())
                 }
             }
             _ => "not handled".into(),
@@ -133,20 +133,26 @@ fn disambiguate_move(info: &MoveInfo, position: &Position) -> String {
         }
     }
 
-    if bitboards::is_bit_set(&common_moves, info.to) {
+    let formatted_string = if bitboards::is_bit_set(&common_moves, info.to) {
         let files = piece_sqs.iter().map(|&sq| Square::file_of(sq)).collect::<Vec<File>>();
         let ranks = piece_sqs.iter().map(|&sq| Square::rank_of(sq)).collect::<Vec<Rank>>();
         let files_are_same = files.iter().all(|&file| file == files[0]);
         let ranks_are_same = ranks.iter().all(|&rank| rank == ranks[0]);
         if !files_are_same {
-            format!("{}{}", piece_type.to_notation_string(), Square::file_of(info.from).to_notation_string())
+            format!("{}{}", piece_type.make_notation_string(), Square::file_of(info.from).make_notation_string())
         } else if !ranks_are_same {
-            format!("{}{}", piece_type.to_notation_string(), Square::rank_of(info.from).to_notation_string())
+            format!("{}{}", piece_type.make_notation_string(), Square::rank_of(info.from).make_notation_string())
         } else {
             let from = format!("{:?}", info.from).to_lowercase();
-            format!("{}{}", piece_type.to_notation_string(), from)
+            format!("{}{}", piece_type.make_notation_string(), from)
         }
     } else {
-        piece_type.to_notation_string().to_string()
-    }
+        if MoveType::Capture == info.move_type && Piece::type_of(info.moved_piece) == PieceType::Pawn {
+            Square::file_of(info.from).make_notation_string().to_string()
+        } else {
+            piece_type.make_notation_string().to_string()
+        }
+    };
+
+    formatted_string
 }
