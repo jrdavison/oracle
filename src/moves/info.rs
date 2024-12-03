@@ -77,24 +77,20 @@ impl MoveInfo {
         self.move_type != MoveType::Invalid
     }
 
-    pub fn to_algebraic_notation(&self) -> SharedString {
+    pub fn to_algebraic_notation(&self, piece_identifier: String) -> SharedString {
         let to_square = format!("{:?}", self.to).to_lowercase();
-        let piece_type = Piece::type_of(self.moved_piece);
 
         let move_string = match self.move_type {
-            MoveType::Quiet | MoveType::TwoSquarePush => {
-                format!("{}{}", piece_type.to_string(), to_square)
-            }
-            MoveType::Capture | MoveType::EnPassant => {
-                if piece_type == PieceType::Pawn {
-                    format!("{}x{}", Square::file_of(self.from).to_string(), to_square)
-                } else {
-                    format!("{}x{}", piece_type.to_string(), to_square)
-                }
-            }
+            MoveType::Quiet | MoveType::TwoSquarePush => [piece_identifier, to_square].join(""),
+            MoveType::Capture | MoveType::EnPassant => [piece_identifier, to_square].join("x"),
             MoveType::Promotion => {
                 if self.captured_piece != Piece::Empty {
-                    format!("{}x{}={}", Square::file_of(self.from).to_string(), to_square, PieceType::Queen.to_string())
+                    format!(
+                        "{}x{}={}",
+                        Square::file_of(self.from).to_string(),
+                        to_square,
+                        PieceType::Queen.to_string()
+                    )
                 } else {
                     format!("{}={}", to_square, PieceType::Queen.to_string())
                 }
@@ -102,7 +98,7 @@ impl MoveInfo {
             _ => "not handled".into(),
         };
 
-        // TODO: handle check/checkmate/ambiguous moves
+        // TODO: handle check/checkmate
 
         SharedString::from(move_string)
     }

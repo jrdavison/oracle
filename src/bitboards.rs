@@ -1,3 +1,7 @@
+/*
+https://tearth.dev/bitboard-viewer/
+*/
+
 use crate::utils::{Color, File, Rank, Square};
 
 pub type Bitboard = u64;
@@ -21,6 +25,10 @@ impl Default for Bitboards {
 impl Bitboards {
     pub fn set_valid_moves(&mut self, sq: Square, bb: Bitboard) {
         self.valid_moves[sq as usize] = bb;
+    }
+
+    pub fn get_valid_moves(&self, sq: Square) -> Bitboard {
+        self.valid_moves[sq as usize]
     }
 
     pub fn is_valid_move(&self, from: Square, to: Square) -> bool {

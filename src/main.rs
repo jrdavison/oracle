@@ -5,7 +5,6 @@ mod position;
 mod utils;
 
 use clap::Parser;
-use moves::info::MoveInfo;
 use num_traits::FromPrimitive;
 use num_traits::ToPrimitive;
 use position::Position;
@@ -59,7 +58,7 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
     ui.set_dragged_piece_sq(dragged_piece_sq);
 
     if compute_moves {
-        let move_history = format_move_history(&pos.move_history());
+        let move_history = format_move_history(&pos);
         pos.compute_valid_moves(side_to_move);
         ui.set_dashboard_state(DashboardState {
             turn: Color::to_i32(&side_to_move).unwrap(),
@@ -147,22 +146,28 @@ fn setup_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
     });
 }
 
-fn format_move_history(history: &Vec<MoveInfo>) -> Vec<SlintMoveInfo> {
+fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
     let mut slint_move_info: Vec<SlintMoveInfo> = Vec::new();
 
+    let history = pos.move_history();
     let mut iter = history.chunks(2);
     while let Some(chunk) = iter.next() {
         match chunk.len() {
             2 => {
+                let white = pos.disambiguate_move(&chunk[0]);
+                let black = pos.disambiguate_move(&chunk[1]);
                 slint_move_info.push(SlintMoveInfo {
-                    white: chunk[0].to_algebraic_notation(),
-                    black: chunk[1].to_algebraic_notation(),
+                    white: chunk[0].to_algebraic_notation(white),
+                    black: chunk[1].to_algebraic_notation(black),
                 });
             }
-            1 => slint_move_info.push(SlintMoveInfo {
-                white: chunk[0].to_algebraic_notation(),
-                black: "".into(),
-            }),
+            1 => {
+                let white = pos.disambiguate_move(&chunk[0]);
+                slint_move_info.push(SlintMoveInfo {
+                    white: chunk[0].to_algebraic_notation(white),
+                    black: "".into(),
+                });
+            }
             _ => {}
         }
     }

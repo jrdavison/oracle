@@ -99,6 +99,9 @@ impl Piece {
     }
 
     pub fn color_of(piece: Piece) -> Color {
+        if piece == Piece::Empty {
+            return Color::Both;
+        }
         Color::from_u8((piece as u8) >> 3).expect("Cannot get color of piece")
     }
 
