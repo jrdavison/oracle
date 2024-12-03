@@ -149,22 +149,19 @@ fn setup_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
 fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
     let mut slint_move_info: Vec<SlintMoveInfo> = Vec::new();
 
+    // TODO: this breaks if we use a FEN where black moves first
     let history = pos.move_history();
-    let mut iter = history.chunks(2);
-    while let Some(chunk) = iter.next() {
+    for chunk in history.chunks(2) {
         match chunk.len() {
             2 => {
-                let white = pos.disambiguate_move(&chunk[0]);
-                let black = pos.disambiguate_move(&chunk[1]);
                 slint_move_info.push(SlintMoveInfo {
-                    white: chunk[0].to_algebraic_notation(white),
-                    black: chunk[1].to_algebraic_notation(black),
+                    white: chunk[0].notation.clone(),
+                    black: chunk[1].notation.clone(),
                 });
             }
             1 => {
-                let white = pos.disambiguate_move(&chunk[0]);
                 slint_move_info.push(SlintMoveInfo {
-                    white: chunk[0].to_algebraic_notation(white),
+                    white: chunk[0].notation.clone(),
                     black: "".into(),
                 });
             }

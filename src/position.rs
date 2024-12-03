@@ -1,4 +1,4 @@
-use crate::bitboards::{self, Bitboards};
+use crate::bitboards::Bitboards;
 use crate::moves::generate;
 use crate::moves::info::MoveInfo;
 use crate::utils::{Color, Direction, File, MoveType, Piece, PieceType, Rank, Square};
@@ -62,49 +62,9 @@ impl Position {
 
     pub fn en_passant_square(&self) -> String {
         if self.en_passant_square == Square::Count {
-            "-".to_string()
+            "-".into()
         } else {
             format!("{:?}", self.en_passant_square)
-        }
-    }
-
-    pub fn disambiguate_move(&self, info: &MoveInfo) -> String {
-        // TODO: we can save this notation when move actually happens
-        let piece_type = Piece::type_of(info.moved_piece);
-        let original_attack = self.bitboards.get_valid_moves(info.from);
-
-        let mut common_moves = original_attack;
-        let mut piece_sqs = vec![info.from];
-        for sq in Square::iter() {
-            let other_piece = self.board[sq as usize];
-            let _test = Piece::color_of(other_piece);
-            if (sq != info.to && Piece::color_of(info.moved_piece) == Piece::color_of(other_piece))
-                && (Piece::type_of(info.moved_piece) == Piece::type_of(other_piece))
-            {
-                let other_attack = self.bitboards.get_valid_moves(sq);
-                let check_common_moves = original_attack & other_attack;
-                if check_common_moves != 0 {
-                    piece_sqs.push(sq);
-                }
-                common_moves &= other_attack;
-            }
-        }
-
-        if bitboards::is_bit_set(&common_moves, info.to) {
-            let files = piece_sqs.iter().map(|&sq| Square::file_of(sq)).collect::<Vec<File>>();
-            let ranks = piece_sqs.iter().map(|&sq| Square::rank_of(sq)).collect::<Vec<Rank>>();
-            let files_are_same = files.iter().all(|&file| file == files[0]);
-            let ranks_are_same = ranks.iter().all(|&rank| rank == ranks[0]);
-            if !files_are_same {
-                format!("{}{}", piece_type.to_string(), Square::file_of(info.from).to_string())
-            } else if !ranks_are_same {
-                format!("{}{}", piece_type.to_string(), Square::rank_of(info.from).to_string())
-            } else {
-                let from = format!("{:?}", info.from).to_lowercase();
-                format!("{}{}", piece_type.to_string(), from)
-            }
-        } else {
-            format!("{}", piece_type.to_string())
         }
     }
 
@@ -135,7 +95,7 @@ impl Position {
             return MoveInfo::default();
         }
 
-        let move_info = MoveInfo::new(from, to, &self.board, self.halfmove_clock);
+        let move_info = MoveInfo::new(from, to, &self);
         let moved_piece_color = Piece::color_of(move_info.moved_piece);
 
         // en passant only valid for one move
@@ -182,7 +142,7 @@ impl Position {
         }
 
         self.side_to_move = !self.side_to_move;
-        self.move_history.push(move_info);
+        self.move_history.push(move_info.clone());
 
         // clear redo history if move is not a redo
         if clear_redo {

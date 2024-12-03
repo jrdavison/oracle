@@ -6,7 +6,7 @@ use std::ops::{Add, Mul, Sub};
 use std::ops::{Index, IndexMut, Not};
 
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Debug, Default)]
+#[derive(Clone, PartialEq, Debug, Default)]
 pub enum MoveType {
     #[default]
     Invalid,
@@ -36,7 +36,7 @@ impl Not for Color {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
+#[derive(Debug, FromPrimitive, PartialEq)]
 pub enum PieceType {
     Empty,
     King,
@@ -61,15 +61,16 @@ impl PieceType {
         }
     }
 
-    pub fn to_string(&self) -> &str {
-        match self {
+    pub fn to_notation_string(self) -> String {
+        let notation = match self {
             PieceType::Pawn | PieceType::Empty => "",
             PieceType::King => "K",
             PieceType::Queen => "Q",
             PieceType::Bishop => "B",
             PieceType::Knight => "N",
             PieceType::Rook => "R",
-        }
+        };
+        notation.to_string()
     }
 }
 
@@ -233,7 +234,7 @@ impl File {
         (0..(File::Count as usize)).map(|i| File::from_u8(i as u8).unwrap())
     }
 
-    pub fn to_string(&self) -> &str {
+    pub fn to_notation_string(&self) -> &str {
         match self {
             File::FileA => "a",
             File::FileB => "b",
@@ -305,6 +306,20 @@ impl Rank {
         (0..(Rank::Count as usize))
             .rev()
             .map(|i| Rank::from_u8(i as u8).unwrap())
+    }
+
+    pub fn to_notation_string(&self) -> &str {
+        match self {
+            Rank::Rank1 => "1",
+            Rank::Rank2 => "2",
+            Rank::Rank3 => "3",
+            Rank::Rank4 => "4",
+            Rank::Rank5 => "5",
+            Rank::Rank6 => "6",
+            Rank::Rank7 => "7",
+            Rank::Rank8 => "8",
+            _ => panic!("Invalid rank"),
+        }
     }
 }
 
