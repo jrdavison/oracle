@@ -146,12 +146,10 @@ fn disambiguate_move(info: &MoveInfo, position: &Position) -> String {
             let from = format!("{:?}", info.from).to_lowercase();
             format!("{}{}", piece_type.make_notation_string(), from)
         }
+    } else if MoveType::Capture == info.move_type && Piece::type_of(info.moved_piece) == PieceType::Pawn {
+        Square::file_of(info.from).make_notation_string().to_string()
     } else {
-        if MoveType::Capture == info.move_type && Piece::type_of(info.moved_piece) == PieceType::Pawn {
-            Square::file_of(info.from).make_notation_string().to_string()
-        } else {
-            piece_type.make_notation_string().to_string()
-        }
+        piece_type.make_notation_string().to_string()
     };
 
     formatted_string
