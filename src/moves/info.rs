@@ -139,9 +139,17 @@ fn disambiguate_move(info: &MoveInfo, position: &Position) -> String {
         let files_are_same = files.iter().all(|&file| file == files[0]);
         let ranks_are_same = ranks.iter().all(|&rank| rank == ranks[0]);
         if !files_are_same {
-            format!("{}{}", piece_type.make_notation_string(), Square::file_of(info.from).make_notation_string())
+            format!(
+                "{}{}",
+                piece_type.make_notation_string(),
+                Square::file_of(info.from).make_notation_string()
+            )
         } else if !ranks_are_same {
-            format!("{}{}", piece_type.make_notation_string(), Square::rank_of(info.from).make_notation_string())
+            format!(
+                "{}{}",
+                piece_type.make_notation_string(),
+                Square::rank_of(info.from).make_notation_string()
+            )
         } else {
             let from = format!("{:?}", info.from).to_lowercase();
             format!("{}{}", piece_type.make_notation_string(), from)
