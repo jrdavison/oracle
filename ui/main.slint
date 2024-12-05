@@ -14,7 +14,7 @@ export component AppWindow inherits Window {
     title: "Oracle";
 
     height: Dimensions.board_size;
-    width:  Dimensions.board_size * 2;
+    width:  Dimensions.board_size + Dimensions.dashboard_w;
     background: Palette.dashboard_bg;
 
     board := Board {
@@ -22,18 +22,18 @@ export component AppWindow inherits Window {
         dragged_piece_sq: dragged_piece_sq;
 
         x: 0;
-        height: parent.height;
-        width: parent.width / 2;
+        height: Dimensions.board_size;
+        width: Dimensions.board_size;
     }
     dash := Dashboard {
-        x: board.width + eval.width;
-        width: board.width - eval.width;
-        height: board.height;
+        x: Dimensions.board_size + eval.width;
+        width: Dimensions.dashboard_w - eval.width;
+        height: Dimensions.board_size;
 
         dashboard_state: dashboard_state;
     }
     eval := EvalBar {
-        x: board.width;
+        x: Dimensions.board_size;
         b_eval: 50%;
         w_eval: 50%;
     }

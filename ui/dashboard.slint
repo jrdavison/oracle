@@ -13,62 +13,34 @@ export struct DashboardState {
     turn: int,
     en_passant_square: string,
     halfmove_clock: int,
-    fullmove_count: int,
     compute_time: string,
 }
 
 export component Dashboard inherits Rectangle {
     in property <DashboardState> dashboard_state;
+    
+    property <length> move_table_height: 350px;
+    property <length> move_table_width: Dimensions.dashboard_w * 0.85;
+
+    property <[{col1: string, col2: string, col3: string}]> columns: [
+        {col1: "Move", col2: "White", col3: "Black"}
+    ];
 
     property <[{text: string, value: string}]> info: [
-        {text: "Fullmove Count:", value: dashboard_state.fullmove_count},
         {text: "Halfmove Clock:", value: dashboard_state.halfmove_clock},
         {text: "En Passant Square:", value: dashboard_state.en_passant_square},
         {text: "Time to compute valid moves:", value: dashboard_state.compute_time}
     ];
 
-    VerticalBox {
-        padding-top: 10px;
-        padding-left: 10px;
-        padding-right: 10px;
-        padding-bottom: 0px;
-        spacing: 20px;
-
-        HorizontalLayout {
-            move_columns := Rectangle {
-                height: 350px;
-                width: 80%;
-
-                HorizontalLayout {
-                    padding: 8px;
-                    Text {
-                        color: white;
-                        min-width: move_columns.width * (1/5);
-                        text: "#";
-                        font-size: Font.font_size_sm;
-                    }
-                    Text {
-                        color: white;
-                        min-width: move_columns.width * (2/5);
-                        text: "White";
-                        font-size: Font.font_size_sm;
-                    }
-                    Text {
-                        color: white;
-                        min-width: move_columns.width  * (2/5);
-                        text: "Black";
-                        font-size: Font.font_size_sm;
-                    }
-                }
-            }
-        }
+    VerticalLayout {
+        padding: 10px;
 
         HorizontalLayout {
             alignment: center;
 
             move_history_border := Rectangle {
-                height: move_columns.height;
-                width: move_columns.width;
+                height: move_table_height;
+                width: move_table_width;
                 border-color: Palette.border;
                 border-width: 2px;
                 border-radius: 2px;
@@ -83,21 +55,23 @@ export component Dashboard inherits Rectangle {
                             padding: 8px;
                             Text {
                                 color: white;
-                                min-width: move_history.width * (1/5);
+                                min-width: move_table_width * (1/5);
                                 text: (i + 1) + ".";
                                 font-size: Font.font_size_sm;
                             }
                             Text {
                                 color: white;
-                                min-width: move_history.width * (2/5);
+                                min-width: move_table_width * (2/5);
                                 text: move.white;
                                 font-size: Font.font_size_sm;
+                                horizontal-alignment: center;
                             }
                             Text {
                                 color: white;
-                                min-width: move_history.width  * (2/5);
+                                min-width: move_table_width  * (2/5);
                                 text: move.black;
                                 font-size: Font.font_size_sm;
+                                horizontal-alignment: center;
                             }
                         }
                     }
@@ -105,36 +79,30 @@ export component Dashboard inherits Rectangle {
             }
         }
     }
-
-    info_border := Rectangle {
+    
+    info_table := ListView {
         x: 0;
         y: Dimensions.board_size - self.height;
-        height: 124px;
+        height: 93px;
         width: 100%;
-        border-color: Palette.border;
-        border-width: 2px;
 
-        info_table := ListView {
-            width: info_border.width - (info_border.border-width * 2);
-            height: info_border.height - (info_border.border-width * 2);
-            for row[i] in root.info : Rectangle {
-                background: Math.mod(i, 2) == 0 ? Palette.dashboard_bg : Palette.alternate_bg;
-                width: info_table.width;
-                HorizontalLayout {
-                    padding: 8px;
-                    Text {
-                        color: white;
-                        min-width: info_table.width / 2;
-                        text: row.text;
-                        font-size: Font.font_size_sm;
-                    }
-                    Text {
-                        color: white;
-                        min-width: info_table.width / 2;
-                        text: row.value;
-                        font-size: Font.font_size_sm;
-                        
-                    }
+        for row[i] in root.info : Rectangle {
+            background: Math.mod(i, 2) == 0 ? Palette.alternate_bg : Palette.dashboard_bg;
+            width: info_table.width;
+            HorizontalLayout {
+                padding: 8px;
+                Text {
+                    color: white;
+                    min-width: info_table.width / 2;
+                    text: row.text;
+                    font-size: Font.font_size_sm;
+                }
+                Text {
+                    color: white;
+                    min-width: info_table.width / 2;
+                    text: row.value;
+                    font-size: Font.font_size_sm;
+                    horizontal-alignment: center;
                 }
             }
         }

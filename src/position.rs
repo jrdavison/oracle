@@ -52,10 +52,6 @@ impl Position {
         self.halfmove_clock
     }
 
-    pub fn fullmove_count(&self) -> i32 {
-        self.fullmove_count
-    }
-
     pub fn compute_time(&self) -> String {
         format!("{:?}", self.compute_time)
     }
