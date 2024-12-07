@@ -120,8 +120,10 @@ impl Position {
             MoveType::Promotion => {
                 // TODO: give user option to choose promotion piece
                 self.board[move_info.to as usize] = Piece::make_piece(PieceType::Queen, moved_piece_color);
-                self.bitboards
-                    .unset_checkers(Piece::color_of(move_info.captured_piece), move_info.capture_piece_sq);
+                if Piece::color_of(move_info.captured_piece) != Color::Both {
+                    self.bitboards
+                        .unset_checkers(Piece::color_of(move_info.captured_piece), move_info.capture_piece_sq);
+                }
             }
             MoveType::Invalid => panic!("Invalid move"),
             MoveType::Quiet => {}
@@ -195,6 +197,7 @@ impl Position {
     }
 
     pub fn redo_move(&mut self) -> bool {
+        // TODO: bug in redoing promotion with capture moves
         if let Some(last_move) = self.redo_history.pop() {
             self.move_piece(last_move.from, last_move.to, false);
             true

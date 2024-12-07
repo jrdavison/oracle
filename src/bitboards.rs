@@ -48,6 +48,7 @@ impl Bitboards {
     }
 
     pub fn unset_checkers(&mut self, color: Color, sq: Square) {
+        assert!(color != Color::Both, "Invalid color");
         clear_bit(&mut self.checkers[color as usize], sq);
     }
 
