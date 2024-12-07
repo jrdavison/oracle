@@ -7,8 +7,8 @@ mod bitboards;
 mod magic_bitboards;
 mod moves;
 mod position;
-mod utils;
 mod slint_interface;
+mod utils;
 
 use clap::Parser;
 use std::error::Error;

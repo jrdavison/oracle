@@ -17,8 +17,8 @@ pub struct MoveInfo {
 
 impl MoveInfo {
     pub fn new(position: &Position, from: Square, to: Square) -> MoveInfo {
-        let moved_piece = position.board[from as usize];
         let move_type;
+        let moved_piece = position.board[from as usize];
         let mut captured_piece = position.board[to as usize];
         let mut capture_piece_sq = Square::Count;
 

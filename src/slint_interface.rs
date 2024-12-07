@@ -1,11 +1,13 @@
 use num_traits::FromPrimitive;
 use num_traits::ToPrimitive;
 use crate::position::Position;
+use crate::utils::Piece;
 use slint::VecModel;
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
 use crate::utils::{Color, File, Rank, Square};
+use itertools::Itertools;
 
 slint::include_modules!();
 
@@ -125,32 +127,33 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
 }
 
 fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
+    let history = pos.move_history();
+    let mut moves_iter = history.iter();
     let mut slint_move_info: Vec<SlintMoveInfo> = Vec::new();
 
-    // TODO: this breaks if we use a FEN where black moves first
-    let history = pos.move_history();
-    // if history.is_empty() {
-    //     return vec![SlintMoveInfo {
-    //         white: "".into(),
-    //         black: "".into(),
-    //     }];
-    // } else if history.first().unwrap().moved_piece == Color::Black {
-    //     slint_move_info.push(SlintMoveInfo {
-    //         white: "".into(),
-    //         black: history.first().unwrap().notation.clone(),
-    //     });
-    // }
-    for chunk in history.chunks(2) {
-        match chunk.len() {
+    // first move is by black, add ... to white
+    if let Some(first_move) = moves_iter.next() {
+        if Piece::color_of(first_move.moved_piece) == Color::Black {
+                slint_move_info.push(SlintMoveInfo {
+                    white: "...".into(),
+                    black: first_move.notation.clone(),
+                });
+
+        }
+    }
+
+    for chunk in &moves_iter.chunks(2) {
+        let chunk_vec = chunk.collect::<Vec<_>>();
+        match chunk_vec.len() {
             2 => {
                 slint_move_info.push(SlintMoveInfo {
-                    white: chunk[0].notation.clone(),
-                    black: chunk[1].notation.clone(),
+                    white: chunk_vec[0].notation.clone(),
+                    black: chunk_vec[1].notation.clone(),
                 });
             }
             1 => {
                 slint_move_info.push(SlintMoveInfo {
-                    white: chunk[0].notation.clone(),
+                    white: chunk_vec[0].notation.clone(),
                     black: "".into(),
                 });
             }
