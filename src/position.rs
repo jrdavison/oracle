@@ -168,7 +168,7 @@ impl Position {
                     self.bitboards.set_checkers(color, last_move.from);
                     self.bitboards.unset_checkers(color, last_move.to);
 
-                    if last_move.move_type == MoveType::Capture {
+                    if last_move.captured_piece != Piece::Empty {
                         self.bitboards.set_checkers(!color, last_move.capture_piece_sq);
                     }
                 }
@@ -197,7 +197,6 @@ impl Position {
     }
 
     pub fn redo_move(&mut self) -> bool {
-        // TODO: bug in redoing promotion with capture moves
         if let Some(last_move) = self.redo_history.pop() {
             self.move_piece(last_move.from, last_move.to, false);
             true
