@@ -49,13 +49,13 @@ component MoveTableRow inherits Rectangle {
     in property <length> header_padding;
 
     HorizontalLayout {
-        padding: header_padding;
-        Rectangle {
+        padding: 8px;
+        Rectangle { // move no.
             width: container_w * (1/5) - header_padding;
             HorizontalLayout {
                 alignment: center;
                 Rectangle {
-                    width: 60%;
+                    width: 30%;
                     Text {
                         color: white;
                         font-size: Font.font_size_md;
@@ -66,14 +66,14 @@ component MoveTableRow inherits Rectangle {
                 }
             }
         }
-        Rectangle {
+        Rectangle { // white move
             width: container_w * (2/5) - header_padding;
             HorizontalLayout {
                 alignment: center;
                 Rectangle {
-                    background: move.active_move == 1 ? lightcoral : transparent;
+                    background: move.active_move == 1 ? Palette.active_highlight : transparent;
                     border-radius: 5px;
-                    width: 60%;
+                    width: 30%;
                     Text {
                         color: move.active_move == 1 ? black : white;
                         font-size: Font.font_size_md;
@@ -84,14 +84,14 @@ component MoveTableRow inherits Rectangle {
                 }
             }
         }
-        Rectangle {
+        Rectangle { // black move
             width: container_w * (2/5) - header_padding;
             HorizontalLayout {
                 alignment: center;
                 Rectangle {
-                    background: move.active_move == 2 ? lightcoral : transparent;
+                    background: move.active_move == 2 ? Palette.active_highlight : transparent;
                     border-radius: 5px;
-                    width: 60%;
+                    width: 30%;
                     Text {
                         color: move.active_move == 2 ? black : white;
                         font-size: Font.font_size_md;
@@ -111,54 +111,53 @@ component MoveTable {
     in property <length> table_width;
 
     container := Rectangle {
+        height: table_height;
+        width: table_width;
+
         border-color: Palette.border;
         border-radius: 5px;
         border-width: 2px;
         clip: true;
 
-        height: table_height;
-        width: table_width;
-
-        HorizontalLayout {
-            VerticalLayout {
-                alignment: start;
-                Rectangle {
-                    header := HorizontalLayout {
-                        padding: 10px;
-                        alignment: start;
-                        MoveTableHeader {
-                            text: "#";
-                            highlight_color: transparent;
-                            text_color: white;
-                            width: container.width * (1/5) - header.padding;
-                            text_alignment: left;
-                        }
-                        MoveTableHeader {
-                            text: "White";
-                            highlight_color: white;
-                            text_color: black;
-                            width: container.width * (2/5) - header.padding;
-                            text_alignment: center;
-                        }
-                        MoveTableHeader {
-                            text: "Black";
-                            highlight_color: black;
-                            text_color: white;
-                            width: container.width * (2/5) - header.padding;
-                            text_alignment: center;
-                        }
+        VerticalLayout {
+            alignment: start;
+            header := Rectangle {
+                width: container.width - (container.padding * 2);
+                HorizontalLayout {
+                    padding: 10px;
+                    alignment: start;
+                    MoveTableHeader {
+                        text: "#";
+                        highlight_color: transparent;
+                        text_color: white;
+                        width: container.width * (1/5) - header.padding;
+                        text_alignment: left;
+                    }
+                    MoveTableHeader {
+                        text: "White";
+                        highlight_color: white;
+                        text_color: black;
+                        width: container.width * (2/5) - header.padding;
+                        text_alignment: center;
+                    }
+                    MoveTableHeader {
+                        text: "Black";
+                        highlight_color: black;
+                        text_color: white;
+                        width: container.width * (2/5) - header.padding;
+                        text_alignment: center;
                     }
                 }
+            }
 
-                move_history := ListView {
-                    height: container.height;
-                    width: container.width;
-                    for move[i] in moves : MoveTableRow {
-                        background: Math.mod(i, 2) == 0 ? Palette.alternate_bg : Palette.dashboard_bg;
-                        container_w: container.width;
-                        header_padding: header.padding;
-                        move: move;
-                    }
+            move_history := ListView {
+                height: table_height - 38px; // hardcoded header height since using header.height causes circular dependency
+                width: table_width - (container.padding * 2);
+                for move[i] in moves : MoveTableRow {
+                    background: Math.mod(i, 2) == 0 ? Palette.alternate_bg : Palette.dashboard_bg;
+                    container_w: container.width - (container.padding * 2);
+                    header_padding: header.padding;
+                    move: move;
                 }
             }
         }
