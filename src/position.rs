@@ -41,7 +41,10 @@ impl Position {
     }
 
     pub fn board_i32(&self) -> Vec<i32> {
-        self.board.iter().map(|&piece| Piece::to_i32(&piece).unwrap_or(0)).collect()
+        self.board
+            .iter()
+            .map(|&piece| Piece::to_i32(&piece).unwrap_or(0))
+            .collect()
     }
 
     pub fn side_to_move(&self) -> Color {

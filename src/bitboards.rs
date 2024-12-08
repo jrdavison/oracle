@@ -97,7 +97,6 @@ pub fn set_bit(bitboard: &mut Bitboard, sq: Square) {
     } else {
         eprintln!("Invalid square");
     }
-    
 }
 
 pub fn clear_bit(bitboard: &mut Bitboard, sq: Square) {
