@@ -164,7 +164,7 @@ fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
     moves
 }
 
-fn chunk_move_history(history: &Vec<MoveInfo>) -> Vec<SlintMoveInfo> {
+fn chunk_move_history(history: &[MoveInfo]) -> Vec<SlintMoveInfo> {
     let mut moves_iter = history.iter();
     let mut slint_move_info: Vec<SlintMoveInfo> = Vec::new();
 
