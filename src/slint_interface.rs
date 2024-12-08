@@ -142,24 +142,22 @@ fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
             black: "".into(),
             active_move: 0,
         });
-    } else {
-        if let Some(active_move) = history.last() {
-            let fullmove_idx = match history.len() {
-                0 => 0,
-                len => {
-                    let temp = len / 2;
-                    if Piece::color_of(active_move.moved_piece) == Color::White {
-                        temp
-                    } else {
-                        temp - 1
-                    }
+    } else if let Some(active_move) = history.last() {
+        let fullmove_idx = match history.len() {
+            0 => 0,
+            len => {
+                let temp = len / 2;
+                if Piece::color_of(active_move.moved_piece) == Color::White {
+                    temp
+                } else {
+                    temp - 1
                 }
-            };
-
-            if let Some(move_ref) = moves.get_mut(fullmove_idx) {
-                let color = Piece::color_of(active_move.moved_piece);
-                move_ref.active_move = if color == Color::White { 1 } else { 2 };
             }
+        };
+
+        if let Some(move_ref) = moves.get_mut(fullmove_idx) {
+            let color = Piece::color_of(active_move.moved_piece);
+            move_ref.active_move = if color == Color::White { 1 } else { 2 };
         }
     }
 
@@ -179,22 +177,20 @@ fn chunk_move_history(history: &Vec<MoveInfo>) -> Vec<SlintMoveInfo> {
                 black: first_move.notation.clone(),
                 active_move: 0,
             });
+        } else if let Some(first_response) = moves_iter.next() {
+            slint_move_info.push(SlintMoveInfo {
+                move_no: first_move.fullmove_count,
+                white: first_move.notation.clone(),
+                black: first_response.notation.clone(),
+                active_move: 0,
+            });
         } else {
-            if let Some(first_response) = moves_iter.next() {
-                slint_move_info.push(SlintMoveInfo {
-                    move_no: first_move.fullmove_count,
-                    white: first_move.notation.clone(),
-                    black: first_response.notation.clone(),
-                    active_move: 0,
-                });
-            } else {
-                slint_move_info.push(SlintMoveInfo {
-                    move_no: first_move.fullmove_count,
-                    white: first_move.notation.clone(),
-                    black: "".into(),
-                    active_move: 0,
-                });
-            }
+            slint_move_info.push(SlintMoveInfo {
+                move_no: first_move.fullmove_count,
+                white: first_move.notation.clone(),
+                black: "".into(),
+                active_move: 0,
+            });
         }
     }
 
