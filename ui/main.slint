@@ -42,13 +42,11 @@ export component AppWindow inherits Window {
         init() => { self.focus(); }
 
         key-pressed(event) => {
-            if (!event.repeat) {
-                if (event.text == Key.LeftArrow) {
-                    RustInterface.undo_move();
-                }
-                if (event.text == Key.RightArrow) {
-                    RustInterface.redo_move();
-                }
+            if (event.text == Key.LeftArrow) {
+                RustInterface.undo_move();
+            }
+            if (event.text == Key.RightArrow) {
+                RustInterface.redo_move();
             }
             accept
         }
