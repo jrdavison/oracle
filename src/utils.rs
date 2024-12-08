@@ -49,7 +49,7 @@ pub enum PieceType {
 
 impl PieceType {
     pub fn make_piece_type(c: char) -> PieceType {
-        let c_lower = c.to_lowercase().next().unwrap_or(' ');
+        let c_lower = c.to_lowercase().next().unwrap_or('\0');
         match c_lower {
             'k' => PieceType::King,
             'q' => PieceType::Queen,
