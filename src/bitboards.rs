@@ -1,3 +1,7 @@
+/*
+https://tearth.dev/bitboard-viewer/
+*/
+
 use crate::utils::{Color, File, Rank, Square};
 
 pub type Bitboard = u64;
@@ -23,6 +27,10 @@ impl Bitboards {
         self.valid_moves[sq as usize] = bb;
     }
 
+    pub fn get_valid_moves(&self, sq: Square) -> Bitboard {
+        self.valid_moves[sq as usize]
+    }
+
     pub fn is_valid_move(&self, from: Square, to: Square) -> bool {
         is_bit_set(&self.valid_moves[from as usize], to)
     }
@@ -40,6 +48,7 @@ impl Bitboards {
     }
 
     pub fn unset_checkers(&mut self, color: Color, sq: Square) {
+        assert!(color != Color::Both, "Invalid color");
         clear_bit(&mut self.checkers[color as usize], sq);
     }
 
@@ -57,11 +66,12 @@ impl Bitboards {
 }
 
 #[allow(dead_code)]
-pub fn print_bitboard(bitboard: Bitboard) {
+pub fn print_bitboard(bitboard: &Bitboard) {
     for rank in Rank::iter_reverse() {
+        print!("{}: ", rank);
         for file in File::iter() {
             let sq = Square::make_square(file, rank);
-            if is_bit_set(&bitboard, sq) {
+            if is_bit_set(bitboard, sq) {
                 print!("1 ");
             } else {
                 print!("0 ");
@@ -69,6 +79,7 @@ pub fn print_bitboard(bitboard: Bitboard) {
         }
         println!();
     }
+    println!("   A B C D E F G H");
 }
 
 pub fn set_bit(bitboard: &mut Bitboard, sq: Square) {

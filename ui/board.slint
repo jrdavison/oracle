@@ -1,6 +1,6 @@
 import { VerticalBox } from "std-widgets.slint";
 
-import { Font,  Palette, Utils, RustInterface } from "./globals.slint";
+import { Font, Palette, Utils, RustInterface } from "./globals.slint";
 import { Dimensions } from "./globals.slint";
 
 export struct BoardState {
@@ -18,28 +18,28 @@ export component Board inherits TouchArea {
         width: Dimensions.sq_size;
 
         // build the board (starting from the bottom left corner A1)
+        background: Utils.square_color(i) == 0 ? Palette.dark_sq : Palette.light_sq;
         x: Utils.square_to_x(i, self.width);
         y: Utils.square_to_y(i, self.height);
-        background: Utils.square_color(i) == 0 ? Palette.dark_sq : Palette.light_sq;
 
         // Add numbers to left file (1-8)
         if (mod(i, 8) == 0) : Text {
+            color: Utils.square_color(i) == 0 ? Palette.light_sq : Palette.dark_sq;
+            font-size: Font.font_size_md;
+            font-weight: Font.semi_bold;
             text: Utils.files[floor(i / 8)]; // Adjust text to match reversed rank
             x: 3px;
             y: 0px;
-            color: Utils.square_color(i) == 0 ? Palette.light_sq : Palette.dark_sq;
-            font-size: Font.font_size_sm;
-            font-weight: Font.semi_bold;
         }
 
         // Add letters to bottom rank (a-h)
         if (i < 8) : Text {
+            color: Utils.square_color(i) == 0 ? Palette.light_sq : Palette.dark_sq;
+            font-size: Font.font_size_md;
+            font-weight: Font.semi_bold;
             text: Utils.ranks[i];
             x: parent.width - 13px;
             y: parent.height - 22px;
-            color: Utils.square_color(i) == 0 ? Palette.light_sq : Palette.dark_sq;
-            font-size: Font.font_size_sm;
-            font-weight: Font.semi_bold;
         }
 
         if (dragged_piece_sq != -1 && RustInterface.highlight_valid_move_sq(dragged_piece_sq, i)) : Rectangle {
@@ -51,15 +51,15 @@ export component Board inherits TouchArea {
         }
 
         if (board_state.board[i] != 0 && dragged_piece_sq != i) : Image {
+            height: parent.height;
             source: Utils.piece_urls[board_state.board[i]];
             width: parent.width;
-            height: parent.height;
         }
     }
 
     if (dragged_piece_sq != -1) : Image {
-        source: Utils.piece_urls[board_state.board[dragged_piece_sq]];
         height: Dimensions.sq_size;
+        source: Utils.piece_urls[board_state.board[dragged_piece_sq]];
         width: Dimensions.sq_size;
         x: Utils.constrain_mouse_x(parent.mouse-x) - (Dimensions.sq_size / 2);
         y: Utils.constrain_mouse_y(parent.mouse-y) - (Dimensions.sq_size / 2);

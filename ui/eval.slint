@@ -6,14 +6,14 @@ export component EvalBar inherits Rectangle {
     width: 20px;
 
     Rectangle {
+        background: black;
+        height: b_eval;
         x: 0;
         y: 0;
-        height: b_eval;
-        background: black;
     }
     Rectangle {
-        y: parent.height - (parent.height * w_eval);
-        height: w_eval;
         background: white;
+        height: w_eval;
+        y: parent.height - (parent.height * w_eval);
     }
 }
