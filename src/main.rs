@@ -13,8 +13,6 @@ mod utils;
 use clap::Parser;
 use std::error::Error;
 
-slint::include_modules!();
-
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Cli {

@@ -1,110 +1,228 @@
-import { VerticalBox, ListView, StandardTableView, HorizontalBox } from "std-widgets.slint";
+import { ListView } from "std-widgets.slint";
 
 import { Palette, Font } from "./globals.slint";
 import { Dimensions } from "globals.slint";
 
 export struct SlintMoveInfo {
-    white: string,
     black: string,
+    white: string,
+
+    move_no: int,
+    active_move: int, // 0 if not active, 1 if white, 2 if black
 }
 
 export struct DashboardState {
     move_history: [SlintMoveInfo],
-    turn: int,
+
+    compute_time: string,
     en_passant_square: string,
     halfmove_clock: int,
-    compute_time: string,
 }
 
-export component Dashboard inherits Rectangle {
-    in property <DashboardState> dashboard_state;
-    
-    property <length> move_table_height: 350px;
-    property <length> move_table_width: Dimensions.dashboard_w * 0.85;
+component MoveTableHeader inherits Rectangle {
+    in property <string> text;
+    in property <color> highlight_color;
+    in property <color> text_color;
+    in property <TextHorizontalAlignment> text_alignment;
 
-    property <[{col1: string, col2: string, col3: string}]> columns: [
-        {col1: "Move", col2: "White", col3: "Black"}
-    ];
+    HorizontalLayout {
+        alignment: center;
+        Rectangle {
+            background: highlight_color;
+            border-radius: 5px;
+            width: 60%;
+            Text {
+                color: text_color;
+                font-size: Font.font_size_md;
+                font-weight: Font.semi_bold;
+                horizontal-alignment: text_alignment;
+                text: text;
+                width: 100%;
+            }
+        }
+    }
+}
 
-    property <[{text: string, value: string}]> info: [
-        {text: "Halfmove Clock:", value: dashboard_state.halfmove_clock},
-        {text: "En Passant Square:", value: dashboard_state.en_passant_square},
-        {text: "Time to compute valid moves:", value: dashboard_state.compute_time}
-    ];
+component MoveTableRow inherits Rectangle {
+    in property <SlintMoveInfo> move;
+    in property <length> container_w;
+    in property <length> header_padding;
 
-    VerticalLayout {
-        padding: 10px;
-
-        HorizontalLayout {
-            alignment: center;
-
-            move_history_border := Rectangle {
-                height: move_table_height;
-                width: move_table_width;
-                border-color: Palette.border;
-                border-width: 2px;
-                border-radius: 2px;
-            
-                move_history := ListView {
-                    height: move_history_border.height - (move_history_border.border_width * 2);
-                    width: move_history_border.width - (move_history_border.border_width * 2);
-                    for move[i] in root.dashboard_state.move-history : Rectangle {
-                        background: Math.mod(i, 2) == 0 ? Palette.dashboard_bg : Palette.alternate_bg;
-                        width: move_history.width;
-                        HorizontalLayout {
-                            padding: 8px;
-                            Text {
-                                color: white;
-                                min-width: move_table_width * (1/5);
-                                text: (i + 1) + ".";
-                                font-size: Font.font_size_sm;
-                            }
-                            Text {
-                                color: white;
-                                min-width: move_table_width * (2/5);
-                                text: move.white;
-                                font-size: Font.font_size_sm;
-                                horizontal-alignment: center;
-                            }
-                            Text {
-                                color: white;
-                                min-width: move_table_width  * (2/5);
-                                text: move.black;
-                                font-size: Font.font_size_sm;
-                                horizontal-alignment: center;
-                            }
-                        }
+    HorizontalLayout {
+        padding: header_padding;
+        Rectangle {
+            width: container_w * (1/5) - header_padding;
+            HorizontalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 60%;
+                    Text {
+                        color: white;
+                        font-size: Font.font_size_md;
+                        horizontal-alignment: left;
+                        text: move.move_no + ".";
+                        width: 100%;
+                    }
+                }
+            }
+        }
+        Rectangle {
+            width: container_w * (2/5) - header_padding;
+            HorizontalLayout {
+                alignment: center;
+                Rectangle {
+                    background: move.active_move == 1 ? lightcoral : transparent;
+                    border-radius: 5px;
+                    width: 60%;
+                    Text {
+                        color: move.active_move == 1 ? black : white;
+                        font-size: Font.font_size_md;
+                        horizontal-alignment: center;
+                        text: move.white;
+                        width: 100%;
+                    }
+                }
+            }
+        }
+        Rectangle {
+            width: container_w * (2/5) - header_padding;
+            HorizontalLayout {
+                alignment: center;
+                Rectangle {
+                    background: move.active_move == 2 ? lightcoral : transparent;
+                    border-radius: 5px;
+                    width: 60%;
+                    Text {
+                        color: move.active_move == 2 ? black : white;
+                        font-size: Font.font_size_md;
+                        horizontal-alignment: center;
+                        text: move.black;
+                        width: 100%;
                     }
                 }
             }
         }
     }
-    
-    info_table := ListView {
-        x: 0;
-        y: Dimensions.board_size - self.height;
-        height: 93px;
-        width: 100%;
+}
 
-        for row[i] in root.info : Rectangle {
-            background: Math.mod(i, 2) == 0 ? Palette.alternate_bg : Palette.dashboard_bg;
-            width: info_table.width;
-            HorizontalLayout {
-                padding: 8px;
-                Text {
-                    color: white;
-                    min-width: info_table.width / 2;
-                    text: row.text;
-                    font-size: Font.font_size_sm;
+component MoveTable {
+    in property <[SlintMoveInfo]> moves;
+    in property <length> table_height;
+    in property <length> table_width;
+
+    container := Rectangle {
+        border-color: Palette.border;
+        border-radius: 5px;
+        border-width: 2px;
+        clip: true;
+
+        height: table_height;
+        width: table_width;
+
+        HorizontalLayout {
+            VerticalLayout {
+                alignment: start;
+                Rectangle {
+                    header := HorizontalLayout {
+                        padding: 10px;
+                        alignment: start;
+                        MoveTableHeader {
+                            text: "#";
+                            highlight_color: transparent;
+                            text_color: white;
+                            width: container.width * (1/5) - header.padding;
+                            text_alignment: left;
+                        }
+                        MoveTableHeader {
+                            text: "White";
+                            highlight_color: white;
+                            text_color: black;
+                            width: container.width * (2/5) - header.padding;
+                            text_alignment: center;
+                        }
+                        MoveTableHeader {
+                            text: "Black";
+                            highlight_color: black;
+                            text_color: white;
+                            width: container.width * (2/5) - header.padding;
+                            text_alignment: center;
+                        }
+                    }
                 }
-                Text {
-                    color: white;
-                    min-width: info_table.width / 2;
-                    text: row.value;
-                    font-size: Font.font_size_sm;
-                    horizontal-alignment: center;
+
+                move_history := ListView {
+                    height: container.height;
+                    width: container.width;
+                    for move[i] in moves : MoveTableRow {
+                        background: Math.mod(i, 2) == 0 ? Palette.alternate_bg : Palette.dashboard_bg;
+                        container_w: container.width;
+                        header_padding: header.padding;
+                        move: move;
+                    }
                 }
             }
         }
+    }
+}
+
+component InfoTable inherits ListView {
+    in property <[{text: string, value: string}]> data;
+
+    for row[i] in root.data : Rectangle {
+        background: Math.mod(i, 2) == 0 ? Palette.alternate_bg : Palette.dashboard_bg;
+        width: root.width;
+        HorizontalLayout {
+            padding: 8px;
+            Text {
+                color: white;
+                font-size: Font.font_size_sm;
+                min-width: root.width / 2;
+                text: row.text;
+            }
+            Text {
+                color: white;
+                font-size: Font.font_size_sm;
+                horizontal-alignment: center;
+                min-width: root.width / 2;
+                text: row.value;
+            }
+        }
+    }
+}
+
+export component Dashboard inherits Rectangle {
+    in property <DashboardState> dashboard_state;
+    
+    property <length> info_table_height: 93px;
+    property <length> move_table_height: 350px;
+    property <length> move_table_width: Dimensions.dashboard_w * 0.85;
+
+    VerticalLayout {
+        alignment: start;
+        padding: 10px;
+
+        HorizontalLayout {
+            alignment: center;
+
+            MoveTable {
+                table_height: move_table_height;
+                table_width: move_table_width;
+
+                moves: dashboard_state.move_history;
+            }
+        }
+    }
+
+    InfoTable {
+        height: info_table_height;
+        width: 100%;
+        x: 0;
+        y: Dimensions.board_size - self.height;
+
+        data: [
+            {text: "Halfmove Clock:", value: dashboard_state.halfmove_clock},
+            {text: "En Passant Square:", value: dashboard_state.en_passant_square},
+            {text: "Time to compute valid moves:", value: dashboard_state.compute_time}
+        ];
     }
 }

@@ -11,6 +11,7 @@ pub struct MoveInfo {
     pub moved_piece: Piece,
     pub captured_piece: Piece,
     pub capture_piece_sq: Square,
+    pub fullmove_count: i32,
     pub halfmove_clock: i32,
     pub notation: SharedString,
 }
@@ -72,6 +73,7 @@ impl MoveInfo {
             moved_piece,
             captured_piece,
             capture_piece_sq,
+            fullmove_count: position.fullmove_count(),
             halfmove_clock: position.halfmove_clock(),
             notation: SharedString::default(),
         };

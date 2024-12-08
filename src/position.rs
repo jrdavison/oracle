@@ -48,6 +48,10 @@ impl Position {
         self.side_to_move
     }
 
+    pub fn fullmove_count(&self) -> i32 {
+        self.fullmove_count
+    }
+
     pub fn halfmove_clock(&self) -> i32 {
         self.halfmove_clock
     }
@@ -66,6 +70,10 @@ impl Position {
 
     pub fn move_history(&self) -> Vec<MoveInfo> {
         self.move_history.clone()
+    }
+
+    pub fn redo_history(&self) -> Vec<MoveInfo> {
+        self.redo_history.clone()
     }
 
     pub fn last_move(&self) -> MoveInfo {
@@ -178,16 +186,8 @@ impl Position {
             }
 
             self.side_to_move = !self.side_to_move;
-
-            // reset clocks
-            if color == Color::Black {
-                self.fullmove_count -= 1;
-            }
-            if last_move.move_type == MoveType::Capture || Piece::type_of(last_move.moved_piece) == PieceType::Pawn {
-                self.halfmove_clock = last_move.halfmove_clock;
-            } else {
-                self.halfmove_clock -= 1;
-            }
+            self.halfmove_clock = last_move.halfmove_clock;
+            self.fullmove_count = last_move.fullmove_count;
 
             self.redo_history.push(last_move);
             true

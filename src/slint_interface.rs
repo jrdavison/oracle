@@ -1,13 +1,13 @@
-use num_traits::FromPrimitive;
-use num_traits::ToPrimitive;
+use crate::moves::info::MoveInfo;
 use crate::position::Position;
 use crate::utils::Piece;
+use crate::utils::{Color, File, Rank, Square};
+use itertools::Itertools;
+use num_traits::FromPrimitive;
 use slint::VecModel;
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
-use crate::utils::{Color, File, Rank, Square};
-use itertools::Itertools;
 
 slint::include_modules!();
 
@@ -16,7 +16,7 @@ pub fn run_application() -> Result<(), Box<dyn Error>> {
 
     // start: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
     let position = Rc::new(RefCell::new(Position::new(
-        "5K2/1k6/5Pp1/pp2P1b1/1BR3bP/1p6/1Pp5/7q b - - 0 1",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
     )));
 
     set_application_state(&ui, &position, -1, true); // -1 no piece is being dragged
@@ -42,7 +42,6 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
         let move_history = format_move_history(&pos);
         pos.compute_valid_moves(side_to_move);
         ui.set_dashboard_state(DashboardState {
-            turn: Color::to_i32(&side_to_move).unwrap(),
             move_history: Rc::new(VecModel::from(move_history)).into(),
             halfmove_clock: pos.halfmove_clock(),
             en_passant_square: pos.en_passant_square().into(),
@@ -128,17 +127,74 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
 
 fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
     let history = pos.move_history();
+    let mut redo_history = pos.redo_history();
+    redo_history.reverse();
+
+    let mut combined_history = Vec::new();
+    combined_history.extend_from_slice(&history);
+    combined_history.extend_from_slice(&redo_history);
+
+    let mut moves = chunk_move_history(&combined_history);
+    if moves.is_empty() {
+        moves.push(SlintMoveInfo {
+            move_no: 1,
+            white: "".into(),
+            black: "".into(),
+            active_move: 0,
+        });
+    } else {
+        if let Some(active_move) = history.last() {
+            let fullmove_idx = match history.len() {
+                0 => 0,
+                len => {
+                    let temp = len / 2;
+                    if Piece::color_of(active_move.moved_piece) == Color::White {
+                        temp
+                    } else {
+                        temp - 1
+                    }
+                }
+            };
+
+            if let Some(move_ref) = moves.get_mut(fullmove_idx) {
+                let color = Piece::color_of(active_move.moved_piece);
+                move_ref.active_move = if color == Color::White { 1 } else { 2 };
+            }
+        }
+    }
+
+    moves
+}
+
+fn chunk_move_history(history: &Vec<MoveInfo>) -> Vec<SlintMoveInfo> {
     let mut moves_iter = history.iter();
     let mut slint_move_info: Vec<SlintMoveInfo> = Vec::new();
 
     // first move is by black, add ... to white
     if let Some(first_move) = moves_iter.next() {
         if Piece::color_of(first_move.moved_piece) == Color::Black {
+            slint_move_info.push(SlintMoveInfo {
+                move_no: first_move.fullmove_count,
+                white: "...".into(),
+                black: first_move.notation.clone(),
+                active_move: 0,
+            });
+        } else {
+            if let Some(first_response) = moves_iter.next() {
                 slint_move_info.push(SlintMoveInfo {
-                    white: "...".into(),
-                    black: first_move.notation.clone(),
+                    move_no: first_move.fullmove_count,
+                    white: first_move.notation.clone(),
+                    black: first_response.notation.clone(),
+                    active_move: 0,
                 });
-
+            } else {
+                slint_move_info.push(SlintMoveInfo {
+                    move_no: first_move.fullmove_count,
+                    white: first_move.notation.clone(),
+                    black: "".into(),
+                    active_move: 0,
+                });
+            }
         }
     }
 
@@ -147,25 +203,22 @@ fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
         match chunk_vec.len() {
             2 => {
                 slint_move_info.push(SlintMoveInfo {
+                    move_no: chunk_vec[0].fullmove_count,
                     white: chunk_vec[0].notation.clone(),
                     black: chunk_vec[1].notation.clone(),
+                    active_move: 0,
                 });
             }
             1 => {
                 slint_move_info.push(SlintMoveInfo {
+                    move_no: chunk_vec[0].fullmove_count,
                     white: chunk_vec[0].notation.clone(),
                     black: "".into(),
+                    active_move: 0,
                 });
             }
             _ => {}
         }
-    }
-
-    if slint_move_info.is_empty() {
-        slint_move_info.push(SlintMoveInfo {
-            white: "".into(),
-            black: "".into(),
-        });
     }
 
     slint_move_info

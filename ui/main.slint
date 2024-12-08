@@ -13,29 +13,29 @@ export component AppWindow inherits Window {
 
     title: "Oracle";
 
+    background: Palette.dashboard_bg;
     height: Dimensions.board_size;
     width:  Dimensions.board_size + Dimensions.dashboard_w;
-    background: Palette.dashboard_bg;
 
     board := Board {
         board_state: board_state;
         dragged_piece_sq: dragged_piece_sq;
 
-        x: 0;
         height: Dimensions.board_size;
         width: Dimensions.board_size;
+        x: 0;
     }
     dash := Dashboard {
-        x: Dimensions.board_size + eval.width;
-        width: Dimensions.dashboard_w - eval.width;
         height: Dimensions.board_size;
+        width: Dimensions.dashboard_w - eval.width;
+        x: Dimensions.board_size + eval.width;
 
         dashboard_state: dashboard_state;
     }
     eval := EvalBar {
-        x: Dimensions.board_size;
         b_eval: 50%;
         w_eval: 50%;
+        x: Dimensions.board_size;
     }
 
     key_handler := FocusScope {
