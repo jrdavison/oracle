@@ -1,6 +1,7 @@
 use crate::bitboards::{self, Bitboard};
 use crate::magic_bitboards::{
-    BISHOP_BLOCKERS_LOOKUP, DIAGONAL_MASKS, KING_MASKS, KNIGHT_MASKS, ORTHOGONAL_MASKS, ROOK_BLOCKERS_LOOKUP,
+    BISHOP_BLOCKERS_LOOKUP, DIAGONAL_MASKS, KING_MASKS, KNIGHT_MASKS, ORTHOGONAL_MASKS, PAWN_ATTACK_MASKS,
+    ROOK_BLOCKERS_LOOKUP,
 };
 use crate::position::Position;
 use crate::utils::{Color, Direction, Piece, PieceType, Rank, Square};
@@ -30,12 +31,6 @@ pub fn compute_valid_moves(pos: &mut Position, color: Color) {
         let piece_type = Piece::type_of(piece);
         let mut computed_moves = ComputedMoves::default();
 
-        /*
-        only compute moves for pieces of the correct color.
-        Valid moves and attacks will be reset back to 0 for the enemy color
-        */
-        // if color == Piece::color_of(piece) {
-        // let p_start = Instant::now();
         match piece_type {
             PieceType::Pawn => computed_moves = compute_pawn_moves(pos, sq),
             PieceType::Knight => computed_moves = compute_knight_moves(sq),
@@ -45,23 +40,17 @@ pub fn compute_valid_moves(pos: &mut Position, color: Color) {
             PieceType::King => computed_moves = compute_king_moves(sq),
             _ => {}
         }
-        // }
 
         /*
         TODO: check if move puts king in check (diagonal and horizontal pins)
 
         we will need to copy the position and then use that to simulate the move. Then we check if the king is in
-        check
+        check. We can probably do this without having to recalculate the moves for the entire board though...
         */
 
         computed_moves.valid_moves &= !pos.bitboards.get_checkers(color);
         pos.bitboards.set_valid_moves(sq, computed_moves.valid_moves);
         attacks |= computed_moves.attacks;
-        // println!(
-        //     "Computed moves for {:?} in {:.4} ms",
-        //     piece,
-        //     p_start.elapsed().as_secs_f64() * 1000.0
-        // );
     }
 
     pos.bitboards.set_attacks(color, attacks);
@@ -74,7 +63,6 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
     let color = Piece::color_of(piece);
     let forward = Direction::forward_direction(color);
 
-    // normal move
     let mut target_sq = sq;
     for i in 0..2 {
         // only allow double move from starting rank
@@ -90,39 +78,14 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
         }
     }
 
-    // capture moves
-    let mut attacks = 0; // pawns can only attack diagonally
-    let target_sq_east = (sq + forward) + Direction::East;
-    if target_sq_east != Square::Count {
-        bitboards::set_bit(&mut attacks, sq);
-        if pos.bitboards.is_checkers_sq_set(!color, target_sq_east) {
-            bitboards::set_bit(&mut valid_moves, target_sq_east);
-        }
-    }
-
-    let target_sq_west = (sq + forward) + Direction::West;
-    if target_sq_west != Square::Count {
-        bitboards::set_bit(&mut attacks, sq);
-        if pos.bitboards.is_checkers_sq_set(!color, target_sq_west) {
-            bitboards::set_bit(&mut valid_moves, target_sq_west);
-        }
-    }
-
-    // en passant
+    let mut enemy_checkers = pos.bitboards.get_checkers(!color);
     if pos.en_passant_square != Square::Count {
-        if target_sq_east == pos.en_passant_square {
-            bitboards::set_bit(&mut valid_moves, target_sq_east);
-        } else if target_sq_west == pos.en_passant_square {
-            bitboards::set_bit(&mut valid_moves, target_sq_west);
-        }
+        bitboards::set_bit(&mut enemy_checkers, pos.en_passant_square);
     }
+    let attacks = PAWN_ATTACK_MASKS[color as usize][sq as usize] & enemy_checkers;
+    valid_moves |= attacks;
 
-    // TODO: promotion
-
-    ComputedMoves {
-        valid_moves,
-        attacks: valid_moves,
-    }
+    ComputedMoves { valid_moves, attacks }
 }
 
 fn compute_knight_moves(sq: Square) -> ComputedMoves {

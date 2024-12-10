@@ -1,11 +1,12 @@
 use core::panic;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
+use std::fmt;
 use std::ops::{Add, Mul, Sub};
 use std::ops::{Index, IndexMut, Not};
 
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Debug, Default)]
+#[derive(Clone, PartialEq, Debug, Default)]
 pub enum MoveType {
     #[default]
     Invalid,
@@ -35,7 +36,7 @@ impl Not for Color {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
+#[derive(Debug, FromPrimitive, PartialEq)]
 pub enum PieceType {
     Empty,
     King,
@@ -48,7 +49,7 @@ pub enum PieceType {
 
 impl PieceType {
     pub fn make_piece_type(c: char) -> PieceType {
-        let c_lower = c.to_lowercase().next().unwrap_or(' ');
+        let c_lower = c.to_lowercase().next().unwrap_or('\0');
         match c_lower {
             'k' => PieceType::King,
             'q' => PieceType::Queen,
@@ -57,6 +58,17 @@ impl PieceType {
             'r' => PieceType::Rook,
             'p' => PieceType::Pawn,
             _ => PieceType::Empty,
+        }
+    }
+
+    pub fn make_notation_string(&self) -> &str {
+        match self {
+            PieceType::Pawn | PieceType::Empty => "",
+            PieceType::King => "K",
+            PieceType::Queen => "Q",
+            PieceType::Bishop => "B",
+            PieceType::Knight => "N",
+            PieceType::Rook => "R",
         }
     }
 }
@@ -87,6 +99,9 @@ impl Piece {
     }
 
     pub fn color_of(piece: Piece) -> Color {
+        if piece == Piece::Empty {
+            return Color::Both;
+        }
         Color::from_u8((piece as u8) >> 3).expect("Cannot get color of piece")
     }
 
@@ -144,8 +159,6 @@ impl Add<Direction> for Square {
         Square::from_i8(new_sq).expect("Cannot add direction to square")
     }
 }
-
-// impl
 
 impl Square {
     pub fn make_square(file: File, rank: Rank) -> Square {
@@ -219,6 +232,20 @@ impl File {
     pub fn iter() -> impl Iterator<Item = File> {
         (0..(File::Count as usize)).map(|i| File::from_u8(i as u8).unwrap())
     }
+
+    pub fn make_notation_string(&self) -> &str {
+        match self {
+            File::FileA => "a",
+            File::FileB => "b",
+            File::FileC => "c",
+            File::FileD => "d",
+            File::FileE => "e",
+            File::FileF => "f",
+            File::FileG => "g",
+            File::FileH => "h",
+            _ => panic!("Invalid file"),
+        }
+    }
 }
 
 impl Add<u8> for File {
@@ -279,6 +306,20 @@ impl Rank {
             .rev()
             .map(|i| Rank::from_u8(i as u8).unwrap())
     }
+
+    pub fn make_notation_string(&self) -> &str {
+        match self {
+            Rank::Rank1 => "1",
+            Rank::Rank2 => "2",
+            Rank::Rank3 => "3",
+            Rank::Rank4 => "4",
+            Rank::Rank5 => "5",
+            Rank::Rank6 => "6",
+            Rank::Rank7 => "7",
+            Rank::Rank8 => "8",
+            _ => panic!("Invalid rank"),
+        }
+    }
 }
 
 impl Add<u8> for Rank {
@@ -306,5 +347,11 @@ impl Mul<u8> for Rank {
     type Output = Rank;
     fn mul(self, rhs: u8) -> Rank {
         Rank::from_u8(self as u8 * rhs).unwrap_or(Rank::Count)
+    }
+}
+
+impl fmt::Display for Rank {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", *self as u8 + 1)
     }
 }
