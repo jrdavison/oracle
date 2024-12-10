@@ -155,7 +155,10 @@ fn disambiguate_move(info: &MoveInfo, position: &Position) -> String {
             let from = format!("{:?}", info.from).to_lowercase();
             format!("{}{}", piece_type.make_notation_string(), from)
         }
-    } else if MoveType::Capture == info.move_type && Piece::type_of(info.moved_piece) == PieceType::Pawn {
+    } else if piece_type == PieceType::Pawn
+        && (info.move_type == MoveType::EnPassant || info.move_type == MoveType::Capture)
+    {
+        // add file of pawns automatically during captures (and en passant)
         Square::file_of(info.from).make_notation_string().to_string()
     } else {
         piece_type.make_notation_string().to_string()

@@ -146,11 +146,10 @@ fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
         let fullmove_idx = match history.len() {
             0 => 0,
             len => {
-                let temp = len / 2;
                 if Piece::color_of(active_move.moved_piece) == Color::White {
-                    temp
+                    len / 2
                 } else {
-                    temp - 1
+                    (len / 2) - 1
                 }
             }
         };
