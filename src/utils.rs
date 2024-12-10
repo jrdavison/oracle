@@ -3,7 +3,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 use std::fmt;
 use std::ops::{Add, Mul, Sub};
-use std::ops::{Index, IndexMut, Not};
+use std::ops::Not;
 
 #[repr(u8)]
 #[derive(Clone, PartialEq, Debug, Default)]
@@ -127,19 +127,6 @@ pub enum Square {
     Count = 64,
 }
 
-impl Index<Square> for [Piece; Square::Count as usize] {
-    type Output = Piece;
-    fn index(&self, index: Square) -> &Piece {
-        &self[index as usize]
-    }
-}
-
-impl IndexMut<Square> for [Piece; Square::Count as usize] {
-    fn index_mut(&mut self, index: Square) -> &mut Piece {
-        &mut self[index as usize]
-    }
-}
-
 impl Add<Direction> for Square {
     type Output = Square;
     fn add(self, rhs: Direction) -> Square {
@@ -177,7 +164,7 @@ impl Square {
         (0..(Square::Count as usize)).map(|i| Square::from_u8(i as u8).unwrap())
     }
 
-    pub fn is_valid(sq: i8) -> bool {
+    fn is_valid(sq: i8) -> bool {
         Square::A1 as i8 <= sq && sq < Square::Count as i8
     }
 }
@@ -295,10 +282,6 @@ impl Rank {
             Color::Black => Rank::Rank8 - (rank as u8),
             _ => panic!("Invalid color"),
         }
-    }
-
-    pub fn iter() -> impl Iterator<Item = Rank> {
-        (0..(Rank::Count as usize)).map(|i| Rank::from_u8(i as u8).unwrap())
     }
 
     pub fn iter_reverse() -> impl Iterator<Item = Rank> {

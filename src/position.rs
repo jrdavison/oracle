@@ -2,12 +2,11 @@ use crate::bitboards::Bitboards;
 use crate::moves::generate;
 use crate::moves::info::MoveInfo;
 use crate::utils::{Color, Direction, File, MoveType, Piece, PieceType, Rank, Square};
-use num_traits::ToPrimitive;
 use std::time::{Duration, Instant};
 
 pub struct Position {
-    pub board: [Piece; Square::Count as usize],
     pub bitboards: Bitboards,
+    pub board: [Piece; Square::Count as usize],
     pub en_passant_square: Square,
 
     move_history: Vec<MoveInfo>,
@@ -22,11 +21,13 @@ pub struct Position {
 impl Default for Position {
     fn default() -> Self {
         Position {
-            board: [Piece::Empty; Square::Count as usize],
             bitboards: Bitboards::default(),
+            board: [Piece::Empty; Square::Count as usize],
             en_passant_square: Square::Count,
+
             move_history: Vec::new(),
             redo_history: Vec::new(),
+
             compute_time: Duration::default(),
             fullmove_count: 1,
             halfmove_clock: 0,
@@ -38,13 +39,6 @@ impl Default for Position {
 impl Position {
     pub fn new(fen: &str) -> Position {
         init_from_fen(fen)
-    }
-
-    pub fn board_i32(&self) -> Vec<i32> {
-        self.board
-            .iter()
-            .map(|&piece| Piece::to_i32(&piece).unwrap_or(0))
-            .collect()
     }
 
     pub fn side_to_move(&self) -> Color {
@@ -84,7 +78,7 @@ impl Position {
     }
 
     pub fn valid_move(&self, from: Square, to: Square) -> bool {
-        let piece = self.board[from];
+        let piece = self.board[from as usize];
         if Piece::color_of(piece) != self.side_to_move {
             return false;
         }
