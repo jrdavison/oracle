@@ -15,13 +15,6 @@ struct Cli {
     gen_magics: bool,
 }
 
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Cli {
-    #[arg(long)]
-    gen_magics: bool,
-}
-
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Cli::parse();
     if args.gen_magics {

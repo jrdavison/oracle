@@ -42,7 +42,7 @@ impl Bitboards {
         self.checkers[color as usize]
     }
 
-    pub fsn set_checkers(&mut self, color: Color, sq: Square) {
+    pub fn set_checkers(&mut self, color: Color, sq: Square) {
         if color != Color::Both {
             set_bit(&mut self.checkers[color as usize], sq);
         } else {
