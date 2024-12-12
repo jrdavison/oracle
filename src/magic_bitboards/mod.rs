@@ -40,9 +40,16 @@ pub struct PerfectHashTable {
 }
 
 impl PerfectHashTable {
-    pub fn get(&self, key: &Bitboard) -> Option<&Bitboard> {
-        let index = self.hasher.get(key)?;
-        Some(&self.table[index as usize])
+    pub fn get(&self, key: &Bitboard) -> Bitboard {
+        // if let Some(index) = self.hasher.get(key) {
+            let start= std::time::Instant::now();
+            let index = self.hasher.get(key).unwrap();
+            println!("Time taken: {:?}", start.elapsed());
+            let test = self.table[index as usize];
+            test
+        // } else {
+            // Bitboard::default()
+        // }
     }
 }
 
@@ -130,7 +137,7 @@ fn generate_perfect_blockers_table(path: &str) -> PerfectBlockersTable {
             if hash_index >= table.len() {
                 table.resize_with(hash_index + 1, || 0);
             }
-            table.insert(hash_index as usize, *attacks);
+            table[hash_index as usize] = *attacks;
         }
 
         perfect_blockers[sq] = PerfectHashTable { hasher, table };

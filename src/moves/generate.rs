@@ -69,7 +69,7 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
 
         target_sq = target_sq + forward;
         if (target_sq != Square::Count) && !pos.bitboards.is_checkers_sq_set(Color::Both, target_sq) {
-            bitboards::set_bit(&mut valid_moves, target_sq);
+            valid_moves = bitboards::set_bit(valid_moves, target_sq);
         } else {
             break;
         }
@@ -77,7 +77,7 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
 
     let mut enemy_checkers = pos.bitboards.get_checkers(!color);
     if pos.en_passant_square != Square::Count {
-        bitboards::set_bit(&mut enemy_checkers, pos.en_passant_square);
+        enemy_checkers = bitboards::set_bit(enemy_checkers, pos.en_passant_square);
     }
     let attacks = LOOKUP_TABLES.pawn_attack_masks[color as usize][sq as usize] & enemy_checkers;
     valid_moves |= attacks;
@@ -96,9 +96,7 @@ fn compute_knight_moves(sq: Square) -> ComputedMoves {
 fn compute_rook_moves(pos: &Position, sq: Square) -> ComputedMoves {
     let move_mask = LOOKUP_TABLES.orthogonal_masks[sq as usize];
     let blocker_key = pos.bitboards.get_checkers(Color::Both) & move_mask;
-    let attacks = *LOOKUP_TABLES.rook_blockers_lookup[sq as usize]
-        .get(&blocker_key)
-        .unwrap_or(&Bitboard::default());
+    let attacks = LOOKUP_TABLES.rook_blockers_lookup[sq as usize].get(&blocker_key);
 
     ComputedMoves {
         attacks,
@@ -109,9 +107,7 @@ fn compute_rook_moves(pos: &Position, sq: Square) -> ComputedMoves {
 fn compute_bishop_moves(pos: &Position, sq: Square) -> ComputedMoves {
     let diagonal_mask = LOOKUP_TABLES.diagonal_masks[sq as usize];
     let blocker_key = pos.bitboards.get_checkers(Color::Both) & diagonal_mask;
-    let attacks = *LOOKUP_TABLES.bishop_blockers_lookup[sq as usize]
-        .get(&blocker_key)
-        .unwrap_or(&Bitboard::default());
+    let attacks = LOOKUP_TABLES.bishop_blockers_lookup[sq as usize].get(&blocker_key);
 
     ComputedMoves {
         valid_moves: attacks,
