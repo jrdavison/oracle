@@ -30,9 +30,10 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
 
     let side_to_move = pos.side_to_move();
     let last_move = pos.last_move();
+    let board_i32 = pos.board.iter().map(|&piece| piece as i32).collect::<Vec<_>>();
 
     ui.set_board_state(BoardState {
-        board: Rc::new(VecModel::from(pos.board_i32())).into(),
+        board: Rc::new(VecModel::from(board_i32)).into(),
         last_move_from: last_move.from as i32,
         last_move_to: last_move.to as i32,
     });

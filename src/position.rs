@@ -2,7 +2,6 @@ use crate::bitboards::Bitboards;
 use crate::moves::generate;
 use crate::moves::info::MoveInfo;
 use crate::utils::{Color, Direction, File, MoveType, Piece, PieceType, Rank, Square};
-use num_traits::ToPrimitive;
 use std::time::{Duration, Instant};
 
 pub struct Position {
@@ -38,13 +37,6 @@ impl Default for Position {
 impl Position {
     pub fn new(fen: &str) -> Position {
         init_from_fen(fen)
-    }
-
-    pub fn board_i32(&self) -> Vec<i32> {
-        self.board
-            .iter()
-            .map(|&piece| Piece::to_i32(&piece).unwrap_or(0))
-            .collect()
     }
 
     pub fn side_to_move(&self) -> Color {
@@ -136,8 +128,7 @@ impl Position {
                         .unset_checkers(Piece::color_of(move_info.captured_piece), move_info.capture_piece_sq);
                 }
             }
-            MoveType::Invalid => panic!("Invalid move"),
-            MoveType::Quiet => {}
+            MoveType::Quiet | MoveType::Invalid => {}
         }
 
         if self.side_to_move == Color::Black {

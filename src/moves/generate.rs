@@ -72,7 +72,7 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
 
         target_sq = target_sq + forward;
         if (target_sq != Square::Count) && !pos.bitboards.is_checkers_sq_set(Color::Both, target_sq) {
-            bitboards::set_bit(&mut valid_moves, target_sq);
+            valid_moves = bitboards::set_bit(valid_moves, target_sq);
         } else {
             break;
         }
@@ -80,7 +80,7 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
 
     let mut enemy_checkers = pos.bitboards.get_checkers(!color);
     if pos.en_passant_square != Square::Count {
-        bitboards::set_bit(&mut enemy_checkers, pos.en_passant_square);
+        enemy_checkers = bitboards::set_bit(enemy_checkers, pos.en_passant_square);
     }
     let attacks = PAWN_ATTACK_MASKS[color as usize][sq as usize] & enemy_checkers;
     valid_moves |= attacks;
