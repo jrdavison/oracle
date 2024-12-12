@@ -1,11 +1,11 @@
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 use std::fmt;
-use std::ops::{Add, Mul, Sub};
 use std::ops::Not;
+use std::ops::{Add, Mul, Sub};
 
 #[repr(u8)]
-#[derive(Clone, PartialEq, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum MoveType {
     #[default]
     Invalid,
@@ -19,7 +19,7 @@ pub enum MoveType {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq, ToPrimitive)]
 pub enum Color {
     White,
     Black,
@@ -37,7 +37,7 @@ impl Not for Color {
 }
 
 #[repr(u8)]
-#[derive(Debug, FromPrimitive, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
 pub enum PieceType {
     #[default]
     Empty,
@@ -78,7 +78,7 @@ impl PieceType {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq, ToPrimitive)]
 pub enum Piece {
     #[default]
     Empty,
@@ -116,7 +116,7 @@ impl Piece {
 
 #[repr(u8)]
 #[rustfmt::skip]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, PartialOrd, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq, PartialOrd)]
 pub enum Square {
     A1, B1, C1, D1, E1, F1, G1, H1,
     A2, B2, C2, D2, E2, F2, G2, H2,
@@ -174,7 +174,7 @@ impl Square {
 }
 
 #[repr(i8)]
-#[derive(Clone, Copy, Debug, PartialEq, FromPrimitive, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
 pub enum Direction {
     #[default]
     Invalid,
@@ -204,7 +204,7 @@ impl Direction {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
 pub enum File {
     FileA,
     FileB,
@@ -266,7 +266,7 @@ impl Add<i8> for File {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
 pub enum Rank {
     Rank1,
     Rank2,
@@ -296,9 +296,7 @@ impl Rank {
     }
 
     pub fn iter_reverse() -> impl Iterator<Item = Rank> {
-        (0..(Rank::Count as usize))
-            .rev()
-            .filter_map(|i| Rank::from_u8(i as u8))
+        (0..(Rank::Count as usize)).rev().filter_map(|i| Rank::from_u8(i as u8))
     }
 
     pub fn make_notation_string(&self) -> &str {
