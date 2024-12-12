@@ -4,7 +4,7 @@ mod storage;
 use crate::bitboards::Bitboard;
 use crate::magic_bitboards::compute::{
     generate_bishop_attack_tables, generate_jumping_attacks_db, generate_rook_attack_tables, BLACK_PAWN_ATTACKS,
-    KING_DIRECTIONS, KNIGHT_DIRECTIONS, WHITE_PAWN_ATTACKS,
+    KING_DIRECTIONS, KNIGHT_DIRECTIONS, WHITE_PAWN_ATTACKS, custom_hash
 };
 use crate::magic_bitboards::storage::{
     load_attack_masks_bin, load_blockers_lookup_bin, save_attack_masks_bin, save_blockers_table_bin,
@@ -35,20 +35,17 @@ pub static LOOKUP_TABLES: LookupTables = LookupTables {
     bishop_blockers_lookup: Lazy::new(|| generate_perfect_blockers_table("bishop_blockers_table.bin")),
 };
 
+#[derive(Clone, Copy, Default)]
 pub struct MagicHashTable {
     pub table: Vec<Bitboard>,
-    pub num_keys: usize,
-
+    pub shift: usize,
+    pub magic: usize,
 }
 
 impl MagicHashTable {
     pub fn get(&self, key: Bitboard) -> Bitboard {
-        let index = self.custom_hash(key);
+        let index = custom_hash(key, self.magic, self.shift);
         self.table[index]
-    }
-
-    fn custom_hash(&self, key: u64) -> usize {
-        ((key.wrapping_mul(HASH_MULTIPLIER)) >> 32) as usize % self.num_keys
     }
 }
 
@@ -120,65 +117,32 @@ pub fn precompute() -> Result<(), Box<dyn Error>> {
 }
 
 // TODO: rename this
-fn generate_perfect_blockers_table(path: &str) -> MagicBlockersTable {
-    let blockers = load_blockers_lookup_bin(path);
-    let intersecting_keys = find_intersecting_keys(&blockers);
-    println!("Intersecting keys: {:?}", intersecting_keys);
+// fn generate_perfect_blockers_table(path: &str) -> MagicBlockersTable {
+//     let blockers = load_blockers_lookup_bin(path);
 
-    let mut magic_blockers = std::array::from_fn(|_| MagicHashTable {
-        table: Vec::new(),
-        num_keys: 0,
-    });
+//     let mut magic_blockers = std::array::from_fn(|_| MagicHashTable {
+//         table: Vec::new(),
+//         num_keys: 0,
+//     });
 
-    for sq in Square::iter() {
-        let blockers_map = &blockers[sq as usize];
-        let magic_hash = &mut magic_blockers[sq as usize];
-        magic_hash.num_keys = blockers_map.len();
-        let mut collisions = 0;
+//     for sq in Square::iter() {
+//         let blockers_map = &blockers[sq as usize];
+//         let magic_hash = &mut magic_blockers[sq as usize];
+//         magic_hash.num_keys = blockers_map.len();
+//         let mut collisions = 0;
 
-        for (blockers, attacks) in blockers_map {
-            let hash_index = magic_hash.custom_hash(*blockers);
-            if hash_index >= magic_hash.table.len() {
-                magic_hash.table.resize_with(hash_index + 1, || 0);
-            }
-            if magic_hash.table[hash_index as usize] != 0 {
-                collisions += 1;
-            }
-            magic_hash.table[hash_index as usize] = *attacks;
-        }
+//         for (blockers, attacks) in blockers_map {
+//             let hash_index = magic_hash.custom_hash(*blockers);
+//             if hash_index >= magic_hash.table.len() {
+//                 magic_hash.table.resize_with(hash_index + 1, || 0);
+//             }
+//             if magic_hash.table[hash_index as usize] != 0 {
+//                 collisions += 1;
+//             }
+//             magic_hash.table[hash_index as usize] = *attacks;
+//         }
 
-        println!("Collisions for {:?}: {}", sq, collisions);
-    }
-    magic_blockers
-}
-
-
-fn find_intersecting_keys(blockers_table: &BlockersTable) -> Vec<Bitboard> {
-    let mut key_sets: Vec<Vec<Bitboard>> = Vec::new();
-
-    // Collect all keys from each hashmap in the blockers table
-    for hashmap in blockers_table.iter() {
-        let keys: Vec<Bitboard> = hashmap.keys().copied().collect();
-        key_sets.push(keys);
-    }
-
-    // Compare keys for intersections across all hashmaps
-    let mut intersecting_keys = Vec::new();
-
-    for (i, keys1) in key_sets.iter().enumerate() {
-        for &key1 in keys1 {
-            let mut found_in_all = true;
-            for (j, keys2) in key_sets.iter().enumerate() {
-                if i != j && !keys2.iter().any(|&key2| key1 & key2 != 0) {
-                    found_in_all = false;
-                    break;
-                }
-            }
-            if found_in_all {
-                intersecting_keys.push(key1);
-            }
-        }
-    }
-
-    intersecting_keys
-}
+//         println!("Collisions for {:?}: {}", sq, collisions);
+//     }
+//     magic_blockers
+// }

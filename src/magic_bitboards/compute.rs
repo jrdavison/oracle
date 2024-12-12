@@ -1,8 +1,11 @@
 use crate::bitboards::{self, Bitboard};
 use crate::magic_bitboards::{AttackMaskTable, BlockersTable};
 use crate::utils::{File, Rank, Square};
-use std::collections::HashMap;
+use rand::Rng;
+use std::collections::{HashMap, HashSet};
 use std::time::Instant;
+
+use super::MagicHashTable;
 
 const HORIZONTAL_MASK: Bitboard = 0xFF;
 const VERTICAL_MASK: Bitboard = 0x0101010101010101;
@@ -14,7 +17,7 @@ pub const BLACK_PAWN_ATTACKS: [(i8, i8); 2] = [(-1, 1), (-1, -1)];
 
 pub struct BitboardLookupTables {
     pub masks: AttackMaskTable,
-    pub blockers: BlockersTable,
+    pub magics: [MagicHashTable; Square::Count as usize],
 }
 
 fn remove_edge_bits(mask: &mut Bitboard, sq: Square) {
@@ -69,7 +72,7 @@ fn rook_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboard 
     let mut west_file = file - 1u8;
     while west_file != File::Count {
         let dest_sq = Square::make_square(west_file, rank);
-        
+
         attack_mask = bitboards::set_bit(attack_mask, dest_sq);
         if bitboards::is_bit_set(blockers, dest_sq) {
             break;
@@ -182,28 +185,27 @@ fn jumping_attacks(sq: Square, directions: &[(i8, i8)]) -> Bitboard {
 }
 
 pub fn generate_rook_attack_tables() -> BitboardLookupTables {
-    let mut rook_moves: [HashMap<Bitboard, Bitboard>; Square::Count as usize] = std::array::from_fn(|_| HashMap::new());
+    // let mut rook_moves: [HashMap<Bitboard, Bitboard>; Square::Count as usize] = std::array::from_fn(|_| HashMap::new());
     let mut orthog_masks = [Bitboard::default(); Square::Count as usize];
+    let mut rook_magics = [MagicHashTable::default(); Square::Count as usize];
 
     for sq in Square::iter() {
         let start = Instant::now();
         let mask = rook_attacks(sq, 0, true);
         orthog_masks[sq as usize] = mask;
+    
+        let mut rook_moves = HashMap::new();
         for blockers in generate_relevant_blockers(mask) {
             let attacks = rook_attacks(sq, blockers, false);
-            rook_moves[sq as usize].insert(blockers, attacks);
+            rook_moves.insert(blockers, attacks);
         }
-        println!(
-            "Computed {} moves for square {:?}. Done in {:.2} seconds.",
-            rook_moves[sq as usize].len(),
-            sq,
-            start.elapsed().as_secs_f64()
-        );
+        println!("Computed {} moves for square {:?}. Done in {:?} seconds.", rook_moves.len(), sq, start.elapsed());
+        rook_magics[sq as usize] = compute_magic_number(rook_moves, std::time::Duration::from_secs(30));
     }
 
     BitboardLookupTables {
         masks: orthog_masks,
-        blockers: rook_moves,
+        magics: rook_magics,
     }
 }
 
@@ -221,10 +223,10 @@ pub fn generate_bishop_attack_tables() -> BitboardLookupTables {
             bishop_moves[sq as usize].insert(blockers, attacks);
         }
         println!(
-            "Computed {} moves for square {:?}. Done in {:.2} seconds.",
+            "Computed {} moves for square {:?}. Done in {:?} seconds.",
             bishop_moves[sq as usize].len(),
             sq,
-            start.elapsed().as_secs_f64()
+            start.elapsed()
         );
     }
 
@@ -240,4 +242,59 @@ pub fn generate_jumping_attacks_db(directions: &[(i8, i8)]) -> [Bitboard; 64] {
         attack_lookup[sq as usize] = jumping_attacks(sq, directions);
     }
     attack_lookup
+}
+
+fn compute_magic_number(blockers_table: HashMap<Bitboard, Bitboard>, time_limit: std::time::Duration) -> MagicHashTable {
+    let start = Instant::now();
+    let mut rng = rand::thread_rng();
+
+    let mut best_magic = 0;
+    let mut best_size = std::usize::MAX;
+    let shift = blockers_table.keys().len();
+    while start.elapsed() < time_limit {
+        let magic = rng.gen::<usize>() & rng.gen::<usize>() & rng.gen::<usize>();
+
+        let mut seen = HashSet::new();
+        let mut valid = true;
+
+        for blocker in blockers_table.keys() {
+            let index = custom_hash(*blocker, magic as usize, shift);
+            if !seen.insert(index) {
+                valid = false;
+                break;
+            }
+        }
+
+        let hash_size = *seen.iter().max().unwrap_or(&std::usize::MAX) as usize;
+        if valid && hash_size < best_size {
+            best_magic = magic as usize;
+            best_size = hash_size + 1;
+        }
+
+        if best_size == shift {
+            // perfectly hashed
+            break;
+        }
+    }
+    println!("Best magic: {:x} with size: {}", best_magic, best_size);
+
+    let mut table = vec![0; best_size];
+    for key in blockers_table.keys() {
+        let index = custom_hash(*key, best_magic, shift);
+        let attacks = blockers_table.get(key).unwrap();
+        table[index] = *attacks;
+    }
+
+    MagicHashTable {
+        table,
+        shift,
+        magic: best_magic,
+    }
+}
+
+pub fn custom_hash(key: Bitboard, magic: usize, shift: usize) -> usize {
+    let magic = magic as u64;
+    let key = key as u64;
+    let index = (key.wrapping_mul(magic)) >> (64 - shift.ilog2());
+    index as usize
 }
