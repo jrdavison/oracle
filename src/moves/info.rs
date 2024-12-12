@@ -42,7 +42,7 @@ impl MoveInfo {
                 } else if from_file != to_file {
                     move_type = MoveType::EnPassant;
                     capture_piece_sq = to + Direction::forward_direction(!color);
-                    captured_piece = position.board[capture_piece_sq];
+                    captured_piece = position.board[capture_piece_sq as usize];
                 } else {
                     move_type = MoveType::Quiet;
                 }

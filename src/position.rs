@@ -84,7 +84,7 @@ impl Position {
     }
 
     pub fn valid_move(&self, from: Square, to: Square) -> bool {
-        let piece = self.board[from];
+        let piece = self.board[from as usize];
         if Piece::color_of(piece) != self.side_to_move {
             return false;
         }

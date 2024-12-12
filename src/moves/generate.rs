@@ -27,7 +27,7 @@ impl BitOr for ComputedMoves {
 pub fn compute_valid_moves(pos: &mut Position, color: Color) {
     let mut attacks = 0;
     for sq in Square::iter() {
-        let piece = pos.board[sq];
+        let piece = pos.board[sq as usize];
         let piece_type = Piece::type_of(piece);
         let mut computed_moves = ComputedMoves::default();
 
@@ -59,7 +59,7 @@ pub fn compute_valid_moves(pos: &mut Position, color: Color) {
 fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
     let mut valid_moves = 0;
 
-    let piece = pos.board[sq];
+    let piece = pos.board[sq as usize];
     let color = Piece::color_of(piece);
     let forward = Direction::forward_direction(color);
 
