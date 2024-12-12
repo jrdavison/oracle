@@ -1,4 +1,5 @@
 use crate::bitboards::{self, Bitboard};
+use crate::magic_bitboards::{AttackMaskTable, BlockersTable};
 use crate::utils::{File, Rank, Square};
 use std::collections::HashMap;
 use std::time::Instant;
@@ -12,8 +13,8 @@ pub const WHITE_PAWN_ATTACKS: [(i8, i8); 2] = [(1, 1), (1, -1)];
 pub const BLACK_PAWN_ATTACKS: [(i8, i8); 2] = [(-1, 1), (-1, -1)];
 
 pub struct BitboardLookupTables {
-    pub masks: [Bitboard; Square::Count as usize],
-    pub blockers: [HashMap<Bitboard, Bitboard>; Square::Count as usize],
+    pub masks: AttackMaskTable,
+    pub blockers: BlockersTable,
 }
 
 fn remove_edge_bits(mask: &mut Bitboard, sq: Square) {
@@ -163,6 +164,22 @@ fn bishop_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboar
     attack_mask
 }
 
+fn jumping_attacks(sq: Square, directions: &[(i8, i8)]) -> Bitboard {
+    let mut attacks = 0;
+    let file = Square::file_of(sq);
+    let rank = Square::rank_of(sq);
+
+    for &(dr, df) in directions {
+        let dest_rank = rank + dr;
+        let dest_file = file + df;
+        if dest_file != File::Count && dest_rank != Rank::Count {
+            let dest_sq = Square::make_square(dest_file, dest_rank);
+            bitboards::set_bit(&mut attacks, dest_sq);
+        }
+    }
+    attacks
+}
+
 pub fn generate_rook_attack_tables() -> BitboardLookupTables {
     let mut rook_moves: [HashMap<Bitboard, Bitboard>; Square::Count as usize] = std::array::from_fn(|_| HashMap::new());
     let mut orthog_masks = [Bitboard::default(); Square::Count as usize];
@@ -214,22 +231,6 @@ pub fn generate_bishop_attack_tables() -> BitboardLookupTables {
         masks: diagonal_masks,
         blockers: bishop_moves,
     }
-}
-
-fn jumping_attacks(sq: Square, directions: &[(i8, i8)]) -> Bitboard {
-    let mut attacks = 0;
-    let file = Square::file_of(sq);
-    let rank = Square::rank_of(sq);
-
-    for &(dr, df) in directions {
-        let dest_rank = rank + dr;
-        let dest_file = file + df;
-        if dest_file != File::Count && dest_rank != Rank::Count {
-            let dest_sq = Square::make_square(dest_file, dest_rank);
-            bitboards::set_bit(&mut attacks, dest_sq);
-        }
-    }
-    attacks
 }
 
 pub fn generate_jumping_attacks_db(directions: &[(i8, i8)]) -> [Bitboard; 64] {

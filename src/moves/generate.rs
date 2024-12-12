@@ -1,8 +1,5 @@
 use crate::bitboards::{self, Bitboard};
-use crate::magic_bitboards::{
-    BISHOP_BLOCKERS_LOOKUP, DIAGONAL_MASKS, KING_MASKS, KNIGHT_MASKS, ORTHOGONAL_MASKS, PAWN_ATTACK_MASKS,
-    ROOK_BLOCKERS_LOOKUP,
-};
+use crate::magic_bitboards::LOOKUP_TABLES;
 use crate::position::Position;
 use crate::utils::{Color, Direction, Piece, PieceType, Rank, Square};
 use std::ops::BitOr;
@@ -82,37 +79,37 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
     if pos.en_passant_square != Square::Count {
         bitboards::set_bit(&mut enemy_checkers, pos.en_passant_square);
     }
-    let attacks = PAWN_ATTACK_MASKS[color as usize][sq as usize] & enemy_checkers;
+    let attacks = LOOKUP_TABLES.pawn_attack_masks[color as usize][sq as usize] & enemy_checkers;
     valid_moves |= attacks;
 
     ComputedMoves { valid_moves, attacks }
 }
 
 fn compute_knight_moves(sq: Square) -> ComputedMoves {
-    let valid_moves = KNIGHT_MASKS[sq as usize];
+    let attacks = LOOKUP_TABLES.knight_masks[sq as usize];
     ComputedMoves {
-        valid_moves,
-        attacks: valid_moves,
+        attacks,
+        valid_moves: attacks,
     }
 }
 
 fn compute_rook_moves(pos: &Position, sq: Square) -> ComputedMoves {
-    let move_mask = ORTHOGONAL_MASKS[sq as usize];
+    let move_mask = LOOKUP_TABLES.orthogonal_masks[sq as usize];
     let blocker_key = pos.bitboards.get_checkers(Color::Both) & move_mask;
-    let valid_moves = *ROOK_BLOCKERS_LOOKUP[sq as usize]
+    let attacks = *LOOKUP_TABLES.rook_blockers_lookup[sq as usize]
         .get(&blocker_key)
         .unwrap_or(&Bitboard::default());
 
     ComputedMoves {
-        valid_moves,
-        attacks: valid_moves,
+        attacks,
+        valid_moves: attacks,
     }
 }
 
 fn compute_bishop_moves(pos: &Position, sq: Square) -> ComputedMoves {
-    let diagonal_mask = DIAGONAL_MASKS[sq as usize];
+    let diagonal_mask = LOOKUP_TABLES.diagonal_masks[sq as usize];
     let blocker_key = pos.bitboards.get_checkers(Color::Both) & diagonal_mask;
-    let attacks = *BISHOP_BLOCKERS_LOOKUP[sq as usize]
+    let attacks = *LOOKUP_TABLES.bishop_blockers_lookup[sq as usize]
         .get(&blocker_key)
         .unwrap_or(&Bitboard::default());
 
@@ -124,9 +121,9 @@ fn compute_bishop_moves(pos: &Position, sq: Square) -> ComputedMoves {
 
 fn compute_king_moves(sq: Square) -> ComputedMoves {
     // TODO: castling
-    let valid_moves = KING_MASKS[sq as usize];
+    let attacks = LOOKUP_TABLES.king_masks[sq as usize];
     ComputedMoves {
-        valid_moves,
-        attacks: valid_moves,
+        attacks,
+        valid_moves: attacks,
     }
 }

@@ -11,36 +11,66 @@ use crate::magic_bitboards::storage::{
 };
 use crate::utils::{Color, Square};
 use once_cell::sync::Lazy;
+use ph::fmph;
 use std::collections::HashMap;
 use std::error::Error;
 
-pub type BlockersTable = [HashMap<Bitboard, Bitboard>; Square::Count as usize];
 pub type AttackMaskTable = [Bitboard; Square::Count as usize];
+pub type BlockersTable = [HashMap<Bitboard, Bitboard>; Square::Count as usize];
+pub type PerfectBlockersTable = [PerfectHashTable; Square::Count as usize];
 
-pub static KNIGHT_MASKS: Lazy<AttackMaskTable> = Lazy::new(|| load_attack_masks_bin("knight_masks.bin"));
-pub static KING_MASKS: Lazy<AttackMaskTable> = Lazy::new(|| load_attack_masks_bin("king_masks.bin"));
-pub static ORTHOGONAL_MASKS: Lazy<AttackMaskTable> = Lazy::new(|| load_attack_masks_bin("orthogonal_masks.bin"));
-pub static DIAGONAL_MASKS: Lazy<AttackMaskTable> = Lazy::new(|| load_attack_masks_bin("diagonal_masks.bin"));
-pub static PAWN_ATTACK_MASKS: [Lazy<AttackMaskTable>; Color::Both as usize] = [
-    Lazy::new(|| load_attack_masks_bin("white_pawn_attack_masks.bin")),
-    Lazy::new(|| load_attack_masks_bin("black_pawn_attack_masks.bin")),
-];
+pub static LOOKUP_TABLES: LookupTables = LookupTables {
+    diagonal_masks: Lazy::new(|| load_attack_masks_bin("diagonal_masks.bin")),
+    orthogonal_masks: Lazy::new(|| load_attack_masks_bin("orthogonal_masks.bin")),
 
-pub static ROOK_BLOCKERS_LOOKUP: Lazy<BlockersTable> =
-    Lazy::new(|| load_blockers_lookup_bin("rook_blockers_table.bin"));
-pub static BISHOP_BLOCKERS_LOOKUP: Lazy<BlockersTable> =
-    Lazy::new(|| load_blockers_lookup_bin("bishop_blockers_table.bin"));
+    king_masks: Lazy::new(|| load_attack_masks_bin("king_masks.bin")),
+    knight_masks: Lazy::new(|| load_attack_masks_bin("knight_masks.bin")),
+    pawn_attack_masks: [
+        Lazy::new(|| load_attack_masks_bin("white_pawn_attack_masks.bin")),
+        Lazy::new(|| load_attack_masks_bin("black_pawn_attack_masks.bin")),
+    ],
 
-pub fn load_precomputed_moves() {
-    Lazy::force(&KNIGHT_MASKS);
-    Lazy::force(&KING_MASKS);
-    Lazy::force(&ORTHOGONAL_MASKS);
-    Lazy::force(&DIAGONAL_MASKS);
-    Lazy::force(&PAWN_ATTACK_MASKS[Color::White as usize]);
-    Lazy::force(&PAWN_ATTACK_MASKS[Color::Black as usize]);
+    rook_blockers_lookup: Lazy::new(|| generate_perfect_blockers_table("rook_blockers_table.bin")),
+    bishop_blockers_lookup: Lazy::new(|| generate_perfect_blockers_table("bishop_blockers_table.bin")),
+};
 
-    Lazy::force(&ROOK_BLOCKERS_LOOKUP);
-    Lazy::force(&BISHOP_BLOCKERS_LOOKUP);
+pub struct PerfectHashTable {
+    hasher: fmph::Function,
+    table: Vec<Bitboard>,
+}
+
+impl PerfectHashTable {
+    pub fn get(&self, key: &Bitboard) -> Option<&Bitboard> {
+        let index = self.hasher.get(key)?;
+        Some(&self.table[index as usize])
+    }
+}
+
+pub struct LookupTables {
+    // masks
+    pub diagonal_masks: Lazy<AttackMaskTable>,
+    pub orthogonal_masks: Lazy<AttackMaskTable>,
+
+    pub king_masks: Lazy<AttackMaskTable>,
+    pub knight_masks: Lazy<AttackMaskTable>,
+    pub pawn_attack_masks: [Lazy<AttackMaskTable>; Color::Both as usize],
+
+    // blocker tables
+    pub rook_blockers_lookup: Lazy<PerfectBlockersTable>,
+    pub bishop_blockers_lookup: Lazy<PerfectBlockersTable>,
+}
+
+impl LookupTables {
+    pub fn load_all(&self) {
+        Lazy::force(&self.diagonal_masks);
+        Lazy::force(&self.orthogonal_masks);
+        Lazy::force(&self.king_masks);
+        Lazy::force(&self.knight_masks);
+        Lazy::force(&self.pawn_attack_masks[Color::White as usize]);
+        Lazy::force(&self.pawn_attack_masks[Color::Black as usize]);
+        Lazy::force(&self.rook_blockers_lookup);
+        Lazy::force(&self.bishop_blockers_lookup);
+    }
 }
 
 pub fn precompute() -> Result<(), Box<dyn Error>> {
@@ -81,4 +111,33 @@ pub fn precompute() -> Result<(), Box<dyn Error>> {
     println!("Saved bishop tables.");
 
     Ok(())
+}
+
+fn generate_perfect_blockers_table(path: &str) -> PerfectBlockersTable {
+    let blockers = load_blockers_lookup_bin(path);
+    let mut perfect_blockers: PerfectBlockersTable = std::array::from_fn(|_| PerfectHashTable {
+        hasher: fmph::Function::from(vec![0]),
+        table: Vec::new(),
+    });
+
+    for (sq, blockers_map) in blockers.iter().enumerate() {
+        let keys = blockers_map.keys().cloned().collect::<Vec<Bitboard>>();
+        let hasher = fmph::Function::from(keys);
+        let mut table = Vec::new();
+
+        for (blockers, attacks) in blockers_map {
+            let hash_index = hasher.get(&blockers).unwrap() as usize;
+            if hash_index >= table.len() {
+                table.resize_with(hash_index + 1, || 0);
+            }
+            table.insert(hash_index as usize, *attacks);
+        }
+
+        perfect_blockers[sq] = PerfectHashTable { hasher, table };
+    }
+
+    println!();
+
+    // TODO: move this to storage?
+    perfect_blockers
 }
