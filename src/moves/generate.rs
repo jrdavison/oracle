@@ -26,18 +26,18 @@ pub fn compute_valid_moves(pos: &mut Position, color: Color) {
     for sq in Square::iter() {
         let piece = pos.board[sq as usize];
         let piece_type = Piece::type_of(piece);
-        let mut computed_moves = ComputedMoves::default();
 
-        match piece_type {
-            PieceType::Pawn => computed_moves = compute_pawn_moves(pos, sq),
-            PieceType::Knight => computed_moves = compute_knight_moves(sq),
-            PieceType::Rook => computed_moves = compute_rook_moves(pos, sq),
-            PieceType::Bishop => computed_moves = compute_bishop_moves(pos, sq),
-            PieceType::Queen => computed_moves = compute_rook_moves(pos, sq) | compute_bishop_moves(pos, sq),
-            PieceType::King => computed_moves = compute_king_moves(sq),
-            _ => {}
-        }
-
+        let start = std::time::Instant::now();
+        let mut computed_moves = match piece_type {
+            PieceType::Pawn => compute_pawn_moves(pos, sq),
+            PieceType::Knight => compute_knight_moves(sq),
+            PieceType::Rook => compute_rook_moves(pos, sq),
+            PieceType::Bishop => compute_bishop_moves(pos, sq),
+            PieceType::Queen => compute_rook_moves(pos, sq) | compute_bishop_moves(pos, sq),
+            PieceType::King => compute_king_moves(sq),
+            _ => ComputedMoves::default(),
+        };
+        println!("Time elapsed for {:?}: {:?}", piece_type, start.elapsed());
         /*
         TODO: check if move puts king in check (diagonal and horizontal pins)
 
@@ -96,7 +96,7 @@ fn compute_knight_moves(sq: Square) -> ComputedMoves {
 fn compute_rook_moves(pos: &Position, sq: Square) -> ComputedMoves {
     let move_mask = LOOKUP_TABLES.orthogonal_masks[sq as usize];
     let blocker_key = pos.bitboards.get_checkers(Color::Both) & move_mask;
-    let attacks = LOOKUP_TABLES.rook_blockers_lookup[sq as usize].get(&blocker_key);
+    let attacks = LOOKUP_TABLES.rook_blockers_lookup[sq as usize].get(blocker_key);
 
     ComputedMoves {
         attacks,
@@ -107,7 +107,7 @@ fn compute_rook_moves(pos: &Position, sq: Square) -> ComputedMoves {
 fn compute_bishop_moves(pos: &Position, sq: Square) -> ComputedMoves {
     let diagonal_mask = LOOKUP_TABLES.diagonal_masks[sq as usize];
     let blocker_key = pos.bitboards.get_checkers(Color::Both) & diagonal_mask;
-    let attacks = LOOKUP_TABLES.bishop_blockers_lookup[sq as usize].get(&blocker_key);
+    let attacks = LOOKUP_TABLES.bishop_blockers_lookup[sq as usize].get(blocker_key);
 
     ComputedMoves {
         valid_moves: attacks,

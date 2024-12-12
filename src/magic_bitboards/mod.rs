@@ -11,13 +11,14 @@ use crate::magic_bitboards::storage::{
 };
 use crate::utils::{Color, Square};
 use once_cell::sync::Lazy;
-use ph::fmph;
 use std::collections::HashMap;
 use std::error::Error;
 
 pub type AttackMaskTable = [Bitboard; Square::Count as usize];
 pub type BlockersTable = [HashMap<Bitboard, Bitboard>; Square::Count as usize];
-pub type PerfectBlockersTable = [PerfectHashTable; Square::Count as usize];
+pub type MagicBlockersTable = [MagicHashTable; Square::Count as usize]; // TODO: better names
+
+const HASH_MULTIPLIER: u64 = 0x9e3779b97f4a7c15;
 
 pub static LOOKUP_TABLES: LookupTables = LookupTables {
     diagonal_masks: Lazy::new(|| load_attack_masks_bin("diagonal_masks.bin")),
@@ -34,22 +35,20 @@ pub static LOOKUP_TABLES: LookupTables = LookupTables {
     bishop_blockers_lookup: Lazy::new(|| generate_perfect_blockers_table("bishop_blockers_table.bin")),
 };
 
-pub struct PerfectHashTable {
-    hasher: fmph::Function,
-    table: Vec<Bitboard>,
+pub struct MagicHashTable {
+    pub table: Vec<Bitboard>,
+    pub num_keys: usize,
+
 }
 
-impl PerfectHashTable {
-    pub fn get(&self, key: &Bitboard) -> Bitboard {
-        // if let Some(index) = self.hasher.get(key) {
-            let start= std::time::Instant::now();
-            let index = self.hasher.get(key).unwrap();
-            println!("Time taken: {:?}", start.elapsed());
-            let test = self.table[index as usize];
-            test
-        // } else {
-            // Bitboard::default()
-        // }
+impl MagicHashTable {
+    pub fn get(&self, key: Bitboard) -> Bitboard {
+        let index = self.custom_hash(key);
+        self.table[index]
+    }
+
+    fn custom_hash(&self, key: u64) -> usize {
+        ((key.wrapping_mul(HASH_MULTIPLIER)) >> 32) as usize % self.num_keys
     }
 }
 
@@ -63,8 +62,8 @@ pub struct LookupTables {
     pub pawn_attack_masks: [Lazy<AttackMaskTable>; Color::Both as usize],
 
     // blocker tables
-    pub rook_blockers_lookup: Lazy<PerfectBlockersTable>,
-    pub bishop_blockers_lookup: Lazy<PerfectBlockersTable>,
+    pub rook_blockers_lookup: Lazy<MagicBlockersTable>,
+    pub bishop_blockers_lookup: Lazy<MagicBlockersTable>,
 }
 
 impl LookupTables {
@@ -120,31 +119,66 @@ pub fn precompute() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn generate_perfect_blockers_table(path: &str) -> PerfectBlockersTable {
+// TODO: rename this
+fn generate_perfect_blockers_table(path: &str) -> MagicBlockersTable {
     let blockers = load_blockers_lookup_bin(path);
-    let mut perfect_blockers: PerfectBlockersTable = std::array::from_fn(|_| PerfectHashTable {
-        hasher: fmph::Function::from(vec![0]),
+    let intersecting_keys = find_intersecting_keys(&blockers);
+    println!("Intersecting keys: {:?}", intersecting_keys);
+
+    let mut magic_blockers = std::array::from_fn(|_| MagicHashTable {
         table: Vec::new(),
+        num_keys: 0,
     });
 
-    for (sq, blockers_map) in blockers.iter().enumerate() {
-        let keys = blockers_map.keys().cloned().collect::<Vec<Bitboard>>();
-        let hasher = fmph::Function::from(keys);
-        let mut table = Vec::new();
+    for sq in Square::iter() {
+        let blockers_map = &blockers[sq as usize];
+        let magic_hash = &mut magic_blockers[sq as usize];
+        magic_hash.num_keys = blockers_map.len();
+        let mut collisions = 0;
 
         for (blockers, attacks) in blockers_map {
-            let hash_index = hasher.get(&blockers).unwrap() as usize;
-            if hash_index >= table.len() {
-                table.resize_with(hash_index + 1, || 0);
+            let hash_index = magic_hash.custom_hash(*blockers);
+            if hash_index >= magic_hash.table.len() {
+                magic_hash.table.resize_with(hash_index + 1, || 0);
             }
-            table[hash_index as usize] = *attacks;
+            if magic_hash.table[hash_index as usize] != 0 {
+                collisions += 1;
+            }
+            magic_hash.table[hash_index as usize] = *attacks;
         }
 
-        perfect_blockers[sq] = PerfectHashTable { hasher, table };
+        println!("Collisions for {:?}: {}", sq, collisions);
+    }
+    magic_blockers
+}
+
+
+fn find_intersecting_keys(blockers_table: &BlockersTable) -> Vec<Bitboard> {
+    let mut key_sets: Vec<Vec<Bitboard>> = Vec::new();
+
+    // Collect all keys from each hashmap in the blockers table
+    for hashmap in blockers_table.iter() {
+        let keys: Vec<Bitboard> = hashmap.keys().copied().collect();
+        key_sets.push(keys);
     }
 
-    println!();
+    // Compare keys for intersections across all hashmaps
+    let mut intersecting_keys = Vec::new();
 
-    // TODO: move this to storage?
-    perfect_blockers
+    for (i, keys1) in key_sets.iter().enumerate() {
+        for &key1 in keys1 {
+            let mut found_in_all = true;
+            for (j, keys2) in key_sets.iter().enumerate() {
+                if i != j && !keys2.iter().any(|&key2| key1 & key2 != 0) {
+                    found_in_all = false;
+                    break;
+                }
+            }
+            if found_in_all {
+                intersecting_keys.push(key1);
+            }
+        }
+    }
+
+    intersecting_keys
 }
