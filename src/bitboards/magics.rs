@@ -106,7 +106,7 @@ impl MagicHashTable {
         let mut rng = rand::thread_rng();
 
         let mut best_magic = 0;
-        let mut best_size = std::usize::MAX;
+        let mut best_size = usize::MAX;
         let shift = blockers_table.keys().len();
         while start.elapsed() < time_limit {
             let magic = rng.gen::<u64>() & rng.gen::<u64>() & rng.gen::<u64>();
@@ -122,7 +122,7 @@ impl MagicHashTable {
                 }
             }
 
-            let hash_size = *seen.iter().max().unwrap_or(&std::usize::MAX) as usize;
+            let hash_size = *seen.iter().max().unwrap_or(&usize::MAX);
             if valid && hash_size < best_size {
                 best_magic = magic;
                 best_size = hash_size + 1;
