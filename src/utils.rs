@@ -1,4 +1,3 @@
-use core::panic;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 use std::fmt;
@@ -6,7 +5,7 @@ use std::ops::Not;
 use std::ops::{Add, Mul, Sub};
 
 #[repr(u8)]
-#[derive(Clone, PartialEq, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum MoveType {
     #[default]
     Invalid,
@@ -20,7 +19,7 @@ pub enum MoveType {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq, ToPrimitive)]
 pub enum Color {
     White,
     Black,
@@ -38,7 +37,7 @@ impl Not for Color {
     }
 }
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
 pub enum PieceType {
     #[default]
     Empty,
@@ -73,13 +72,13 @@ impl PieceType {
             PieceType::Bishop => "B",
             PieceType::Knight => "N",
             PieceType::Rook => "R",
-            _ => "?",
+            PieceType::Empty => "???",
         }
     }
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq, ToPrimitive)]
 pub enum Piece {
     #[default]
     Empty,
@@ -104,6 +103,9 @@ impl Piece {
     }
 
     pub fn color_of(piece: Piece) -> Color {
+        if piece == Piece::Empty {
+            return Color::Both;
+        }
         Color::from_u8((piece as u8) >> 3).unwrap_or_default()
     }
 
@@ -114,7 +116,7 @@ impl Piece {
 
 #[repr(u8)]
 #[rustfmt::skip]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, PartialOrd, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq, PartialOrd)]
 pub enum Square {
     A1, B1, C1, D1, E1, F1, G1, H1,
     A2, B2, C2, D2, E2, F2, G2, H2,
@@ -172,10 +174,10 @@ impl Square {
 }
 
 #[repr(i8)]
-#[derive(Clone, Copy, Debug, PartialEq, FromPrimitive, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
 pub enum Direction {
     #[default]
-    Invalid = 0,
+    Invalid,
 
     North = 8,
     East = 1,
@@ -202,7 +204,7 @@ impl Direction {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
 pub enum File {
     FileA,
     FileB,
@@ -237,7 +239,7 @@ impl File {
             File::FileF => "f",
             File::FileG => "g",
             File::FileH => "h",
-            _ => panic!("Invalid file"),
+            _ => "???",
         }
     }
 }
@@ -264,7 +266,7 @@ impl Add<i8> for File {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
 pub enum Rank {
     Rank1,
     Rank2,
@@ -307,7 +309,7 @@ impl Rank {
             Rank::Rank6 => "6",
             Rank::Rank7 => "7",
             Rank::Rank8 => "8",
-            _ => panic!("Invalid rank"),
+            _ => "???",
         }
     }
 }

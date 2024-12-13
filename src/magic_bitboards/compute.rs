@@ -72,7 +72,6 @@ fn rook_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboard 
     let mut west_file = file - 1u8;
     while west_file != File::Count {
         let dest_sq = Square::make_square(west_file, rank);
-
         attack_mask = bitboards::set_bit(attack_mask, dest_sq);
         if bitboards::is_bit_set(blockers, dest_sq) {
             break;

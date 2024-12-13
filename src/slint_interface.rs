@@ -31,16 +31,17 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
 
     let side_to_move = pos.side_to_move();
     let last_move = pos.last_move();
+    let board_i32 = pos.board.iter().map(|&piece| piece as i32).collect::<Vec<_>>();
 
     // convert board to Vec<i32> for slint
-    let board: Vec<i32> = pos
+    let board_i32: Vec<i32> = pos
         .board
         .iter()
         .map(|&piece| Piece::to_i32(&piece).unwrap_or(0))
         .collect();
 
     ui.set_board_state(BoardState {
-        board: Rc::new(VecModel::from(board)).into(),
+        board: Rc::new(VecModel::from(board_i32)).into(),
         last_move_from: last_move.from as i32,
         last_move_to: last_move.to as i32,
     });

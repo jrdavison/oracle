@@ -130,8 +130,7 @@ impl Position {
                         .unset_checkers(Piece::color_of(move_info.captured_piece), move_info.capture_piece_sq);
                 }
             }
-            MoveType::Invalid => panic!("Invalid move"),
-            MoveType::Quiet => {}
+            MoveType::Quiet | MoveType::Invalid => {}
         }
 
         if self.side_to_move == Color::Black {
