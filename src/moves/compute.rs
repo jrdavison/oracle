@@ -78,14 +78,14 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
     if pos.en_passant_square != Square::Count {
         enemy_checkers = bitboards::set_bit(enemy_checkers, pos.en_passant_square);
     }
-    let attacks = LOOKUP_TABLES.pawn_attack_masks[color as usize][sq as usize] & enemy_checkers;
+    let attacks = LOOKUP_TABLES.get_pawn_attack_mask(color, sq) & enemy_checkers;
     valid_moves |= attacks;
 
     ComputedMoves { valid_moves, attacks }
 }
 
 fn compute_knight_moves(sq: Square) -> ComputedMoves {
-    let attacks = LOOKUP_TABLES.knight_masks[sq as usize];
+    let attacks = LOOKUP_TABLES.get_knight_mask(sq);
     ComputedMoves {
         attacks,
         valid_moves: attacks,
@@ -93,9 +93,9 @@ fn compute_knight_moves(sq: Square) -> ComputedMoves {
 }
 
 fn compute_rook_moves(pos: &Position, sq: Square) -> ComputedMoves {
-    let move_mask = LOOKUP_TABLES.orthogonal_masks[sq as usize];
+    let move_mask = LOOKUP_TABLES.get_orthogonal_mask(sq);
     let blocker_key = pos.bitboards.get_checkers(Color::Both) & move_mask;
-    let attacks = LOOKUP_TABLES.rook_blockers_lookup[sq as usize].get(blocker_key);
+    let attacks = LOOKUP_TABLES.get_rook_mask(sq, blocker_key);
 
     ComputedMoves {
         attacks,
@@ -104,9 +104,9 @@ fn compute_rook_moves(pos: &Position, sq: Square) -> ComputedMoves {
 }
 
 fn compute_bishop_moves(pos: &Position, sq: Square) -> ComputedMoves {
-    let diagonal_mask = LOOKUP_TABLES.diagonal_masks[sq as usize];
+    let diagonal_mask = LOOKUP_TABLES.get_diagonal_mask(sq);
     let blocker_key = pos.bitboards.get_checkers(Color::Both) & diagonal_mask;
-    let attacks = LOOKUP_TABLES.bishop_blockers_lookup[sq as usize].get(blocker_key);
+    let attacks = LOOKUP_TABLES.get_bishop_mask(sq, blocker_key);
 
     ComputedMoves {
         valid_moves: attacks,
@@ -116,7 +116,7 @@ fn compute_bishop_moves(pos: &Position, sq: Square) -> ComputedMoves {
 
 fn compute_king_moves(sq: Square) -> ComputedMoves {
     // TODO: castling
-    let attacks = LOOKUP_TABLES.king_masks[sq as usize];
+    let attacks = LOOKUP_TABLES.get_king_mask(sq);
     ComputedMoves {
         attacks,
         valid_moves: attacks,
