@@ -1,5 +1,5 @@
-use crate::bitboards::{self, Bitboard};
 use crate::bitboards::magics::LOOKUP_TABLES;
+use crate::bitboards::{self, Bitboard};
 use crate::position::Position;
 use crate::utils::{Color, Direction, Piece, PieceType, Rank, Square};
 use std::ops::BitOr;

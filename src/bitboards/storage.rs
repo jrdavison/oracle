@@ -1,10 +1,10 @@
+use super::magics::{AttackMaskTable, MagicBlockersTable, MagicHashTable};
+use super::Bitboard;
 use crate::utils::Square;
 use include_dir::{include_dir, Dir};
 use std::fs::File;
-use std::io::{Write, Cursor, Read, BufWriter};
+use std::io::{BufWriter, Cursor, Read, Write};
 use std::path::Path;
-use super::Bitboard;
-use super::magics::{AttackMaskTable, MagicBlockersTable, MagicHashTable};
 
 const SAVE_PATH: &str = "./data/";
 static DATA_DIR: Dir = include_dir!("data/");
@@ -13,8 +13,7 @@ pub fn load_magic_hash_table_bin(path: &str) -> MagicBlockersTable {
     let file = DATA_DIR.get_file(path).expect("Failed to get file");
     let mut reader = Cursor::new(file.contents());
 
-    let mut magic_tables: MagicBlockersTable =
-        std::array::from_fn(|_| MagicHashTable::default());
+    let mut magic_tables: MagicBlockersTable = std::array::from_fn(|_| MagicHashTable::default());
 
     for sq in Square::iter() {
         let mut vec_len_buf = [0u8; 4];

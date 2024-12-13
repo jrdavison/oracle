@@ -1,11 +1,11 @@
-use super::{Bitboard, is_bit_set, set_bit};
 use super::storage;
-use crate::utils::{File, Rank,Color, Square};
+use super::{is_bit_set, set_bit, Bitboard};
+use crate::utils::{Color, File, Rank, Square};
 use once_cell::sync::Lazy;
-use std::error::Error;
 use rand::Rng;
 use std::collections::{HashMap, HashSet};
-use std::time::Instant;
+use std::error::Error;
+use std::time::{Duration, Instant};
 
 pub type AttackMaskTable = [Bitboard; Square::Count as usize];
 pub type MagicBlockersTable = [MagicHashTable; Square::Count as usize];
@@ -248,14 +248,19 @@ pub fn generate_rook_attack_tables() -> BitboardLookupTables {
         let start = Instant::now();
         let mask = rook_attacks(sq, 0, true);
         orthog_masks[sq as usize] = mask;
-    
+
         let mut rook_moves = HashMap::new();
         for blockers in generate_relevant_blockers(mask) {
             let attacks = rook_attacks(sq, blockers, false);
             rook_moves.insert(blockers, attacks);
         }
-        println!("Computed {} moves for square {:?}. Done in {:?} seconds.", rook_moves.len(), sq, start.elapsed());
-        rook_magics[sq as usize] = compute_magic_number(rook_moves, std::time::Duration::from_secs(30));
+        println!(
+            "Computed {} moves for square {:?}. Done in {:?} seconds.",
+            rook_moves.len(),
+            sq,
+            start.elapsed()
+        );
+        rook_magics[sq as usize] = compute_magic_number(rook_moves, Duration::from_secs(30));
     }
 
     BitboardLookupTables {
@@ -278,11 +283,16 @@ pub fn generate_bishop_attack_tables() -> BitboardLookupTables {
             let attacks = bishop_attacks(sq, blockers, false);
             bishop_moves.insert(blockers, attacks);
         }
-        println!("Computed {} moves for square {:?}. Done in {:?} seconds.", bishop_moves.len(), sq, start.elapsed());
-        bishop_magics[sq as usize] = compute_magic_number(bishop_moves, std::time::Duration::from_secs(30));
+        println!(
+            "Computed {} moves for square {:?}. Done in {:?} seconds.",
+            bishop_moves.len(),
+            sq,
+            start.elapsed()
+        );
+        bishop_magics[sq as usize] = compute_magic_number(bishop_moves, Duration::from_secs(30));
     }
 
-    BitboardLookupTables{
+    BitboardLookupTables {
         masks: diagonal_masks,
         magics: bishop_magics,
     }
@@ -296,7 +306,7 @@ pub fn generate_jumping_attacks_db(directions: &[(i8, i8)]) -> [Bitboard; 64] {
     attack_lookup
 }
 
-fn compute_magic_number(blockers_table: HashMap<Bitboard, Bitboard>, time_limit: std::time::Duration) -> MagicHashTable {
+fn compute_magic_number(blockers_table: HashMap<Bitboard, Bitboard>, time_limit: Duration) -> MagicHashTable {
     let start = Instant::now();
     let mut rng = rand::thread_rng();
 
@@ -350,7 +360,6 @@ pub fn custom_hash(key: Bitboard, magic: usize, shift: usize) -> usize {
     let index = (key.wrapping_mul(magic)) >> (64 - shift.ilog2());
     index as usize
 }
-
 
 pub fn compute() -> Result<(), Box<dyn Error>> {
     println!("Precomputing moves...");
