@@ -35,8 +35,8 @@ pub struct LookupTables {
     pawn_attack_masks: [Lazy<AttackMaskTable>; Color::Both as usize],
 
     // blocker tables
-    rook_blockers_lookup: Lazy<MagicBlockersTable>,
     bishop_blockers_lookup: Lazy<MagicBlockersTable>,
+    rook_blockers_lookup: Lazy<MagicBlockersTable>,
 }
 
 impl LookupTables {
@@ -73,19 +73,19 @@ impl LookupTables {
         }
         self.pawn_attack_masks[color as usize][sq as usize]
     }
+    
+    pub fn get_bishop_mask(&self, sq: Square, blocker_key: Bitboard) -> Bitboard {
+        self.bishop_blockers_lookup[sq as usize].get(blocker_key)
+    }
 
     pub fn get_rook_mask(&self, sq: Square, blocker_key: Bitboard) -> Bitboard {
         self.rook_blockers_lookup[sq as usize].get(blocker_key)
-    }
-
-    pub fn get_bishop_mask(&self, sq: Square, blocker_key: Bitboard) -> Bitboard {
-        self.bishop_blockers_lookup[sq as usize].get(blocker_key)
     }
 }
 
 #[derive(Clone, Default)]
 pub struct MagicHashTable {
-    pub magic: usize,
+    pub magic: u64,
     pub shift: usize,
     pub table: Vec<Bitboard>,
 }
@@ -96,11 +96,9 @@ impl MagicHashTable {
         self.table[index]
     }
 
-    fn custom_hash(key: Bitboard, magic: usize, shift: usize) -> usize {
-        let magic = magic as u64;
-        let key = key as u64;
-        let index = (key.wrapping_mul(magic)) >> (64 - shift.ilog2());
-        index as usize
+    fn custom_hash(key: Bitboard, magic: u64, shift: usize) -> usize {
+        let hash = (key.wrapping_mul(magic)) >> (64 - shift.ilog2());
+        hash as usize
     }
 
     fn compute_magic_number(blockers_table: HashMap<Bitboard, Bitboard>, time_limit: Duration) -> MagicHashTable {
@@ -111,13 +109,13 @@ impl MagicHashTable {
         let mut best_size = std::usize::MAX;
         let shift = blockers_table.keys().len();
         while start.elapsed() < time_limit {
-            let magic = rng.gen::<usize>() & rng.gen::<usize>() & rng.gen::<usize>();
+            let magic = rng.gen::<u64>() & rng.gen::<u64>() & rng.gen::<u64>();
     
             let mut seen = HashSet::new();
             let mut valid = true;
     
             for blocker in blockers_table.keys() {
-                let index = MagicHashTable::custom_hash(*blocker, magic as usize, shift);
+                let index = MagicHashTable::custom_hash(*blocker, magic, shift);
                 if !seen.insert(index) {
                     valid = false;
                     break;
@@ -126,7 +124,7 @@ impl MagicHashTable {
     
             let hash_size = *seen.iter().max().unwrap_or(&std::usize::MAX) as usize;
             if valid && hash_size < best_size {
-                best_magic = magic as usize;
+                best_magic = magic;
                 best_size = hash_size + 1;
             }
     
@@ -325,8 +323,7 @@ impl Compute {
         attacks
     }
     
-    fn generate_sliding_attack_tables<F>(compute_attacks: F) -> (AttackMaskTable, MagicBlockersTable)
-    where F: Fn(Square, Bitboard, bool) -> Bitboard
+    fn generate_sliding_attack_tables<F>(compute_attacks: F) -> (AttackMaskTable, MagicBlockersTable) where F: Fn(Square, Bitboard, bool) -> Bitboard
     {
         let mut attack_masks = [Bitboard::default(); Square::Count as usize];
         let mut magics = std::array::from_fn(|_| MagicHashTable::default());

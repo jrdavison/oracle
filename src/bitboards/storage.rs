@@ -34,7 +34,7 @@ pub fn load_magic_hash_table_bin(path: &str) -> MagicBlockersTable {
 
         let mut magic_buf = [0u8; 8];
         reader.read_exact(&mut magic_buf).unwrap();
-        let magic = usize::from_le_bytes(magic_buf);
+        let magic = u64::from_le_bytes(magic_buf);
 
         magic_tables[sq as usize] = MagicHashTable { table, shift, magic };
     }
