@@ -5,7 +5,7 @@ mod bitboards;
 mod magic_bitboards;
 mod moves;
 mod position;
-mod slint_interface;
+mod ui;
 mod utils;
 
 use clap::Parser;
@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         magic_bitboards::precompute()?;
     } else {
         magic_bitboards::LOOKUP_TABLES.load_all();
-        slint_interface::run_application()?;
+        ui::run_application()?;
     }
     Ok(())
 }

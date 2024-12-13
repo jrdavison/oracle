@@ -4,7 +4,6 @@ use crate::utils::Piece;
 use crate::utils::{Color, File, Rank, Square};
 use itertools::Itertools;
 use num_traits::FromPrimitive;
-use num_traits::ToPrimitive;
 use slint::VecModel;
 use std::cell::RefCell;
 use std::error::Error;
@@ -32,13 +31,6 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
     let side_to_move = pos.side_to_move();
     let last_move = pos.last_move();
     let board_i32 = pos.board.iter().map(|&piece| piece as i32).collect::<Vec<_>>();
-
-    // convert board to Vec<i32> for slint
-    let board_i32: Vec<i32> = pos
-        .board
-        .iter()
-        .map(|&piece| Piece::to_i32(&piece).unwrap_or(0))
-        .collect();
 
     ui.set_board_state(BoardState {
         board: Rc::new(VecModel::from(board_i32)).into(),
