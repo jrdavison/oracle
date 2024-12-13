@@ -1,4 +1,5 @@
-use super::magics::{AttackMaskTable, BlockersTable, MagicHashTable};
+use super::magics::MagicHashTable;
+use super::tables::{AttackMaskTable, BlockersTable};
 use super::Bitboard;
 use crate::utils::Square;
 use include_dir::{include_dir, Dir};

@@ -2,12 +2,15 @@
 https://tearth.dev/bitboard-viewer/
 */
 
-pub mod magics;
+mod magics;
 mod storage;
+pub mod tables;
 
 use crate::utils::{Color, File, Rank, Square};
 
 pub type Bitboard = u64;
+
+pub static LOOKUP_TABLES: tables::LookupTables = tables::LookupTables::init();
 
 pub struct Bitboards {
     valid_moves: [Bitboard; Square::Count as usize],

@@ -20,9 +20,9 @@ struct Cli {
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Cli::parse();
     if args.gen_magics {
-        bitboards::magics::compute()?;
+        bitboards::tables::compute()?;
     } else {
-        bitboards::magics::LookupTables::load_all();
+        bitboards::tables::force_load(&bitboards::LOOKUP_TABLES);
         ui::run_application()?;
     }
     Ok(())
