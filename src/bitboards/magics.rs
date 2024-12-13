@@ -73,7 +73,7 @@ impl LookupTables {
         }
         self.pawn_attack_masks[color as usize][sq as usize]
     }
-    
+
     pub fn get_bishop_mask(&self, sq: Square, blocker_key: Bitboard) -> Bitboard {
         self.bishop_blockers_lookup[sq as usize].get(blocker_key)
     }
@@ -104,16 +104,16 @@ impl MagicHashTable {
     fn compute_magic_number(blockers_table: HashMap<Bitboard, Bitboard>, time_limit: Duration) -> MagicHashTable {
         let start = Instant::now();
         let mut rng = rand::thread_rng();
-    
+
         let mut best_magic = 0;
         let mut best_size = std::usize::MAX;
         let shift = blockers_table.keys().len();
         while start.elapsed() < time_limit {
             let magic = rng.gen::<u64>() & rng.gen::<u64>() & rng.gen::<u64>();
-    
+
             let mut seen = HashSet::new();
             let mut valid = true;
-    
+
             for blocker in blockers_table.keys() {
                 let index = MagicHashTable::custom_hash(*blocker, magic, shift);
                 if !seen.insert(index) {
@@ -121,27 +121,27 @@ impl MagicHashTable {
                     break;
                 }
             }
-    
+
             let hash_size = *seen.iter().max().unwrap_or(&std::usize::MAX) as usize;
             if valid && hash_size < best_size {
                 best_magic = magic;
                 best_size = hash_size + 1;
             }
-    
+
             if best_size == shift {
                 // perfectly hashed
                 break;
             }
         }
         println!("Best magic: {:x} with size: {}", best_magic, best_size);
-    
+
         let mut table = vec![0; best_size];
         for key in blockers_table.keys() {
             let index = MagicHashTable::custom_hash(*key, best_magic, shift);
             let attacks = blockers_table.get(key).unwrap();
             table[index] = *attacks;
         }
-    
+
         MagicHashTable {
             table,
             shift,
@@ -163,7 +163,7 @@ impl Compute {
     fn remove_edge_bits(mask: &mut Bitboard, sq: Square) {
         let file = Square::file_of(sq);
         let rank = Square::rank_of(sq);
-    
+
         if rank != Rank::Rank1 {
             *mask &= !Compute::HORIZONTAL_MASK;
         }
@@ -181,7 +181,7 @@ impl Compute {
     fn relevant_blockers(mask: Bitboard) -> impl Iterator<Item = Bitboard> {
         let relevant_bits: Vec<usize> = (0..64).filter(|&i| mask & (1 << i) != 0).collect();
         let num_relevant_bits = relevant_bits.len();
-    
+
         (0..(1 << num_relevant_bits)).map(move |index| {
             let mut blockers = 0u64;
             for (i, &bit) in relevant_bits.iter().enumerate() {
@@ -245,12 +245,12 @@ impl Compute {
 
         attack_mask
     }
-   
+
     fn bishop_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboard {
         let mut attack_mask = 0;
         let file = Square::file_of(sq);
         let rank = Square::rank_of(sq);
-    
+
         // NE
         let mut ne_file = file + 1u8;
         let mut ne_rank = rank + 1u8;
@@ -299,19 +299,19 @@ impl Compute {
             nw_file = nw_file - 1u8;
             nw_rank = nw_rank + 1u8;
         }
-    
+
         if remove_edges {
             Compute::remove_edge_bits(&mut attack_mask, sq);
         }
-    
+
         attack_mask
     }
-    
+
     fn jumping_attacks(sq: Square, directions: &[(i8, i8)]) -> Bitboard {
         let mut attacks = 0;
         let file = Square::file_of(sq);
         let rank = Square::rank_of(sq);
-    
+
         for &(dr, df) in directions {
             let dest_rank = rank + dr;
             let dest_file = file + df;
@@ -322,17 +322,19 @@ impl Compute {
         }
         attacks
     }
-    
-    fn generate_sliding_attack_tables<F>(compute_attacks: F) -> (AttackMaskTable, MagicBlockersTable) where F: Fn(Square, Bitboard, bool) -> Bitboard
+
+    fn generate_sliding_attack_tables<F>(compute_attacks: F) -> (AttackMaskTable, MagicBlockersTable)
+    where
+        F: Fn(Square, Bitboard, bool) -> Bitboard,
     {
         let mut attack_masks = [Bitboard::default(); Square::Count as usize];
         let mut magics = std::array::from_fn(|_| MagicHashTable::default());
-    
+
         for sq in Square::iter() {
             let start = Instant::now();
             let mask = compute_attacks(sq, 0, true);
             attack_masks[sq as usize] = mask;
-    
+
             let mut moves = HashMap::new();
             for blockers in Compute::relevant_blockers(mask) {
                 let attacks = compute_attacks(sq, blockers, false);
@@ -346,10 +348,10 @@ impl Compute {
             );
             magics[sq as usize] = MagicHashTable::compute_magic_number(moves, Duration::from_secs(30));
         }
-    
+
         (attack_masks, magics)
     }
-    
+
     fn generate_jumping_attack_tables(directions: &[(i8, i8)]) -> AttackMaskTable {
         let mut attack_lookup = [Bitboard::default(); Square::Count as usize];
         for sq in Square::iter() {
@@ -358,7 +360,6 @@ impl Compute {
         attack_lookup
     }
 }
-
 
 pub fn compute() -> Result<(), Box<dyn Error>> {
     println!("Precomputing moves...");
