@@ -40,7 +40,6 @@ impl MagicHashTable {
         self.table[index]
     }
 
-
     pub fn compute_magic_number(blockers_table: HashMap<Bitboard, Bitboard>) -> MagicHashTable {
         let mut rng = rand::thread_rng();
 
