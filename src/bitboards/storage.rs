@@ -1,4 +1,4 @@
-use super::magics::{AttackMaskTable, MagicBlockersTable, MagicHashTable};
+use super::magics::{AttackMaskTable, BlockersTable, MagicHashTable};
 use super::Bitboard;
 use crate::utils::Square;
 use include_dir::{include_dir, Dir};
@@ -9,11 +9,11 @@ use std::path::Path;
 const SAVE_PATH: &str = "./data/";
 static DATA_DIR: Dir = include_dir!("data/");
 
-pub fn load_magic_hash_table_bin(path: &str) -> MagicBlockersTable {
+pub fn load_magic_hash_table_bin(path: &str) -> BlockersTable {
     let file = DATA_DIR.get_file(path).expect("Failed to get file");
     let mut reader = Cursor::new(file.contents());
 
-    let mut magic_tables: MagicBlockersTable = std::array::from_fn(|_| MagicHashTable::default());
+    let mut magic_tables: BlockersTable = std::array::from_fn(|_| MagicHashTable::default());
 
     for sq in Square::iter() {
         let mut vec_len_buf = [0u8; 4];
@@ -28,21 +28,21 @@ pub fn load_magic_hash_table_bin(path: &str) -> MagicBlockersTable {
             table.push(bitboard);
         }
 
-        let mut shift_buf = [0u8; 8];
-        reader.read_exact(&mut shift_buf).unwrap();
-        let shift = usize::from_le_bytes(shift_buf);
+        let mut n_elements_buf = [0u8; 8];
+        reader.read_exact(&mut n_elements_buf).unwrap();
+        let n_elements = usize::from_le_bytes(n_elements_buf);
 
         let mut magic_buf = [0u8; 8];
         reader.read_exact(&mut magic_buf).unwrap();
         let magic = u64::from_le_bytes(magic_buf);
 
-        magic_tables[sq as usize] = MagicHashTable { table, shift, magic };
+        magic_tables[sq as usize] = MagicHashTable { table, n_elements, magic };
     }
 
     magic_tables
 }
 
-pub fn save_magic_hash_table_bin(filename: &str, tables: &MagicBlockersTable) {
+pub fn save_magic_hash_table_bin(filename: &str, tables: &BlockersTable) {
     let full_path = Path::new(SAVE_PATH).join(filename);
     let file = File::create(full_path).expect("Failed to create magic hash table file");
     let mut writer = BufWriter::new(file);
@@ -54,7 +54,7 @@ pub fn save_magic_hash_table_bin(filename: &str, tables: &MagicBlockersTable) {
         for &bitboard in &table.table {
             writer.write_all(&bitboard.to_le_bytes()).unwrap();
         }
-        writer.write_all(&table.shift.to_le_bytes()).unwrap();
+        writer.write_all(&table.n_elements.to_le_bytes()).unwrap();
         writer.write_all(&table.magic.to_le_bytes()).unwrap();
     }
 }
