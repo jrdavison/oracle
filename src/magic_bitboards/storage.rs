@@ -1,56 +1,62 @@
 use crate::bitboards::Bitboard;
-use crate::magic_bitboards::{AttackMaskTable, BlockersTable};
+use crate::magic_bitboards::{AttackMaskTable, MagicHashTable};
 use crate::utils::Square;
 use include_dir::{include_dir, Dir};
-use std::collections::HashMap;
 use std::fs::File;
-use std::io::Write;
-use std::io::{Cursor, Read};
+use std::io::{Write, Cursor, Read, BufWriter};
 use std::path::Path;
 
 const SAVE_PATH: &str = "./data/";
 static DATA_DIR: Dir = include_dir!("data/");
 
-pub fn load_blockers_lookup_bin(path: &str) -> BlockersTable {
+pub fn load_magic_hash_table_bin(path: &str) -> [MagicHashTable; Square::Count as usize] {
     let file = DATA_DIR.get_file(path).expect("Failed to get file");
     let mut reader = Cursor::new(file.contents());
 
-    let mut move_database: BlockersTable = std::array::from_fn(|_| HashMap::new());
+    let mut magic_tables: [MagicHashTable; Square::Count as usize] =
+        std::array::from_fn(|_| MagicHashTable::default());
+
     for sq in Square::iter() {
-        let mut moves: HashMap<Bitboard, Bitboard> = HashMap::new();
+        let mut vec_len_buf = [0u8; 4];
+        reader.read_exact(&mut vec_len_buf).unwrap();
+        let vec_len = u32::from_le_bytes(vec_len_buf) as usize;
 
-        let mut num_entries_buf = [0u8; 4];
-        reader.read_exact(&mut num_entries_buf).unwrap();
-        let num_entries = u32::from_le_bytes(num_entries_buf);
-        for _ in 0..num_entries {
-            let mut blockers_buf = [0u8; 8];
-            let mut attacks_buf = [0u8; 8];
-
-            reader.read_exact(&mut blockers_buf).unwrap();
-            reader.read_exact(&mut attacks_buf).unwrap();
-
-            let blockers = u64::from_le_bytes(blockers_buf);
-            let attacks = u64::from_le_bytes(attacks_buf);
-            moves.insert(blockers, attacks);
+        let mut table = Vec::with_capacity(vec_len);
+        for _ in 0..vec_len {
+            let mut bitboard_buf = [0u8; 8];
+            reader.read_exact(&mut bitboard_buf).unwrap();
+            let bitboard = u64::from_le_bytes(bitboard_buf);
+            table.push(bitboard);
         }
-        move_database[sq as usize] = moves;
+
+        let mut shift_buf = [0u8; 8];
+        reader.read_exact(&mut shift_buf).unwrap();
+        let shift = usize::from_le_bytes(shift_buf);
+
+        let mut magic_buf = [0u8; 8];
+        reader.read_exact(&mut magic_buf).unwrap();
+        let magic = usize::from_le_bytes(magic_buf);
+
+        magic_tables[sq as usize] = MagicHashTable { table, shift, magic };
     }
 
-    move_database
+    magic_tables
 }
 
-pub fn save_blockers_table_bin(filename: &str, blockers_table: &BlockersTable) {
+pub fn save_magic_hash_table_bin(filename: &str, tables: &[MagicHashTable; Square::Count as usize]) {
     let full_path = Path::new(SAVE_PATH).join(filename);
-    let mut file = File::create(full_path).expect("Failed to create blockers_db file");
+    let file = File::create(full_path).expect("Failed to create magic hash table file");
+    let mut writer = BufWriter::new(file);
 
-    for square_data in blockers_table.iter() {
-        let num_entries = square_data.len() as u32;
-        file.write_all(&num_entries.to_le_bytes()).unwrap();
+    for table in tables.iter() {
+        let vec_len = table.table.len() as u32;
+        writer.write_all(&vec_len.to_le_bytes()).unwrap();
 
-        for (&blockers, &attacks) in square_data {
-            file.write_all(&blockers.to_le_bytes()).unwrap();
-            file.write_all(&attacks.to_le_bytes()).unwrap();
+        for &bitboard in &table.table {
+            writer.write_all(&bitboard.to_le_bytes()).unwrap();
         }
+        writer.write_all(&table.shift.to_le_bytes()).unwrap();
+        writer.write_all(&table.magic.to_le_bytes()).unwrap();
     }
 }
 

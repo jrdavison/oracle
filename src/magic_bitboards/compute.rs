@@ -1,5 +1,5 @@
 use crate::bitboards::{self, Bitboard};
-use crate::magic_bitboards::{AttackMaskTable, BlockersTable};
+use crate::magic_bitboards::AttackMaskTable;
 use crate::utils::{File, Rank, Square};
 use rand::Rng;
 use std::collections::{HashMap, HashSet};
@@ -185,9 +185,8 @@ fn jumping_attacks(sq: Square, directions: &[(i8, i8)]) -> Bitboard {
 }
 
 pub fn generate_rook_attack_tables() -> BitboardLookupTables {
-    // let mut rook_moves: [HashMap<Bitboard, Bitboard>; Square::Count as usize] = std::array::from_fn(|_| HashMap::new());
     let mut orthog_masks = [Bitboard::default(); Square::Count as usize];
-    let mut rook_magics = [MagicHashTable::default(); Square::Count as usize];
+    let mut rook_magics = std::array::from_fn(|_| MagicHashTable::default());
 
     for sq in Square::iter() {
         let start = Instant::now();
@@ -210,29 +209,26 @@ pub fn generate_rook_attack_tables() -> BitboardLookupTables {
 }
 
 pub fn generate_bishop_attack_tables() -> BitboardLookupTables {
-    let mut bishop_moves: [HashMap<Bitboard, Bitboard>; Square::Count as usize] =
-        std::array::from_fn(|_| HashMap::new());
     let mut diagonal_masks = [Bitboard::default(); Square::Count as usize];
+    let mut bishop_magics = std::array::from_fn(|_| MagicHashTable::default());
 
     for sq in Square::iter() {
         let start = Instant::now();
         let mask = bishop_attacks(sq, 0, true);
         diagonal_masks[sq as usize] = mask;
+
+        let mut bishop_moves = HashMap::new();
         for blockers in generate_relevant_blockers(mask) {
             let attacks = bishop_attacks(sq, blockers, false);
-            bishop_moves[sq as usize].insert(blockers, attacks);
+            bishop_moves.insert(blockers, attacks);
         }
-        println!(
-            "Computed {} moves for square {:?}. Done in {:?} seconds.",
-            bishop_moves[sq as usize].len(),
-            sq,
-            start.elapsed()
-        );
+        println!("Computed {} moves for square {:?}. Done in {:?} seconds.", bishop_moves.len(), sq, start.elapsed());
+        bishop_magics[sq as usize] = compute_magic_number(bishop_moves, std::time::Duration::from_secs(30));
     }
 
-    BitboardLookupTables {
+    BitboardLookupTables{
         masks: diagonal_masks,
-        blockers: bishop_moves,
+        magics: bishop_magics,
     }
 }
 

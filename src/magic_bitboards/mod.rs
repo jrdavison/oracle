@@ -7,18 +7,14 @@ use crate::magic_bitboards::compute::{
     KING_DIRECTIONS, KNIGHT_DIRECTIONS, WHITE_PAWN_ATTACKS, custom_hash
 };
 use crate::magic_bitboards::storage::{
-    load_attack_masks_bin, load_blockers_lookup_bin, save_attack_masks_bin, save_blockers_table_bin,
+    load_attack_masks_bin, load_magic_hash_table_bin, save_attack_masks_bin, save_magic_hash_table_bin,
 };
 use crate::utils::{Color, Square};
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
 use std::error::Error;
 
 pub type AttackMaskTable = [Bitboard; Square::Count as usize];
-pub type BlockersTable = [HashMap<Bitboard, Bitboard>; Square::Count as usize];
 pub type MagicBlockersTable = [MagicHashTable; Square::Count as usize]; // TODO: better names
-
-const HASH_MULTIPLIER: u64 = 0x9e3779b97f4a7c15;
 
 pub static LOOKUP_TABLES: LookupTables = LookupTables {
     diagonal_masks: Lazy::new(|| load_attack_masks_bin("diagonal_masks.bin")),
@@ -31,11 +27,11 @@ pub static LOOKUP_TABLES: LookupTables = LookupTables {
         Lazy::new(|| load_attack_masks_bin("black_pawn_attack_masks.bin")),
     ],
 
-    rook_blockers_lookup: Lazy::new(|| generate_perfect_blockers_table("rook_blockers_table.bin")),
-    bishop_blockers_lookup: Lazy::new(|| generate_perfect_blockers_table("bishop_blockers_table.bin")),
+    rook_blockers_lookup: Lazy::new(|| load_magic_hash_table_bin("rook_blockers_table.bin")),
+    bishop_blockers_lookup: Lazy::new(|| load_magic_hash_table_bin("bishop_blockers_table.bin")),
 };
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Default)]
 pub struct MagicHashTable {
     pub table: Vec<Bitboard>,
     pub shift: usize,
@@ -103,46 +99,15 @@ pub fn precompute() -> Result<(), Box<dyn Error>> {
     println!("Generating rook tables..");
     let rook_tables = generate_rook_attack_tables();
     save_attack_masks_bin("orthogonal_masks.bin", &rook_tables.masks);
-    save_blockers_table_bin("rook_blockers_table.bin", &rook_tables.blockers);
+    save_magic_hash_table_bin("rook_blockers_table.bin", &rook_tables.magics);
     println!("Saved rook tables.");
 
     println!();
     println!("Generating bishop tables...");
     let bishop_tables = generate_bishop_attack_tables();
     save_attack_masks_bin("diagonal_masks.bin", &bishop_tables.masks);
-    save_blockers_table_bin("bishop_blockers_table.bin", &bishop_tables.blockers);
+    save_magic_hash_table_bin("bishop_blockers_table.bin", &bishop_tables.magics);
     println!("Saved bishop tables.");
 
     Ok(())
 }
-
-// TODO: rename this
-// fn generate_perfect_blockers_table(path: &str) -> MagicBlockersTable {
-//     let blockers = load_blockers_lookup_bin(path);
-
-//     let mut magic_blockers = std::array::from_fn(|_| MagicHashTable {
-//         table: Vec::new(),
-//         num_keys: 0,
-//     });
-
-//     for sq in Square::iter() {
-//         let blockers_map = &blockers[sq as usize];
-//         let magic_hash = &mut magic_blockers[sq as usize];
-//         magic_hash.num_keys = blockers_map.len();
-//         let mut collisions = 0;
-
-//         for (blockers, attacks) in blockers_map {
-//             let hash_index = magic_hash.custom_hash(*blockers);
-//             if hash_index >= magic_hash.table.len() {
-//                 magic_hash.table.resize_with(hash_index + 1, || 0);
-//             }
-//             if magic_hash.table[hash_index as usize] != 0 {
-//                 collisions += 1;
-//             }
-//             magic_hash.table[hash_index as usize] = *attacks;
-//         }
-
-//         println!("Collisions for {:?}: {}", sq, collisions);
-//     }
-//     magic_blockers
-// }

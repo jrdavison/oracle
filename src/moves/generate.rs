@@ -27,7 +27,6 @@ pub fn compute_valid_moves(pos: &mut Position, color: Color) {
         let piece = pos.board[sq as usize];
         let piece_type = Piece::type_of(piece);
 
-        let start = std::time::Instant::now();
         let mut computed_moves = match piece_type {
             PieceType::Pawn => compute_pawn_moves(pos, sq),
             PieceType::Knight => compute_knight_moves(sq),
@@ -37,7 +36,7 @@ pub fn compute_valid_moves(pos: &mut Position, color: Color) {
             PieceType::King => compute_king_moves(sq),
             _ => ComputedMoves::default(),
         };
-        println!("Time elapsed for {:?}: {:?}", piece_type, start.elapsed());
+
         /*
         TODO: check if move puts king in check (diagonal and horizontal pins)
 
