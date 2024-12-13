@@ -1,5 +1,5 @@
 use crate::bitboards::Bitboards;
-use crate::moves::generate;
+use crate::moves::compute;
 use crate::moves::info::MoveInfo;
 use crate::utils::{Color, Direction, File, MoveType, Piece, PieceType, Rank, Square};
 use std::time::{Duration, Instant};
@@ -87,7 +87,7 @@ impl Position {
 
     pub fn compute_valid_moves(&mut self, color: Color) {
         let start = Instant::now();
-        generate::compute_valid_moves(self, color);
+        compute::compute_valid_moves(self, color);
         self.compute_time = start.elapsed();
     }
 

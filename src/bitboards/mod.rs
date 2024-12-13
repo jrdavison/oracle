@@ -2,6 +2,9 @@
 https://tearth.dev/bitboard-viewer/
 */
 
+pub mod magics;
+mod storage;
+
 use crate::utils::{Color, File, Rank, Square};
 
 pub type Bitboard = u64;

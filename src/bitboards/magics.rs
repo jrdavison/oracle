@@ -1,23 +1,80 @@
-use crate::bitboards::{self, Bitboard};
-use crate::magic_bitboards::AttackMaskTable;
-use crate::utils::{File, Rank, Square};
+use super::{Bitboard, is_bit_set, set_bit};
+use super::storage;
+use crate::utils::{File, Rank,Color, Square};
+use once_cell::sync::Lazy;
+use std::error::Error;
 use rand::Rng;
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
-use super::MagicHashTable;
+pub type AttackMaskTable = [Bitboard; Square::Count as usize];
+pub type MagicBlockersTable = [MagicHashTable; Square::Count as usize];
 
 const HORIZONTAL_MASK: Bitboard = 0xFF;
 const VERTICAL_MASK: Bitboard = 0x0101010101010101;
+const KNIGHT_DIRECTIONS: [(i8, i8); 8] = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, 2), (-1, -2)];
+const KING_DIRECTIONS: [(i8, i8); 8] = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)];
+const WHITE_PAWN_ATTACKS: [(i8, i8); 2] = [(1, 1), (1, -1)];
+const BLACK_PAWN_ATTACKS: [(i8, i8); 2] = [(-1, 1), (-1, -1)];
 
-pub const KNIGHT_DIRECTIONS: [(i8, i8); 8] = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, 2), (-1, -2)];
-pub const KING_DIRECTIONS: [(i8, i8); 8] = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)];
-pub const WHITE_PAWN_ATTACKS: [(i8, i8); 2] = [(1, 1), (1, -1)];
-pub const BLACK_PAWN_ATTACKS: [(i8, i8); 2] = [(-1, 1), (-1, -1)];
+pub static LOOKUP_TABLES: LookupTables = LookupTables {
+    diagonal_masks: Lazy::new(|| storage::load_attack_masks_bin("diagonal_masks.bin")),
+    orthogonal_masks: Lazy::new(|| storage::load_attack_masks_bin("orthogonal_masks.bin")),
 
+    king_masks: Lazy::new(|| storage::load_attack_masks_bin("king_masks.bin")),
+    knight_masks: Lazy::new(|| storage::load_attack_masks_bin("knight_masks.bin")),
+    pawn_attack_masks: [
+        Lazy::new(|| storage::load_attack_masks_bin("white_pawn_attack_masks.bin")),
+        Lazy::new(|| storage::load_attack_masks_bin("black_pawn_attack_masks.bin")),
+    ],
+
+    rook_blockers_lookup: Lazy::new(|| storage::load_magic_hash_table_bin("rook_blockers_table.bin")),
+    bishop_blockers_lookup: Lazy::new(|| storage::load_magic_hash_table_bin("bishop_blockers_table.bin")),
+};
 pub struct BitboardLookupTables {
-    pub masks: AttackMaskTable,
-    pub magics: [MagicHashTable; Square::Count as usize],
+    masks: AttackMaskTable,
+    magics: MagicBlockersTable,
+}
+
+#[derive(Clone, Default)]
+pub struct MagicHashTable {
+    pub magic: usize,
+    pub shift: usize,
+    pub table: Vec<Bitboard>,
+}
+
+impl MagicHashTable {
+    pub fn get(&self, key: Bitboard) -> Bitboard {
+        let index = custom_hash(key, self.magic, self.shift);
+        self.table[index]
+    }
+}
+
+pub struct LookupTables {
+    // masks
+    pub diagonal_masks: Lazy<AttackMaskTable>,
+    pub orthogonal_masks: Lazy<AttackMaskTable>,
+
+    pub king_masks: Lazy<AttackMaskTable>,
+    pub knight_masks: Lazy<AttackMaskTable>,
+    pub pawn_attack_masks: [Lazy<AttackMaskTable>; Color::Both as usize],
+
+    // blocker tables
+    pub rook_blockers_lookup: Lazy<MagicBlockersTable>,
+    pub bishop_blockers_lookup: Lazy<MagicBlockersTable>,
+}
+
+impl LookupTables {
+    pub fn load_all() {
+        Lazy::force(&LOOKUP_TABLES.diagonal_masks);
+        Lazy::force(&LOOKUP_TABLES.orthogonal_masks);
+        Lazy::force(&LOOKUP_TABLES.king_masks);
+        Lazy::force(&LOOKUP_TABLES.knight_masks);
+        Lazy::force(&LOOKUP_TABLES.pawn_attack_masks[Color::White as usize]);
+        Lazy::force(&LOOKUP_TABLES.pawn_attack_masks[Color::Black as usize]);
+        Lazy::force(&LOOKUP_TABLES.rook_blockers_lookup);
+        Lazy::force(&LOOKUP_TABLES.bishop_blockers_lookup);
+    }
 }
 
 fn remove_edge_bits(mask: &mut Bitboard, sq: Square) {
@@ -62,8 +119,8 @@ fn rook_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboard 
     let mut east_file = file + 1u8;
     while east_file != File::Count {
         let dest_sq = Square::make_square(east_file, rank);
-        attack_mask = bitboards::set_bit(attack_mask, dest_sq);
-        if bitboards::is_bit_set(blockers, dest_sq) {
+        attack_mask = set_bit(attack_mask, dest_sq);
+        if is_bit_set(blockers, dest_sq) {
             break;
         }
         east_file = east_file + 1u8;
@@ -72,8 +129,8 @@ fn rook_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboard 
     let mut west_file = file - 1u8;
     while west_file != File::Count {
         let dest_sq = Square::make_square(west_file, rank);
-        attack_mask = bitboards::set_bit(attack_mask, dest_sq);
-        if bitboards::is_bit_set(blockers, dest_sq) {
+        attack_mask = set_bit(attack_mask, dest_sq);
+        if is_bit_set(blockers, dest_sq) {
             break;
         }
         west_file = west_file - 1;
@@ -82,8 +139,8 @@ fn rook_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboard 
     let mut north_rank = rank + 1u8;
     while north_rank != Rank::Count {
         let dest_sq = Square::make_square(file, north_rank);
-        attack_mask = bitboards::set_bit(attack_mask, dest_sq);
-        if bitboards::is_bit_set(blockers, dest_sq) {
+        attack_mask = set_bit(attack_mask, dest_sq);
+        if is_bit_set(blockers, dest_sq) {
             break;
         }
         north_rank = north_rank + 1u8;
@@ -92,8 +149,8 @@ fn rook_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboard 
     let mut south_rank = rank - 1u8;
     while south_rank != Rank::Count {
         let dest_sq = Square::make_square(file, south_rank);
-        attack_mask = bitboards::set_bit(attack_mask, dest_sq);
-        if bitboards::is_bit_set(blockers, dest_sq) {
+        attack_mask = set_bit(attack_mask, dest_sq);
+        if is_bit_set(blockers, dest_sq) {
             break;
         }
         south_rank = south_rank - 1u8;
@@ -116,8 +173,8 @@ fn bishop_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboar
     let mut ne_rank = rank + 1u8;
     while ne_file != File::Count && ne_rank != Rank::Count {
         let dest_sq = Square::make_square(ne_file, ne_rank);
-        attack_mask = bitboards::set_bit(attack_mask, dest_sq);
-        if bitboards::is_bit_set(blockers, dest_sq) {
+        attack_mask = set_bit(attack_mask, dest_sq);
+        if is_bit_set(blockers, dest_sq) {
             break;
         }
         ne_file = ne_file + 1u8;
@@ -128,8 +185,8 @@ fn bishop_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboar
     let mut se_rank = rank - 1u8;
     while se_file != File::Count && se_rank != Rank::Count {
         let dest_sq = Square::make_square(se_file, se_rank);
-        attack_mask = bitboards::set_bit(attack_mask, dest_sq);
-        if bitboards::is_bit_set(blockers, dest_sq) {
+        attack_mask = set_bit(attack_mask, dest_sq);
+        if is_bit_set(blockers, dest_sq) {
             break;
         }
         se_file = se_file + 1u8;
@@ -140,8 +197,8 @@ fn bishop_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboar
     let mut sw_rank = rank - 1u8;
     while sw_file != File::Count && sw_rank != Rank::Count {
         let dest_sq = Square::make_square(sw_file, sw_rank);
-        attack_mask = bitboards::set_bit(attack_mask, dest_sq);
-        if bitboards::is_bit_set(blockers, dest_sq) {
+        attack_mask = set_bit(attack_mask, dest_sq);
+        if is_bit_set(blockers, dest_sq) {
             break;
         }
         sw_file = sw_file - 1u8;
@@ -152,8 +209,8 @@ fn bishop_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboar
     let mut nw_rank = rank + 1u8;
     while nw_file != File::Count && nw_rank != Rank::Count {
         let dest_sq = Square::make_square(nw_file, nw_rank);
-        attack_mask = bitboards::set_bit(attack_mask, dest_sq);
-        if bitboards::is_bit_set(blockers, dest_sq) {
+        attack_mask = set_bit(attack_mask, dest_sq);
+        if is_bit_set(blockers, dest_sq) {
             break;
         }
         nw_file = nw_file - 1u8;
@@ -177,7 +234,7 @@ fn jumping_attacks(sq: Square, directions: &[(i8, i8)]) -> Bitboard {
         let dest_file = file + df;
         if dest_file != File::Count && dest_rank != Rank::Count {
             let dest_sq = Square::make_square(dest_file, dest_rank);
-            attacks = bitboards::set_bit(attacks, dest_sq);
+            attacks = set_bit(attacks, dest_sq);
         }
     }
     attacks
@@ -292,4 +349,45 @@ pub fn custom_hash(key: Bitboard, magic: usize, shift: usize) -> usize {
     let key = key as u64;
     let index = (key.wrapping_mul(magic)) >> (64 - shift.ilog2());
     index as usize
+}
+
+
+pub fn compute() -> Result<(), Box<dyn Error>> {
+    println!("Precomputing moves...");
+
+    println!();
+    println!("Generating knight masks...");
+    let knight_attacks = generate_jumping_attacks_db(&KNIGHT_DIRECTIONS);
+    storage::save_attack_masks_bin("knight_masks.bin", &knight_attacks);
+    println!("Saved knight masks.");
+
+    println!();
+    println!("Generating king masks...");
+    let king_attacks = generate_jumping_attacks_db(&KING_DIRECTIONS);
+    storage::save_attack_masks_bin("king_masks.bin", &king_attacks);
+    println!("Saved king attacks.");
+
+    println!();
+    println!("Generating pawn attack masks..");
+    let w_pawn_attacks = generate_jumping_attacks_db(&WHITE_PAWN_ATTACKS);
+    storage::save_attack_masks_bin("white_pawn_attack_masks.bin", &w_pawn_attacks);
+    let b_pawn_attacks = generate_jumping_attacks_db(&BLACK_PAWN_ATTACKS);
+    storage::save_attack_masks_bin("black_pawn_attack_masks.bin", &b_pawn_attacks);
+    println!("Saved pawn attacks.");
+
+    println!();
+    println!("Generating rook tables..");
+    let rook_tables = generate_rook_attack_tables();
+    storage::save_attack_masks_bin("orthogonal_masks.bin", &rook_tables.masks);
+    storage::save_magic_hash_table_bin("rook_blockers_table.bin", &rook_tables.magics);
+    println!("Saved rook tables.");
+
+    println!();
+    println!("Generating bishop tables...");
+    let bishop_tables = generate_bishop_attack_tables();
+    storage::save_attack_masks_bin("diagonal_masks.bin", &bishop_tables.masks);
+    storage::save_magic_hash_table_bin("bishop_blockers_table.bin", &bishop_tables.magics);
+    println!("Saved bishop tables.");
+
+    Ok(())
 }

@@ -1,19 +1,19 @@
-use crate::bitboards::Bitboard;
-use crate::magic_bitboards::{AttackMaskTable, MagicHashTable};
 use crate::utils::Square;
 use include_dir::{include_dir, Dir};
 use std::fs::File;
 use std::io::{Write, Cursor, Read, BufWriter};
 use std::path::Path;
+use super::Bitboard;
+use super::magics::{AttackMaskTable, MagicBlockersTable, MagicHashTable};
 
 const SAVE_PATH: &str = "./data/";
 static DATA_DIR: Dir = include_dir!("data/");
 
-pub fn load_magic_hash_table_bin(path: &str) -> [MagicHashTable; Square::Count as usize] {
+pub fn load_magic_hash_table_bin(path: &str) -> MagicBlockersTable {
     let file = DATA_DIR.get_file(path).expect("Failed to get file");
     let mut reader = Cursor::new(file.contents());
 
-    let mut magic_tables: [MagicHashTable; Square::Count as usize] =
+    let mut magic_tables: MagicBlockersTable =
         std::array::from_fn(|_| MagicHashTable::default());
 
     for sq in Square::iter() {
@@ -43,7 +43,7 @@ pub fn load_magic_hash_table_bin(path: &str) -> [MagicHashTable; Square::Count a
     magic_tables
 }
 
-pub fn save_magic_hash_table_bin(filename: &str, tables: &[MagicHashTable; Square::Count as usize]) {
+pub fn save_magic_hash_table_bin(filename: &str, tables: &MagicBlockersTable) {
     let full_path = Path::new(SAVE_PATH).join(filename);
     let file = File::create(full_path).expect("Failed to create magic hash table file");
     let mut writer = BufWriter::new(file);

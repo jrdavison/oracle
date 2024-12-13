@@ -2,7 +2,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod bitboards;
-mod magic_bitboards;
 mod moves;
 mod position;
 mod ui;
@@ -21,9 +20,9 @@ struct Cli {
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Cli::parse();
     if args.gen_magics {
-        magic_bitboards::precompute()?;
+        bitboards::magics::compute()?;
     } else {
-        magic_bitboards::LOOKUP_TABLES.load_all();
+        bitboards::magics::LookupTables::load_all();
         ui::run_application()?;
     }
     Ok(())
