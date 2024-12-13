@@ -364,7 +364,12 @@ impl Compute {
                 let attacks = compute_attacks(sq, blockers, false);
                 moves.insert(blockers, attacks);
             }
-            println!("Precomputed {} moves for square {:?} in {:?}", moves.len(), sq, start.elapsed());
+            println!(
+                "Precomputed {} moves for square {:?} in {:?}",
+                moves.len(),
+                sq,
+                start.elapsed()
+            );
             magics[sq as usize] = MagicHashTable::compute_magic_number(moves);
         }
 
