@@ -1,7 +1,6 @@
 use crate::moves::info::MoveInfo;
 use crate::position::Position;
-use crate::utils::Piece;
-use crate::utils::{Color, File, Rank, Square};
+use crate::utils::{Color, File, Piece, Rank, Square};
 use itertools::Itertools;
 use num_traits::FromPrimitive;
 use slint::VecModel;

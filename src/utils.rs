@@ -1,8 +1,7 @@
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 use std::fmt;
-use std::ops::Not;
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Mul, Not, Sub};
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
