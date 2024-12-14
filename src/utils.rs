@@ -1,12 +1,10 @@
-use core::panic;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 use std::fmt;
-use std::ops::{Add, Mul, Sub};
-use std::ops::{Index, IndexMut, Not};
+use std::ops::{Add, Mul, Not, Sub};
 
 #[repr(u8)]
-#[derive(Clone, PartialEq, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum MoveType {
     #[default]
     Invalid,
@@ -20,25 +18,29 @@ pub enum MoveType {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq, ToPrimitive)]
 pub enum Color {
     White,
     Black,
+
+    #[default]
     Both = 2,
 }
 
 impl Not for Color {
     type Output = Color;
+
     fn not(self) -> Color {
         let inverted = !(self as u8) & 1;
-        Color::from_u8(inverted).expect("Invalid color")
+        Color::from_u8(inverted).unwrap_or_default()
     }
 }
-
 #[repr(u8)]
-#[derive(Debug, FromPrimitive, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
 pub enum PieceType {
+    #[default]
     Empty,
+
     King,
     Queen,
     Bishop,
@@ -63,18 +65,19 @@ impl PieceType {
 
     pub fn make_notation_string(&self) -> &str {
         match self {
-            PieceType::Pawn | PieceType::Empty => "",
+            PieceType::Pawn => "",
             PieceType::King => "K",
             PieceType::Queen => "Q",
             PieceType::Bishop => "B",
             PieceType::Knight => "N",
             PieceType::Rook => "R",
+            PieceType::Empty => "???",
         }
     }
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive, PartialEq, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq, ToPrimitive)]
 pub enum Piece {
     #[default]
     Empty,
@@ -95,24 +98,24 @@ pub enum Piece {
 
 impl Piece {
     pub fn make_piece(pt: PieceType, c: Color) -> Piece {
-        Piece::from_u8((pt as u8) + ((c as u8) << 3)).expect("Cannot make piece")
+        Piece::from_u8((pt as u8) + ((c as u8) << 3)).unwrap_or_default()
     }
 
     pub fn color_of(piece: Piece) -> Color {
         if piece == Piece::Empty {
             return Color::Both;
         }
-        Color::from_u8((piece as u8) >> 3).expect("Cannot get color of piece")
+        Color::from_u8((piece as u8) >> 3).unwrap_or_default()
     }
 
     pub fn type_of(piece: Piece) -> PieceType {
-        PieceType::from_u8(piece as u8 & 0b111).expect("Cannot get type of piece")
+        PieceType::from_u8(piece as u8 & 0b111).unwrap_or_default()
     }
 }
 
 #[repr(u8)]
 #[rustfmt::skip]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, PartialOrd, Default)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq, PartialOrd)]
 pub enum Square {
     A1, B1, C1, D1, E1, F1, G1, H1,
     A2, B2, C2, D2, E2, F2, G2, H2,
@@ -125,19 +128,6 @@ pub enum Square {
 
     #[default]
     Count = 64,
-}
-
-impl Index<Square> for [Piece; Square::Count as usize] {
-    type Output = Piece;
-    fn index(&self, index: Square) -> &Piece {
-        &self[index as usize]
-    }
-}
-
-impl IndexMut<Square> for [Piece; Square::Count as usize] {
-    fn index_mut(&mut self, index: Square) -> &mut Piece {
-        &mut self[index as usize]
-    }
 }
 
 impl Add<Direction> for Square {
@@ -156,35 +146,38 @@ impl Add<Direction> for Square {
             return Square::Count;
         }
 
-        Square::from_i8(new_sq).expect("Cannot add direction to square")
+        Square::from_i8(new_sq).unwrap_or_default()
     }
 }
 
 impl Square {
     pub fn make_square(file: File, rank: Rank) -> Square {
-        Square::from_u8((rank as u8) << 3 | (file as u8)).expect("Cannot make square")
+        Square::from_u8((rank as u8) << 3 | (file as u8)).unwrap_or_default()
     }
 
     pub fn rank_of(sq: Square) -> Rank {
-        Rank::from_u8((sq as u8) >> 3).expect("Cannot get rank of square")
+        Rank::from_u8((sq as u8) >> 3).unwrap_or_default()
     }
 
     pub fn file_of(sq: Square) -> File {
-        File::from_u8(sq as u8 & 0b111).expect("Cannot get file of square")
+        File::from_u8(sq as u8 & 0b111).unwrap_or_default()
     }
 
     pub fn iter() -> impl Iterator<Item = Square> {
-        (0..(Square::Count as usize)).map(|i| Square::from_u8(i as u8).unwrap())
+        (0..(Square::Count as usize)).filter_map(|i| Square::from_u8(i as u8))
     }
 
-    pub fn is_valid(sq: i8) -> bool {
+    fn is_valid(sq: i8) -> bool {
         Square::A1 as i8 <= sq && sq < Square::Count as i8
     }
 }
 
 #[repr(i8)]
-#[derive(Clone, Copy, Debug, PartialEq, FromPrimitive)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
 pub enum Direction {
+    #[default]
+    Invalid,
+
     North = 8,
     East = 1,
     South = -8,
@@ -195,7 +188,7 @@ impl Not for Direction {
     type Output = Direction;
     fn not(self) -> Direction {
         let inverted = -(self as i8);
-        Direction::from_i8(inverted).expect("Cannot invert direction")
+        Direction::from_i8(inverted).unwrap_or_default()
     }
 }
 
@@ -204,13 +197,13 @@ impl Direction {
         match c {
             Color::White => Direction::North,
             Color::Black => Direction::South,
-            _ => panic!("Invalid color"),
+            _ => Direction::Invalid,
         }
     }
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
 pub enum File {
     FileA,
     FileB,
@@ -220,17 +213,19 @@ pub enum File {
     FileF,
     FileG,
     FileH,
+
+    #[default]
     Count = 8,
 }
 
 impl File {
     pub fn from_x(x: f32) -> File {
         let file = (x.floor() as i32) / 80; // TODO: don't hardcode square size
-        File::from_i32(file).expect("Cannot get file from x")
+        File::from_i32(file).unwrap_or_default()
     }
 
     pub fn iter() -> impl Iterator<Item = File> {
-        (0..(File::Count as usize)).map(|i| File::from_u8(i as u8).unwrap())
+        (0..(File::Count as usize)).filter_map(|i| File::from_u8(i as u8))
     }
 
     pub fn make_notation_string(&self) -> &str {
@@ -243,7 +238,7 @@ impl File {
             File::FileF => "f",
             File::FileG => "g",
             File::FileH => "h",
-            _ => panic!("Invalid file"),
+            _ => "???",
         }
     }
 }
@@ -251,26 +246,26 @@ impl File {
 impl Add<u8> for File {
     type Output = File;
     fn add(self, rhs: u8) -> File {
-        File::from_u8(self as u8 + rhs).unwrap_or(File::Count)
+        File::from_u8(self as u8 + rhs).unwrap_or_default()
     }
 }
 
 impl Sub<u8> for File {
     type Output = File;
     fn sub(self, rhs: u8) -> File {
-        File::from_u8((self as u8).wrapping_sub(rhs)).unwrap_or(File::Count)
+        File::from_u8((self as u8).wrapping_sub(rhs)).unwrap_or_default()
     }
 }
 
 impl Add<i8> for File {
     type Output = File;
     fn add(self, rhs: i8) -> File {
-        File::from_i8(self as i8 + rhs).unwrap_or(File::Count)
+        File::from_i8(self as i8 + rhs).unwrap_or_default()
     }
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
 pub enum Rank {
     Rank1,
     Rank2,
@@ -280,31 +275,27 @@ pub enum Rank {
     Rank6,
     Rank7,
     Rank8,
+
+    #[default]
     Count = 8,
 }
 
 impl Rank {
     pub fn from_y(y: f32) -> Rank {
         let rank = 7 - (y.floor() as i32 / 80); // TODO: don't hardcode square size
-        Rank::from_i32(rank).expect("Cannot get rank from y")
+        Rank::from_i32(rank).unwrap_or_default()
     }
 
     pub fn relative_rank(color: Color, rank: Rank) -> Rank {
         match color {
             Color::White => rank,
             Color::Black => Rank::Rank8 - (rank as u8),
-            _ => panic!("Invalid color"),
+            _ => Rank::Count,
         }
     }
 
-    pub fn iter() -> impl Iterator<Item = Rank> {
-        (0..(Rank::Count as usize)).map(|i| Rank::from_u8(i as u8).unwrap())
-    }
-
     pub fn iter_reverse() -> impl Iterator<Item = Rank> {
-        (0..(Rank::Count as usize))
-            .rev()
-            .map(|i| Rank::from_u8(i as u8).unwrap())
+        (0..(Rank::Count as usize)).rev().filter_map(|i| Rank::from_u8(i as u8))
     }
 
     pub fn make_notation_string(&self) -> &str {
@@ -317,7 +308,7 @@ impl Rank {
             Rank::Rank6 => "6",
             Rank::Rank7 => "7",
             Rank::Rank8 => "8",
-            _ => panic!("Invalid rank"),
+            _ => "???",
         }
     }
 }
@@ -325,28 +316,28 @@ impl Rank {
 impl Add<u8> for Rank {
     type Output = Rank;
     fn add(self, rhs: u8) -> Rank {
-        Rank::from_u8(self as u8 + rhs).unwrap_or(Rank::Count)
+        Rank::from_u8(self as u8 + rhs).unwrap_or_default()
     }
 }
 
 impl Sub<u8> for Rank {
     type Output = Rank;
     fn sub(self, rhs: u8) -> Rank {
-        Rank::from_u8((self as u8).wrapping_sub(rhs)).unwrap_or(Rank::Count)
+        Rank::from_u8((self as u8).wrapping_sub(rhs)).unwrap_or_default()
     }
 }
 
 impl Add<i8> for Rank {
     type Output = Rank;
     fn add(self, rhs: i8) -> Rank {
-        Rank::from_i8(self as i8 + rhs).unwrap_or(Rank::Count)
+        Rank::from_i8(self as i8 + rhs).unwrap_or_default()
     }
 }
 
 impl Mul<u8> for Rank {
     type Output = Rank;
     fn mul(self, rhs: u8) -> Rank {
-        Rank::from_u8(self as u8 * rhs).unwrap_or(Rank::Count)
+        Rank::from_u8(self as u8 * rhs).unwrap_or_default()
     }
 }
 

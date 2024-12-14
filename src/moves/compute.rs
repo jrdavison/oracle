@@ -1,8 +1,5 @@
+use crate::bitboards::LOOKUP_TABLES;
 use crate::bitboards::{self, Bitboard};
-use crate::magic_bitboards::{
-    BISHOP_BLOCKERS_LOOKUP, DIAGONAL_MASKS, KING_MASKS, KNIGHT_MASKS, ORTHOGONAL_MASKS, PAWN_ATTACK_MASKS,
-    ROOK_BLOCKERS_LOOKUP,
-};
 use crate::position::Position;
 use crate::utils::{Color, Direction, Piece, PieceType, Rank, Square};
 use std::ops::BitOr;
@@ -27,19 +24,18 @@ impl BitOr for ComputedMoves {
 pub fn compute_valid_moves(pos: &mut Position, color: Color) {
     let mut attacks = 0;
     for sq in Square::iter() {
-        let piece = pos.board[sq];
+        let piece = pos.board[sq as usize];
         let piece_type = Piece::type_of(piece);
-        let mut computed_moves = ComputedMoves::default();
 
-        match piece_type {
-            PieceType::Pawn => computed_moves = compute_pawn_moves(pos, sq),
-            PieceType::Knight => computed_moves = compute_knight_moves(sq),
-            PieceType::Rook => computed_moves = compute_rook_moves(pos, sq),
-            PieceType::Bishop => computed_moves = compute_bishop_moves(pos, sq),
-            PieceType::Queen => computed_moves = compute_rook_moves(pos, sq) | compute_bishop_moves(pos, sq),
-            PieceType::King => computed_moves = compute_king_moves(sq),
-            _ => {}
-        }
+        let mut computed_moves = match piece_type {
+            PieceType::Pawn => compute_pawn_moves(pos, sq),
+            PieceType::Knight => compute_knight_moves(sq),
+            PieceType::Rook => compute_rook_moves(pos, sq),
+            PieceType::Bishop => compute_bishop_moves(pos, sq),
+            PieceType::Queen => compute_rook_moves(pos, sq) | compute_bishop_moves(pos, sq),
+            PieceType::King => compute_king_moves(sq),
+            _ => ComputedMoves::default(),
+        };
 
         /*
         TODO: check if move puts king in check (diagonal and horizontal pins)
@@ -59,7 +55,7 @@ pub fn compute_valid_moves(pos: &mut Position, color: Color) {
 fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
     let mut valid_moves = 0;
 
-    let piece = pos.board[sq];
+    let piece = pos.board[sq as usize];
     let color = Piece::color_of(piece);
     let forward = Direction::forward_direction(color);
 
@@ -72,7 +68,7 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
 
         target_sq = target_sq + forward;
         if (target_sq != Square::Count) && !pos.bitboards.is_checkers_sq_set(Color::Both, target_sq) {
-            bitboards::set_bit(&mut valid_moves, target_sq);
+            valid_moves = bitboards::set_bit(valid_moves, target_sq);
         } else {
             break;
         }
@@ -80,41 +76,37 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
 
     let mut enemy_checkers = pos.bitboards.get_checkers(!color);
     if pos.en_passant_square != Square::Count {
-        bitboards::set_bit(&mut enemy_checkers, pos.en_passant_square);
+        enemy_checkers = bitboards::set_bit(enemy_checkers, pos.en_passant_square);
     }
-    let attacks = PAWN_ATTACK_MASKS[color as usize][sq as usize] & enemy_checkers;
+    let attacks = LOOKUP_TABLES.get_pawn_attack_mask(color, sq) & enemy_checkers;
     valid_moves |= attacks;
 
     ComputedMoves { valid_moves, attacks }
 }
 
 fn compute_knight_moves(sq: Square) -> ComputedMoves {
-    let valid_moves = KNIGHT_MASKS[sq as usize];
+    let attacks = LOOKUP_TABLES.get_knight_mask(sq);
     ComputedMoves {
-        valid_moves,
-        attacks: valid_moves,
+        attacks,
+        valid_moves: attacks,
     }
 }
 
 fn compute_rook_moves(pos: &Position, sq: Square) -> ComputedMoves {
-    let move_mask = ORTHOGONAL_MASKS[sq as usize];
+    let move_mask = LOOKUP_TABLES.get_orthogonal_mask(sq);
     let blocker_key = pos.bitboards.get_checkers(Color::Both) & move_mask;
-    let valid_moves = *ROOK_BLOCKERS_LOOKUP[sq as usize]
-        .get(&blocker_key)
-        .unwrap_or(&Bitboard::default());
+    let attacks = LOOKUP_TABLES.get_rook_mask(sq, blocker_key);
 
     ComputedMoves {
-        valid_moves,
-        attacks: valid_moves,
+        attacks,
+        valid_moves: attacks,
     }
 }
 
 fn compute_bishop_moves(pos: &Position, sq: Square) -> ComputedMoves {
-    let diagonal_mask = DIAGONAL_MASKS[sq as usize];
+    let diagonal_mask = LOOKUP_TABLES.get_diagonal_mask(sq);
     let blocker_key = pos.bitboards.get_checkers(Color::Both) & diagonal_mask;
-    let attacks = *BISHOP_BLOCKERS_LOOKUP[sq as usize]
-        .get(&blocker_key)
-        .unwrap_or(&Bitboard::default());
+    let attacks = LOOKUP_TABLES.get_bishop_mask(sq, blocker_key);
 
     ComputedMoves {
         valid_moves: attacks,
@@ -124,9 +116,9 @@ fn compute_bishop_moves(pos: &Position, sq: Square) -> ComputedMoves {
 
 fn compute_king_moves(sq: Square) -> ComputedMoves {
     // TODO: castling
-    let valid_moves = KING_MASKS[sq as usize];
+    let attacks = LOOKUP_TABLES.get_king_mask(sq);
     ComputedMoves {
-        valid_moves,
-        attacks: valid_moves,
+        attacks,
+        valid_moves: attacks,
     }
 }

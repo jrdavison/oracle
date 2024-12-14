@@ -2,10 +2,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod bitboards;
-mod magic_bitboards;
 mod moves;
 mod position;
-mod slint_interface;
+mod ui;
 mod utils;
 
 use clap::Parser;
@@ -21,10 +20,10 @@ struct Cli {
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Cli::parse();
     if args.gen_magics {
-        magic_bitboards::precompute()?;
+        bitboards::tables::compute()?;
     } else {
-        magic_bitboards::load_precomputed_moves();
-        slint_interface::run_application()?;
+        bitboards::tables::force_load(&bitboards::LOOKUP_TABLES);
+        ui::run_application()?;
     }
     Ok(())
 }

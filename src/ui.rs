@@ -1,7 +1,6 @@
 use crate::moves::info::MoveInfo;
 use crate::position::Position;
-use crate::utils::Piece;
-use crate::utils::{Color, File, Rank, Square};
+use crate::utils::{Color, File, Piece, Rank, Square};
 use itertools::Itertools;
 use num_traits::FromPrimitive;
 use slint::VecModel;
@@ -12,7 +11,7 @@ use std::rc::Rc;
 slint::include_modules!();
 
 pub fn run_application() -> Result<(), Box<dyn Error>> {
-    let ui = AppWindow::new().unwrap();
+    let ui = AppWindow::new()?;
 
     // start: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
     let position = Rc::new(RefCell::new(Position::new(
@@ -30,9 +29,10 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
 
     let side_to_move = pos.side_to_move();
     let last_move = pos.last_move();
+    let board_i32 = pos.board.iter().map(|&piece| piece as i32).collect::<Vec<_>>();
 
     ui.set_board_state(BoardState {
-        board: Rc::new(VecModel::from(pos.board_i32())).into(),
+        board: Rc::new(VecModel::from(board_i32)).into(),
         last_move_from: last_move.from as i32,
         last_move_to: last_move.to as i32,
     });
@@ -57,9 +57,12 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
     ui.global::<RustInterface>().on_highlight_valid_move_sq({
         let position_weak = position_weak.clone();
         move |from, to| {
-            let position = position_weak.upgrade().unwrap();
+            let position = position_weak.upgrade().expect("could not upgrade position");
             let position = position.borrow();
-            position.valid_move(Square::from_u8(from as u8).unwrap(), Square::from_u8(to as u8).unwrap())
+            position.valid_move(
+                Square::from_u8(from as u8).unwrap_or_default(),
+                Square::from_u8(to as u8).unwrap_or_default(),
+            )
         }
     });
 
@@ -73,12 +76,12 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
         let position_weak = position_weak.clone();
         let ui_weak = ui_weak.clone();
         move |src: i32, dest: i32| {
-            let ui = ui_weak.upgrade().unwrap();
-            let position = position_weak.upgrade().unwrap();
+            let ui = ui_weak.upgrade().expect("could not upgrade ui");
+            let position = position_weak.upgrade().expect("could not upgrade position");
             let mut position_mut = position.borrow_mut();
 
-            let src_sq = Square::from_u8(src as u8).unwrap();
-            let dest_sq = Square::from_u8(dest as u8).unwrap();
+            let src_sq = Square::from_u8(src as u8).unwrap_or_default();
+            let dest_sq = Square::from_u8(dest as u8).unwrap_or_default();
 
             let move_info = position_mut.move_piece(src_sq, dest_sq, true);
             drop(position_mut);
@@ -94,8 +97,8 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
         let position_weak = position_weak.clone();
         let ui_weak = ui_weak.clone();
         move || {
-            let position = position_weak.upgrade().unwrap();
-            let ui = ui_weak.upgrade().unwrap();
+            let position = position_weak.upgrade().expect("could not upgrade position");
+            let ui = ui_weak.upgrade().expect("could not upgrade ui");
             let mut position_mut = position.borrow_mut();
 
             let undo_success = position_mut.undo_move();
@@ -111,8 +114,8 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
         let position_weak = position_weak.clone();
         let ui_weak = ui_weak.clone();
         move || {
-            let position = position_weak.upgrade().unwrap();
-            let ui = ui_weak.upgrade().unwrap();
+            let position = position_weak.upgrade().expect("could not upgrade position");
+            let ui = ui_weak.upgrade().expect("could not upgrade ui");
             let mut position_mut = position.borrow_mut();
 
             let redo_success = position_mut.redo_move();

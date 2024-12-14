@@ -42,7 +42,7 @@ impl MoveInfo {
                 } else if from_file != to_file {
                     move_type = MoveType::EnPassant;
                     capture_piece_sq = to + Direction::forward_direction(!color);
-                    captured_piece = position.board[capture_piece_sq];
+                    captured_piece = position.board[capture_piece_sq as usize];
                 } else {
                     move_type = MoveType::Quiet;
                 }
@@ -134,7 +134,7 @@ fn disambiguate_move(info: &MoveInfo, position: &Position) -> String {
         }
     }
 
-    let formatted_string = if bitboards::is_bit_set(&common_moves, info.to) && piece_sqs.len() > 1 {
+    let formatted_string = if bitboards::is_bit_set(common_moves, info.to) && piece_sqs.len() > 1 {
         let files = piece_sqs.iter().map(|&sq| Square::file_of(sq)).collect::<Vec<File>>();
         let ranks = piece_sqs.iter().map(|&sq| Square::rank_of(sq)).collect::<Vec<Rank>>();
         let files_are_same = files.iter().all(|&file| file == files[0]);
