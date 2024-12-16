@@ -74,11 +74,8 @@ fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
         }
     }
 
-    let mut enemy_checkers = pos.bitboards.get_checkers(!color);
-    if pos.en_passant_square != Square::Count {
-        enemy_checkers = bitboards::set_bit(enemy_checkers, pos.en_passant_square);
-    }
-    let attacks = LOOKUP_TABLES.get_pawn_attack_mask(color, sq) & enemy_checkers;
+    let enemy_checkers= pos.bitboards.get_checkers(!color);
+    let attacks = LOOKUP_TABLES.get_pawn_attack_mask(color, sq) & bitboards::set_bit(enemy_checkers, pos.en_passant_square);
     valid_moves |= attacks;
 
     ComputedMoves { valid_moves, attacks }
