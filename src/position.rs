@@ -8,6 +8,7 @@ pub struct Position {
     pub bitboards: Bitboards,
     pub board: [Piece; Square::Count as usize],
     pub en_passant_square: Square,
+    pub king_squares: [Square; Color::Both as usize],
 
     move_history: Vec<MoveInfo>,
     redo_history: Vec<MoveInfo>,
@@ -24,6 +25,7 @@ impl Default for Position {
             bitboards: Bitboards::default(),
             board: [Piece::Empty; Square::Count as usize],
             en_passant_square: Square::Count,
+            king_squares: [Square::Count; Color::Both as usize],
 
             move_history: Vec::new(),
             redo_history: Vec::new(),
@@ -98,6 +100,7 @@ impl Position {
 
         let move_info = MoveInfo::new(self, from, to);
         let moved_piece_color = Piece::color_of(move_info.moved_piece);
+        let moved_piece_type = Piece::type_of(move_info.moved_piece);
 
         // en passant only valid for one move
         self.en_passant_square = Square::Count;
@@ -131,6 +134,10 @@ impl Position {
                 }
             }
             MoveType::Quiet | MoveType::Invalid => {}
+        }
+
+        if moved_piece_type == PieceType::King {
+            self.king_squares[moved_piece_color as usize] = move_info.to;
         }
 
         if self.side_to_move == Color::Black {
@@ -181,6 +188,11 @@ impl Position {
                 MoveType::Invalid => panic!("Invalid move"),
             }
 
+            let moved_piece_type = Piece::type_of(last_move.moved_piece);
+            if moved_piece_type == PieceType::King {
+                self.king_squares[color as usize] = last_move.from;
+            }
+
             self.side_to_move = !self.side_to_move;
             self.halfmove_clock = last_move.halfmove_clock;
             self.fullmove_count = last_move.fullmove_count;
@@ -229,6 +241,11 @@ fn init_from_fen(fen: &str) -> Position {
                 let piece_type = PieceType::make_piece_type(c);
                 position.board[sq as usize] = Piece::make_piece(piece_type, color);
                 position.bitboards.set_checkers(color, sq);
+
+                if piece_type == PieceType::King {
+                    position.king_squares[color as usize] = sq;
+                }
+
                 file = file + 1u8;
             }
         }

@@ -21,62 +21,71 @@ impl BitOr for ComputedMoves {
     }
 }
 
-pub fn compute_valid_moves(pos: &mut Position, color: Color) {
-    let mut attacks = 0;
+pub fn compute_valid_moves(pos: &mut Position, turn_color: Color) {
+    let mut attacks = [Bitboard::default(); Color::Both as usize];
     for sq in Square::iter() {
         let piece = pos.board[sq as usize];
         let piece_type = Piece::type_of(piece);
-
-        let mut computed_moves = match piece_type {
-            PieceType::Pawn => compute_pawn_moves(pos, sq),
-            PieceType::Knight => compute_knight_moves(sq),
-            PieceType::Rook => compute_rook_moves(pos, sq),
-            PieceType::Bishop => compute_bishop_moves(pos, sq),
-            PieceType::Queen => compute_rook_moves(pos, sq) | compute_bishop_moves(pos, sq),
-            PieceType::King => compute_king_moves(sq),
-            _ => ComputedMoves::default(),
-        };
-
-        /*
-        TODO: check if move puts king in check (diagonal and horizontal pins)
-
-        we will need to copy the position and then use that to simulate the move. Then we check if the king is in
-        check. We can probably do this without having to recalculate the moves for the entire board though...
-        */
-
-        computed_moves.valid_moves &= !pos.bitboards.get_checkers(color);
-        pos.bitboards.set_valid_moves(sq, computed_moves.valid_moves);
-        attacks |= computed_moves.attacks;
+        if piece_type != PieceType::Empty  {            
+            let piece_color = Piece::color_of(piece);
+    
+            let mut computed_moves = match piece_type {
+                PieceType::Pawn => compute_pawn_moves(pos, sq, piece_color),
+                PieceType::Knight => compute_knight_moves(sq),
+                PieceType::Rook => compute_rook_moves(pos, sq),
+                PieceType::Bishop => compute_bishop_moves(pos, sq),
+                PieceType::Queen => compute_rook_moves(pos, sq) | compute_bishop_moves(pos, sq),
+                _ => ComputedMoves::default(),
+            };
+    
+            /*
+            TODO: check if move puts king in check (diagonal and horizontal pins)
+    
+            we will need to copy the position and then use that to simulate the move. Then we check if the king is in
+            check. We can probably do this without having to recalculate the moves for the entire board though...
+            */
+    
+            computed_moves.valid_moves &= !pos.bitboards.get_checkers(piece_color);
+            pos.bitboards.set_valid_moves(sq, computed_moves.valid_moves);
+            attacks[piece_color as usize] |= computed_moves.attacks;
+        }
     }
+    let enemy_color = !turn_color;
+    let enemy_king_moves = compute_king_moves(pos, enemy_color);
+    pos.bitboards.set_valid_moves(pos.king_squares[enemy_color as usize], enemy_king_moves.valid_moves);
+    attacks[enemy_color as usize] |= enemy_king_moves.attacks;
+    pos.bitboards.set_attacks(enemy_color, attacks[enemy_color as usize]);
 
-    pos.bitboards.set_attacks(color, attacks);
+    let friendly_king_moves = compute_king_moves(pos, turn_color);
+    pos.bitboards.set_valid_moves(pos.king_squares[turn_color as usize], friendly_king_moves.valid_moves);
+    attacks[turn_color as usize] |= friendly_king_moves.attacks;
+    pos.bitboards.set_attacks(turn_color, attacks[turn_color as usize]);
 }
 
-fn compute_pawn_moves(pos: &Position, sq: Square) -> ComputedMoves {
+fn compute_pawn_moves(pos: &Position, sq: Square, color: Color) -> ComputedMoves {
     let mut valid_moves = 0;
-
-    let piece = pos.board[sq as usize];
-    let color = Piece::color_of(piece);
     let forward = Direction::forward_direction(color);
 
     let mut target_sq = sq;
-    for i in 0..2 {
-        // only allow double move from starting rank
-        if i == 1 && (Rank::relative_rank(color, Square::rank_of(sq)) != Rank::Rank2) {
-            break;
-        }
-
-        target_sq = target_sq + forward;
-        if (target_sq != Square::Count) && !pos.bitboards.is_checkers_sq_set(Color::Both, target_sq) {
+    let start_rank = Rank::relative_rank(color, Square::rank_of(sq));
+    if start_rank == Rank::Rank2 {
+        for _ in 0..2 {
+            target_sq = target_sq + forward;
+            if target_sq == Square::Count || pos.bitboards.is_checkers_sq_set(Color::Both, target_sq) {
+                break;
+            }
             valid_moves = bitboards::set_bit(valid_moves, target_sq);
-        } else {
-            break;
+        }
+    } else {
+        target_sq = target_sq + forward;
+        if target_sq != Square::Count && !pos.bitboards.is_checkers_sq_set(Color::Both, target_sq) {
+            valid_moves = bitboards::set_bit(valid_moves, target_sq);
         }
     }
 
     let enemy_checkers= pos.bitboards.get_checkers(!color);
-    let attacks = LOOKUP_TABLES.get_pawn_attack_mask(color, sq) & bitboards::set_bit(enemy_checkers, pos.en_passant_square);
-    valid_moves |= attacks;
+    let attacks = LOOKUP_TABLES.get_pawn_attack_mask(color, sq);
+    valid_moves |= attacks & bitboards::set_bit(enemy_checkers, pos.en_passant_square);
 
     ComputedMoves { valid_moves, attacks }
 }
@@ -111,11 +120,13 @@ fn compute_bishop_moves(pos: &Position, sq: Square) -> ComputedMoves {
     }
 }
 
-fn compute_king_moves(sq: Square) -> ComputedMoves {
-    // TODO: castling
+fn compute_king_moves(pos: &Position, color: Color) -> ComputedMoves {
+    let sq = pos.king_squares[color as usize];
+
     let attacks = LOOKUP_TABLES.get_king_mask(sq);
-    ComputedMoves {
-        attacks,
-        valid_moves: attacks,
-    }
+    let valid_moves = attacks & !pos.bitboards.get_checkers(color) & !pos.bitboards.get_attacks(!color);
+
+    // TODO: castling
+
+    ComputedMoves { attacks, valid_moves }
 }
