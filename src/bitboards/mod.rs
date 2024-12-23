@@ -19,7 +19,7 @@ pub struct Bitboards {
 }
 
 impl Default for Bitboards {
-    fn default() -> Self {
+    fn default() -> Bitboards {
         Bitboards {
             valid_moves: [0; Square::Count as usize],
             checkers: [0; Color::Both as usize],
@@ -86,7 +86,7 @@ pub fn print_bitboard(bb: Bitboard) {
     for rank in Rank::iter_reverse() {
         print!("{}: ", rank);
         for file in File::iter() {
-            let sq = Square::make_square(file, rank);
+            let sq = Square::from(file, rank);
             if is_bit_set(bb, sq) {
                 print!("1 ");
             } else {

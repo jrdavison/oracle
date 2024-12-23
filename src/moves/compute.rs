@@ -85,7 +85,7 @@ fn compute_pawn_moves(pos: &Position, sq: Square, color: Color) -> ComputedMoves
 
     let enemy_checkers= pos.bitboards.get_checkers(!color);
     let attacks = LOOKUP_TABLES.get_pawn_attack_mask(color, sq);
-    valid_moves |= attacks & bitboards::set_bit(enemy_checkers, pos.en_passant_square);
+    valid_moves |= attacks & bitboards::set_bit(enemy_checkers, pos.en_passant_sq);
 
     ComputedMoves { valid_moves, attacks }
 }

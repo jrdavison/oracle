@@ -1,14 +1,16 @@
 use crate::bitboards::Bitboards;
 use crate::moves::compute;
 use crate::moves::info::MoveInfo;
-use crate::utils::{Color, Direction, File, MoveType, Piece, PieceType, Rank, Square};
+use crate::utils::{CastlingRights, Color, Direction, File, MoveType, Piece, PieceType, Rank, Square};
+use num_traits::FromPrimitive;
 use std::time::{Duration, Instant};
 
 pub struct Position {
     pub bitboards: Bitboards,
     pub board: [Piece; Square::Count as usize],
-    pub en_passant_square: Square,
+    pub en_passant_sq: Square,
     pub king_squares: [Square; Color::Both as usize],
+    castling_rights: CastlingRights,
 
     move_history: Vec<MoveInfo>,
     redo_history: Vec<MoveInfo>,
@@ -20,12 +22,13 @@ pub struct Position {
 }
 
 impl Default for Position {
-    fn default() -> Self {
+    fn default() -> Position {
         Position {
             bitboards: Bitboards::default(),
             board: [Piece::Empty; Square::Count as usize],
-            en_passant_square: Square::Count,
+            en_passant_sq: Square::Count,
             king_squares: [Square::Count; Color::Both as usize],
+            castling_rights: CastlingRights::default(),
 
             move_history: Vec::new(),
             redo_history: Vec::new(),
@@ -59,11 +62,11 @@ impl Position {
         format!("{:?}", self.compute_time)
     }
 
-    pub fn en_passant_square(&self) -> String {
-        if self.en_passant_square == Square::Count {
+    pub fn en_passant_sq(&self) -> String {
+        if self.en_passant_sq == Square::Count {
             "-".into()
         } else {
-            format!("{:?}", self.en_passant_square)
+            format!("{:?}", self.en_passant_sq)
         }
     }
 
@@ -103,7 +106,7 @@ impl Position {
         let moved_piece_type = Piece::type_of(move_info.moved_piece);
 
         // en passant only valid for one move
-        self.en_passant_square = Square::Count;
+        self.en_passant_sq = Square::Count;
 
         // move piece
         self.board[move_info.to as usize] = move_info.moved_piece;
@@ -118,7 +121,7 @@ impl Position {
             }
             MoveType::TwoSquarePush => {
                 let enemy_forward = Direction::forward_direction(!moved_piece_color);
-                self.en_passant_square = move_info.to + enemy_forward;
+                self.en_passant_sq = move_info.to + enemy_forward;
             }
             MoveType::EnPassant => {
                 let capture_color = Piece::color_of(move_info.captured_piece);
@@ -127,7 +130,7 @@ impl Position {
             }
             MoveType::Promotion => {
                 // TODO: give user option to choose promotion piece
-                self.board[move_info.to as usize] = Piece::make_piece(PieceType::Queen, moved_piece_color);
+                self.board[move_info.to as usize] = Piece::from(PieceType::Queen, moved_piece_color);
                 if Piece::color_of(move_info.captured_piece) != Color::Both {
                     self.bitboards
                         .unset_checkers(Piece::color_of(move_info.captured_piece), move_info.capture_piece_sq);
@@ -183,7 +186,7 @@ impl Position {
                     self.bitboards.set_checkers(color, last_move.from);
                     self.bitboards.unset_checkers(color, last_move.to);
                     self.bitboards.set_checkers(!color, last_move.capture_piece_sq);
-                    self.en_passant_square = last_move.to;
+                    self.en_passant_sq = last_move.to;
                 }
                 MoveType::Invalid => panic!("Invalid move"),
             }
@@ -194,6 +197,7 @@ impl Position {
             }
 
             self.side_to_move = !self.side_to_move;
+            self.en_passant_sq = last_move.en_passant_sq;
             self.halfmove_clock = last_move.halfmove_clock;
             self.fullmove_count = last_move.fullmove_count;
 
@@ -237,9 +241,9 @@ fn init_from_fen(fen: &str) -> Position {
             }
             _ => {
                 let color = if c.is_uppercase() { Color::White } else { Color::Black };
-                let sq = Square::make_square(file, rank);
-                let piece_type = PieceType::make_piece_type(c);
-                position.board[sq as usize] = Piece::make_piece(piece_type, color);
+                let sq = Square::from(file, rank);
+                let piece_type = PieceType::from_char(c);
+                position.board[sq as usize] = Piece::from(piece_type, color);
                 position.bitboards.set_checkers(color, sq);
 
                 if piece_type == PieceType::King {
@@ -257,11 +261,21 @@ fn init_from_fen(fen: &str) -> Position {
         _ => panic!("Invalid side to move"),
     };
 
-    // TODO: castling rights
-    let _ = fen_parts.next().unwrap_or("-");
+    let castling = fen_parts.next().unwrap_or("-");
+    let mut castling_mask = 0u8;
+    for c in castling.chars() {
+        match c {
+            'K' => castling_mask |= CastlingRights::WhiteOO as u8,
+            'Q' => castling_mask |= CastlingRights::WhiteOOO as u8,
+            'k' => castling_mask |= CastlingRights::BlackOO as u8,
+            'q' => castling_mask |= CastlingRights::BlackOOO as u8,
+            _ => {}
+        }
+    }
+    position.castling_rights = CastlingRights::from_u8(castling_mask).unwrap_or_default();
 
-    // TODO: en passant square
-    let _ = fen_parts.next().unwrap_or("-");
+    let en_passant_str = fen_parts.next().unwrap_or("-").to_lowercase();
+    position.en_passant_sq = Square::from_string(&en_passant_str);
 
     position.halfmove_clock = fen_parts.next().unwrap_or("0").parse::<i32>().unwrap_or(0);
     position.fullmove_count = fen_parts.next().unwrap_or("1").parse::<i32>().unwrap_or(1);

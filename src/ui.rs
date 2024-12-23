@@ -44,7 +44,7 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
         ui.set_dashboard_state(DashboardState {
             move_history: Rc::new(VecModel::from(move_history)).into(),
             halfmove_clock: pos.halfmove_clock(),
-            en_passant_square: pos.en_passant_square().into(),
+            en_passant_square: pos.en_passant_sq().into(),
             compute_time: pos.compute_time().into(),
         });
     }
@@ -69,7 +69,7 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
     ui.global::<RustInterface>().on_square_from_xy(|x: f32, y: f32| {
         let file = File::from_x(x);
         let rank = Rank::from_y(y);
-        Square::make_square(file, rank) as i32
+        Square::from(file, rank) as i32
     });
 
     ui.global::<RustInterface>().on_move_piece({

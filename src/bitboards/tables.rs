@@ -122,7 +122,7 @@ fn rook_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboard 
     // E
     let mut east_file = file + 1u8;
     while east_file != File::Count {
-        let dest_sq = Square::make_square(east_file, rank);
+        let dest_sq = Square::from(east_file, rank);
         attack_mask = set_bit(attack_mask, dest_sq);
         if is_bit_set(blockers, dest_sq) {
             break;
@@ -132,7 +132,7 @@ fn rook_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboard 
     // W
     let mut west_file = file - 1u8;
     while west_file != File::Count {
-        let dest_sq = Square::make_square(west_file, rank);
+        let dest_sq = Square::from(west_file, rank);
         attack_mask = set_bit(attack_mask, dest_sq);
         if is_bit_set(blockers, dest_sq) {
             break;
@@ -142,7 +142,7 @@ fn rook_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboard 
     // N
     let mut north_rank = rank + 1u8;
     while north_rank != Rank::Count {
-        let dest_sq = Square::make_square(file, north_rank);
+        let dest_sq = Square::from(file, north_rank);
         attack_mask = set_bit(attack_mask, dest_sq);
         if is_bit_set(blockers, dest_sq) {
             break;
@@ -152,7 +152,7 @@ fn rook_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboard 
     // S
     let mut south_rank = rank - 1u8;
     while south_rank != Rank::Count {
-        let dest_sq = Square::make_square(file, south_rank);
+        let dest_sq = Square::from(file, south_rank);
         attack_mask = set_bit(attack_mask, dest_sq);
         if is_bit_set(blockers, dest_sq) {
             break;
@@ -176,7 +176,7 @@ fn bishop_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboar
     let mut ne_file = file + 1u8;
     let mut ne_rank = rank + 1u8;
     while ne_file != File::Count && ne_rank != Rank::Count {
-        let dest_sq = Square::make_square(ne_file, ne_rank);
+        let dest_sq = Square::from(ne_file, ne_rank);
         attack_mask = set_bit(attack_mask, dest_sq);
         if is_bit_set(blockers, dest_sq) {
             break;
@@ -188,7 +188,7 @@ fn bishop_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboar
     let mut se_file = file + 1u8;
     let mut se_rank = rank - 1u8;
     while se_file != File::Count && se_rank != Rank::Count {
-        let dest_sq = Square::make_square(se_file, se_rank);
+        let dest_sq = Square::from(se_file, se_rank);
         attack_mask = set_bit(attack_mask, dest_sq);
         if is_bit_set(blockers, dest_sq) {
             break;
@@ -200,7 +200,7 @@ fn bishop_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboar
     let mut sw_file = file - 1u8;
     let mut sw_rank = rank - 1u8;
     while sw_file != File::Count && sw_rank != Rank::Count {
-        let dest_sq = Square::make_square(sw_file, sw_rank);
+        let dest_sq = Square::from(sw_file, sw_rank);
         attack_mask = set_bit(attack_mask, dest_sq);
         if is_bit_set(blockers, dest_sq) {
             break;
@@ -212,7 +212,7 @@ fn bishop_attacks(sq: Square, blockers: Bitboard, remove_edges: bool) -> Bitboar
     let mut nw_file = file - 1u8;
     let mut nw_rank = rank + 1u8;
     while nw_file != File::Count && nw_rank != Rank::Count {
-        let dest_sq = Square::make_square(nw_file, nw_rank);
+        let dest_sq = Square::from(nw_file, nw_rank);
         attack_mask = set_bit(attack_mask, dest_sq);
         if is_bit_set(blockers, dest_sq) {
             break;
@@ -237,7 +237,7 @@ fn jumping_attacks(sq: Square, directions: &[(i8, i8)]) -> Bitboard {
         let dest_rank = rank + dr;
         let dest_file = file + df;
         if dest_file != File::Count && dest_rank != Rank::Count {
-            let dest_sq = Square::make_square(dest_file, dest_rank);
+            let dest_sq = Square::from(dest_file, dest_rank);
             attacks = set_bit(attacks, dest_sq);
         }
     }
