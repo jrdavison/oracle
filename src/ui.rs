@@ -15,7 +15,7 @@ pub fn run_application() -> Result<(), Box<dyn Error>> {
 
     // start: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
     let position = Rc::new(RefCell::new(Position::new(
-        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "4k3/8/8/8/8/8/8/R3K2R b KQ - 0 1",
     )));
 
     set_application_state(&ui, &position, -1, true); // -1 no piece is being dragged
@@ -152,7 +152,7 @@ fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
                 if Piece::color_of(active_move.moved_piece) == Color::White {
                     len / 2
                 } else {
-                    (len / 2) - 1
+                    std::cmp::max(len / 2, 1) - 1
                 }
             }
         };
