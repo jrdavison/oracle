@@ -10,7 +10,7 @@ pub struct Position {
     pub board: [Piece; Square::Count as usize],
     pub en_passant_sq: Square,
     pub king_squares: [Square; Color::Both as usize],
-    castling_rights: CastlingRights,
+    pub castling_rights: CastlingRights,
 
     move_history: Vec<MoveInfo>,
     redo_history: Vec<MoveInfo>,

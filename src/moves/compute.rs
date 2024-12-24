@@ -1,8 +1,18 @@
-use crate::bitboards::LOOKUP_TABLES;
-use crate::bitboards::{self, Bitboard};
+use crate::bitboards::{self, Bitboard, LOOKUP_TABLES};
 use crate::position::Position;
-use crate::utils::{Color, Direction, Piece, PieceType, Rank, Square};
+use crate::utils::{CastlingRights, Color, Direction, Piece, PieceType, Rank, Square};
 use std::ops::BitOr;
+
+const KINGSIDE_CASTLE_MASKS: [Bitboard; Color::Both as usize] = [
+    0b01110000,       // white back rank
+    0b01110000 << 56, // black back rank
+];
+const QUEENSIDE_CASTLE_MASKS: [Bitboard; Color::Both as usize] = [
+    0b00011110,       // white back rank
+    0b00011110 << 56, // black back rank
+];
+const KINGSIDE_CASTLE_SQUARE: [Square; Color::Both as usize] = [Square::G1, Square::G8];
+const QUEENSIDE_CASTLE_SQUARE: [Square; Color::Both as usize] = [Square::C1, Square::C8];
 
 #[derive(Default)]
 pub struct ComputedMoves {
@@ -26,9 +36,9 @@ pub fn compute_valid_moves(pos: &mut Position, turn_color: Color) {
     for sq in Square::iter() {
         let piece = pos.board[sq as usize];
         let piece_type = Piece::type_of(piece);
-        if piece_type != PieceType::Empty  {            
+        if piece_type != PieceType::Empty {
             let piece_color = Piece::color_of(piece);
-    
+
             let mut computed_moves = match piece_type {
                 PieceType::Pawn => compute_pawn_moves(pos, sq, piece_color),
                 PieceType::Knight => compute_knight_moves(sq),
@@ -37,14 +47,14 @@ pub fn compute_valid_moves(pos: &mut Position, turn_color: Color) {
                 PieceType::Queen => compute_rook_moves(pos, sq) | compute_bishop_moves(pos, sq),
                 _ => ComputedMoves::default(),
             };
-    
+
             /*
             TODO: check if move puts king in check (diagonal and horizontal pins)
-    
+
             we will need to copy the position and then use that to simulate the move. Then we check if the king is in
             check. We can probably do this without having to recalculate the moves for the entire board though...
             */
-    
+
             computed_moves.valid_moves &= !pos.bitboards.get_checkers(piece_color);
             pos.bitboards.set_valid_moves(sq, computed_moves.valid_moves);
             attacks[piece_color as usize] |= computed_moves.attacks;
@@ -52,12 +62,14 @@ pub fn compute_valid_moves(pos: &mut Position, turn_color: Color) {
     }
     let enemy_color = !turn_color;
     let enemy_king_moves = compute_king_moves(pos, enemy_color);
-    pos.bitboards.set_valid_moves(pos.king_squares[enemy_color as usize], enemy_king_moves.valid_moves);
+    pos.bitboards
+        .set_valid_moves(pos.king_squares[enemy_color as usize], enemy_king_moves.valid_moves);
     attacks[enemy_color as usize] |= enemy_king_moves.attacks;
     pos.bitboards.set_attacks(enemy_color, attacks[enemy_color as usize]);
 
     let friendly_king_moves = compute_king_moves(pos, turn_color);
-    pos.bitboards.set_valid_moves(pos.king_squares[turn_color as usize], friendly_king_moves.valid_moves);
+    pos.bitboards
+        .set_valid_moves(pos.king_squares[turn_color as usize], friendly_king_moves.valid_moves);
     attacks[turn_color as usize] |= friendly_king_moves.attacks;
     pos.bitboards.set_attacks(turn_color, attacks[turn_color as usize]);
 }
@@ -83,7 +95,7 @@ fn compute_pawn_moves(pos: &Position, sq: Square, color: Color) -> ComputedMoves
         }
     }
 
-    let enemy_checkers= pos.bitboards.get_checkers(!color);
+    let enemy_checkers = pos.bitboards.get_checkers(!color);
     let attacks = LOOKUP_TABLES.get_pawn_attack_mask(color, sq);
     valid_moves |= attacks & bitboards::set_bit(enemy_checkers, pos.en_passant_sq);
 
@@ -122,9 +134,40 @@ fn compute_bishop_moves(pos: &Position, sq: Square) -> ComputedMoves {
 
 fn compute_king_moves(pos: &Position, color: Color) -> ComputedMoves {
     let sq = pos.king_squares[color as usize];
+    let enemy_attacks = pos.bitboards.get_attacks(!color);
+    let friendly_pieces = pos.bitboards.get_checkers(color);
 
     let attacks = LOOKUP_TABLES.get_king_mask(sq);
-    let valid_moves = attacks & !pos.bitboards.get_checkers(color) & !pos.bitboards.get_attacks(!color);
+    let mut valid_moves = attacks & !friendly_pieces & !enemy_attacks;
+
+    if pos.castling_rights != CastlingRights::NoCastling {
+        let kingside_castle_mask = KINGSIDE_CASTLE_MASKS[color as usize];
+        let kingside_castle_sq = KINGSIDE_CASTLE_SQUARE[color as usize];
+
+        let kingside = if color == Color::White {
+            CastlingRights::WhiteOO
+        } else {
+            CastlingRights::BlackOO
+        };
+        if pos.castling_rights & kingside != CastlingRights::NoCastling {
+            if (kingside_castle_mask & !friendly_pieces & !enemy_attacks) != 0 {
+                valid_moves = bitboards::set_bit(valid_moves, kingside_castle_sq);
+            };
+        }
+
+        let queenside_castle_mask = QUEENSIDE_CASTLE_MASKS[color as usize];
+        let queenside_castle_sq = QUEENSIDE_CASTLE_SQUARE[color as usize];
+        let queenside = if color == Color::White {
+            CastlingRights::WhiteOOO
+        } else {
+            CastlingRights::BlackOOO
+        };
+        if pos.castling_rights & queenside != CastlingRights::NoCastling {
+            if (queenside_castle_mask & !friendly_pieces & !enemy_attacks) != 0 {
+                valid_moves = bitboards::set_bit(valid_moves, queenside_castle_sq);
+            };
+        }
+    }
 
     // TODO: castling
 

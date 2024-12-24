@@ -1,7 +1,7 @@
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 use std::fmt;
-use std::ops::{Add, Mul, Not, Sub};
+use std::ops::{Add, BitAnd, Mul, Not, Sub};
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -382,8 +382,8 @@ impl fmt::Display for Rank {
     }
 }
 
-# [repr(u8)]
-#[derive(Clone, Copy, Debug, Default, FromPrimitive)]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
 pub enum CastlingRights {
     #[default]
     NoCastling = 0,
@@ -398,4 +398,12 @@ pub enum CastlingRights {
     WhiteCastling = 0b0011,
     BlackCastling = 0b1100,
     AllCastling = 0b1111,
+}
+
+impl BitAnd for CastlingRights {
+    type Output = CastlingRights;
+
+    fn bitand(self, rhs: CastlingRights) -> CastlingRights {
+        CastlingRights::from_u8(self as u8 & rhs as u8).unwrap_or_default()
+    }
 }
