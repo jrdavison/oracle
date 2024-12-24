@@ -155,7 +155,7 @@ impl Square {
         Square::from_u8((rank as u8) << 3 | (file as u8)).unwrap_or_default()
     }
 
-    pub fn from_string(square_str: &String) -> Square {
+    pub fn from_string(square_str: &str) -> Square {
         let mut chars = square_str.chars();
         let file = File::from_char(chars.next().unwrap_or(' '));
         let rank = Rank::from_char(chars.next().unwrap_or(' '));

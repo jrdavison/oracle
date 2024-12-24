@@ -149,10 +149,10 @@ fn compute_king_moves(pos: &Position, color: Color) -> ComputedMoves {
         } else {
             CastlingRights::BlackOO
         };
-        if pos.castling_rights & kingside != CastlingRights::NoCastling {
-            if (kingside_castle_mask & !friendly_pieces & !enemy_attacks) != 0 {
-                valid_moves = bitboards::set_bit(valid_moves, kingside_castle_sq);
-            };
+        if pos.castling_rights & kingside != CastlingRights::NoCastling
+            && (kingside_castle_mask & !friendly_pieces & !enemy_attacks) != 0
+        {
+            valid_moves = bitboards::set_bit(valid_moves, kingside_castle_sq);
         }
 
         let queenside_castle_mask = QUEENSIDE_CASTLE_MASKS[color as usize];
@@ -162,10 +162,10 @@ fn compute_king_moves(pos: &Position, color: Color) -> ComputedMoves {
         } else {
             CastlingRights::BlackOOO
         };
-        if pos.castling_rights & queenside != CastlingRights::NoCastling {
-            if (queenside_castle_mask & !friendly_pieces & !enemy_attacks) != 0 {
-                valid_moves = bitboards::set_bit(valid_moves, queenside_castle_sq);
-            };
+        if pos.castling_rights & queenside != CastlingRights::NoCastling
+            && (queenside_castle_mask & !friendly_pieces & !enemy_attacks) != 0
+        {
+            valid_moves = bitboards::set_bit(valid_moves, queenside_castle_sq);
         }
     }
 
