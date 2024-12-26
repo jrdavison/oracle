@@ -13,7 +13,7 @@ pub enum MoveType {
     Capture,
     EnPassant,
     TwoSquarePush,
-    // Castle,
+    Castle,
     Promotion,
 }
 
@@ -405,5 +405,13 @@ impl BitAnd for CastlingRights {
 
     fn bitand(self, rhs: CastlingRights) -> CastlingRights {
         CastlingRights::from_u8(self as u8 & rhs as u8).unwrap_or_default()
+    }
+}
+
+impl CastlingRights {
+    pub fn unset_castling_rights(&mut self, rights_to_unset: CastlingRights) {
+        let current = *self as u8;
+        let mask = !(rights_to_unset as u8);
+        *self = CastlingRights::from_u8(current & mask).unwrap_or_default();
     }
 }

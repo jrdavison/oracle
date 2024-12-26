@@ -136,11 +136,44 @@ impl Position {
                         .unset_checkers(Piece::color_of(move_info.captured_piece), move_info.capture_piece_sq);
                 }
             }
+            MoveType::Castle => {
+                let (rook_from, rook_to) = match move_info.to {
+                    Square::G1 => (Square::H1, Square::F1),
+                    Square::C1 => (Square::A1, Square::D1),
+                    Square::G8 => (Square::H8, Square::F8),
+                    Square::C8 => (Square::A8, Square::D8),
+                    _ => (Square::Count, Square::Count),
+                };
+
+                self.board[rook_to as usize] = self.board[rook_from as usize];
+                self.board[rook_from as usize] = Piece::Empty;
+                self.bitboards.unset_checkers(moved_piece_color, rook_from);
+                self.bitboards.set_checkers(moved_piece_color, rook_to);
+            }
             MoveType::Quiet | MoveType::Invalid => {}
         }
 
         if moved_piece_type == PieceType::King {
             self.king_squares[moved_piece_color as usize] = move_info.to;
+            let rights_to_unset = match moved_piece_color {
+                Color::White => CastlingRights::WhiteCastling,
+                Color::Black => CastlingRights::BlackCastling,
+                _ => CastlingRights::default(),
+            };
+            self.castling_rights.unset_castling_rights(rights_to_unset);
+            // TODO: get this working again if we redo moves
+        }
+
+        if moved_piece_type == PieceType::Rook {
+            // if rook is moved from starting square, unset castling rights
+            let rights_to_unset = match (moved_piece_color, move_info.from) {
+                (Color::White, Square::A1) => CastlingRights::WhiteOOO,
+                (Color::White, Square::H1) => CastlingRights::WhiteOO,
+                (Color::Black, Square::A8) => CastlingRights::BlackOOO,
+                (Color::Black, Square::H8) => CastlingRights::BlackOO,
+                _ => CastlingRights::default(),
+            };
+            self.castling_rights.unset_castling_rights(rights_to_unset);
         }
 
         if self.side_to_move == Color::Black {
@@ -187,6 +220,27 @@ impl Position {
                     self.bitboards.unset_checkers(color, last_move.to);
                     self.bitboards.set_checkers(!color, last_move.capture_piece_sq);
                     self.en_passant_sq = last_move.to;
+                }
+                MoveType::Castle => {
+                    let (rook_from, rook_to) = match last_move.to {
+                        Square::G1 => (Square::H1, Square::F1),
+                        Square::C1 => (Square::A1, Square::D1),
+                        Square::G8 => (Square::H8, Square::F8),
+                        Square::C8 => (Square::A8, Square::D8),
+                        _ => (Square::Count, Square::Count),
+                    };
+
+                    // reset king
+                    self.board[last_move.from as usize] = last_move.moved_piece;
+                    self.board[last_move.to as usize] = Piece::Empty;
+                    self.bitboards.set_checkers(color, last_move.from);
+                    self.bitboards.unset_checkers(color, last_move.to);
+
+                    // reset rook
+                    self.board[rook_from as usize] = self.board[rook_to as usize];
+                    self.board[rook_to as usize] = Piece::Empty;
+                    self.bitboards.set_checkers(color, rook_from);
+                    self.bitboards.unset_checkers(color, rook_to);
                 }
                 MoveType::Invalid => panic!("Invalid move"),
             }

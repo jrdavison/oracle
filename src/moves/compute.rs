@@ -3,6 +3,9 @@ use crate::position::Position;
 use crate::utils::{CastlingRights, Color, Direction, Piece, PieceType, Rank, Square};
 use std::ops::BitOr;
 
+pub const KINGSIDE_CASTLE_SQUARES: [Square; Color::Both as usize] = [Square::G1, Square::G8];
+pub const QUEENSIDE_CASTLE_SQUARES: [Square; Color::Both as usize] = [Square::C1, Square::C8];
+
 const KINGSIDE_CASTLE_MASKS: [Bitboard; Color::Both as usize] = [
     0b01110000,       // white back rank
     0b01110000 << 56, // black back rank
@@ -11,8 +14,6 @@ const QUEENSIDE_CASTLE_MASKS: [Bitboard; Color::Both as usize] = [
     0b00011110,       // white back rank
     0b00011110 << 56, // black back rank
 ];
-const KINGSIDE_CASTLE_SQUARE: [Square; Color::Both as usize] = [Square::G1, Square::G8];
-const QUEENSIDE_CASTLE_SQUARE: [Square; Color::Both as usize] = [Square::C1, Square::C8];
 
 #[derive(Default)]
 pub struct ComputedMoves {
@@ -142,7 +143,7 @@ fn compute_king_moves(pos: &Position, color: Color) -> ComputedMoves {
 
     if pos.castling_rights != CastlingRights::NoCastling {
         let kingside_castle_mask = KINGSIDE_CASTLE_MASKS[color as usize];
-        let kingside_castle_sq = KINGSIDE_CASTLE_SQUARE[color as usize];
+        let kingside_castle_sq = KINGSIDE_CASTLE_SQUARES[color as usize];
 
         let kingside = if color == Color::White {
             CastlingRights::WhiteOO
@@ -156,7 +157,7 @@ fn compute_king_moves(pos: &Position, color: Color) -> ComputedMoves {
         }
 
         let queenside_castle_mask = QUEENSIDE_CASTLE_MASKS[color as usize];
-        let queenside_castle_sq = QUEENSIDE_CASTLE_SQUARE[color as usize];
+        let queenside_castle_sq = QUEENSIDE_CASTLE_SQUARES[color as usize];
         let queenside = if color == Color::White {
             CastlingRights::WhiteOOO
         } else {

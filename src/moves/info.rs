@@ -1,3 +1,4 @@
+use super::compute::{KINGSIDE_CASTLE_SQUARES, QUEENSIDE_CASTLE_SQUARES};
 use crate::bitboards;
 use crate::position::Position;
 use crate::utils::{Direction, File, MoveType, Piece, PieceType, Rank, Square};
@@ -21,10 +22,13 @@ impl MoveInfo {
     pub fn new(position: &Position, from: Square, to: Square) -> MoveInfo {
         let move_type;
         let moved_piece = position.board[from as usize];
+        let moved_piece_color = Piece::color_of(moved_piece);
+        let moved_piece_type = Piece::type_of(moved_piece);
+
         let mut captured_piece = position.board[to as usize];
         let mut capture_piece_sq = Square::Count;
 
-        match Piece::type_of(moved_piece) {
+        match moved_piece_type {
             PieceType::Pawn => {
                 let color = Piece::color_of(moved_piece);
                 let from_rank = Square::rank_of(from);
@@ -49,10 +53,13 @@ impl MoveInfo {
                 }
             }
             PieceType::King => {
-                // TODO: castling moves
                 if captured_piece != Piece::Empty {
                     move_type = MoveType::Capture;
                     capture_piece_sq = to;
+                } else if to == KINGSIDE_CASTLE_SQUARES[moved_piece_color as usize]
+                    || to == QUEENSIDE_CASTLE_SQUARES[moved_piece_color as usize]
+                {
+                    move_type = MoveType::Castle;
                 } else {
                     move_type = MoveType::Quiet;
                 }
