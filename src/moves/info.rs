@@ -116,6 +116,13 @@ impl MoveInfo {
                     format!("{}={}", to_square, PieceType::Queen.make_notation_string())
                 }
             }
+            MoveType::Castle => {
+                if self.to == KINGSIDE_CASTLE_SQUARES[Piece::color_of(self.moved_piece) as usize] {
+                    "O-O".into()
+                } else {
+                    "O-O-O".into()
+                }
+            }
             _ => "not handled".into(),
         };
 

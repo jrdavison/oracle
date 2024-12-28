@@ -14,9 +14,9 @@ pub fn run_application() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
 
     // start: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
-    let position = Rc::new(RefCell::new(Position::new("r3k2r/8/8/8/5Q2/8/8/4K3 b kq - 0 1")));
+    let position = Rc::new(RefCell::new(Position::new("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")));
 
-    set_application_state(&ui, &position, -1, true); //
+    set_application_state(&ui, &position, -1, true);
     init_callbacks(&ui, &position);
 
     Ok(ui.run()?)
@@ -137,17 +137,19 @@ fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
 
     let mut moves = chunk_move_history(&combined_history);
     if moves.is_empty() {
+        let white_str = if pos.side_to_move() == Color::White { "" } else { "..." };
         moves.push(SlintMoveInfo {
             move_no: 1,
-            white: "".into(),
+            white: white_str.into(),
             black: "".into(),
             active_move: 0,
         });
     } else if let Some(active_move) = history.last() {
+        let color = Piece::color_of(active_move.moved_piece);
         let fullmove_idx = match history.len() {
             0 => 0,
             len => {
-                if Piece::color_of(active_move.moved_piece) == Color::White {
+                if color == Color::White {
                     len / 2
                 } else {
                     std::cmp::max(len / 2, 1) - 1
@@ -156,7 +158,6 @@ fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
         };
 
         if let Some(move_ref) = moves.get_mut(fullmove_idx) {
-            let color = Piece::color_of(active_move.moved_piece);
             move_ref.active_move = if color == Color::White { 1 } else { 2 };
         }
     }

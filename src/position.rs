@@ -11,6 +11,7 @@ pub struct Position {
     pub en_passant_sq: Square,
     pub king_squares: [Square; Color::Both as usize],
     pub castling_rights: CastlingRights,
+    pub side_to_move: Color,
 
     move_history: Vec<MoveInfo>,
     redo_history: Vec<MoveInfo>,
@@ -18,7 +19,6 @@ pub struct Position {
     compute_time: Duration,
     fullmove_count: i32,
     halfmove_clock: i32,
-    side_to_move: Color,
 }
 
 impl Default for Position {
