@@ -142,35 +142,35 @@ fn compute_king_moves(pos: &Position, color: Color) -> ComputedMoves {
     let mut valid_moves = attacks & !friendly_pieces & !enemy_attacks;
 
     if pos.castling_rights != CastlingRights::NoCastling {
+        // use this wiki for test cases: https://en.wikipedia.org/wiki/Castling
+        let friendly_pieces_no_king = bitboards::clear_bit(friendly_pieces, sq);
+
         let kingside_castle_mask = KINGSIDE_CASTLE_MASKS[color as usize];
         let kingside_castle_sq = KINGSIDE_CASTLE_SQUARES[color as usize];
-
-        let kingside = if color == Color::White {
+        let kingside_rights_mask = if color == Color::White {
             CastlingRights::WhiteOO
         } else {
             CastlingRights::BlackOO
         };
-        if pos.castling_rights & kingside != CastlingRights::NoCastling
-            && (kingside_castle_mask & !friendly_pieces & !enemy_attacks) != 0
-        {
+        let kingside_rights = pos.castling_rights & kingside_rights_mask;
+        let kingside_blockers = kingside_castle_mask & (friendly_pieces_no_king | enemy_attacks);
+        if (kingside_rights != CastlingRights::NoCastling) && (kingside_blockers == 0) {
             valid_moves = bitboards::set_bit(valid_moves, kingside_castle_sq);
         }
 
         let queenside_castle_mask = QUEENSIDE_CASTLE_MASKS[color as usize];
         let queenside_castle_sq = QUEENSIDE_CASTLE_SQUARES[color as usize];
-        let queenside = if color == Color::White {
+        let queenside_rights_mask = if color == Color::White {
             CastlingRights::WhiteOOO
         } else {
             CastlingRights::BlackOOO
         };
-        if pos.castling_rights & queenside != CastlingRights::NoCastling
-            && (queenside_castle_mask & !friendly_pieces & !enemy_attacks) != 0
-        {
+        let queenside_rights = pos.castling_rights & queenside_rights_mask;
+        let queenside_blockers = queenside_castle_mask & (friendly_pieces_no_king | enemy_attacks);
+        if (queenside_rights != CastlingRights::NoCastling) && (queenside_blockers == 0) {
             valid_moves = bitboards::set_bit(valid_moves, queenside_castle_sq);
         }
     }
-
-    // TODO: castling
 
     ComputedMoves { attacks, valid_moves }
 }

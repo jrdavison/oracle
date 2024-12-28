@@ -14,9 +14,9 @@ pub fn run_application() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
 
     // start: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
-    let position = Rc::new(RefCell::new(Position::new("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1")));
+    let position = Rc::new(RefCell::new(Position::new("r3k2r/8/8/8/5Q2/8/8/4K3 b kq - 0 1")));
 
-    set_application_state(&ui, &position, -1, true); // -1 no piece is being dragged
+    set_application_state(&ui, &position, -1, true); //
     init_callbacks(&ui, &position);
 
     Ok(ui.run()?)
