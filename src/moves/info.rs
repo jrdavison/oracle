@@ -1,7 +1,7 @@
 use super::compute::{KINGSIDE_CASTLE_SQUARES, QUEENSIDE_CASTLE_SQUARES};
 use crate::bitboards;
 use crate::position::Position;
-use crate::utils::{Direction, File, MoveType, Piece, PieceType, Rank, Square};
+use crate::utils::{CastlingRights, Direction, File, MoveType, Piece, PieceType, Rank, Square};
 use slint::SharedString;
 
 #[derive(Clone, Debug, Default)]
@@ -13,6 +13,7 @@ pub struct MoveInfo {
     pub captured_piece: Piece,
     pub capture_piece_sq: Square,
     pub en_passant_sq: Square,
+    pub castling_rights: CastlingRights,
     pub fullmove_count: i32,
     pub halfmove_clock: i32,
     pub notation: SharedString,
@@ -82,6 +83,7 @@ impl MoveInfo {
             captured_piece,
             capture_piece_sq,
             en_passant_sq: position.en_passant_sq,
+            castling_rights: position.castling_rights,
             fullmove_count: position.fullmove_count(),
             halfmove_clock: position.halfmove_clock(),
             notation: SharedString::default(),

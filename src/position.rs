@@ -161,7 +161,6 @@ impl Position {
                 _ => CastlingRights::default(),
             };
             self.castling_rights.unset_castling_rights(rights_to_unset);
-            // TODO: get this working again if we redo moves
         }
 
         if moved_piece_type == PieceType::Rook {
@@ -252,6 +251,7 @@ impl Position {
 
             self.side_to_move = !self.side_to_move;
             self.en_passant_sq = last_move.en_passant_sq;
+            self.castling_rights = last_move.castling_rights;
             self.halfmove_clock = last_move.halfmove_clock;
             self.fullmove_count = last_move.fullmove_count;
 
