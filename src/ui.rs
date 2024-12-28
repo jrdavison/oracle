@@ -14,7 +14,9 @@ pub fn run_application() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
 
     // start: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
-    let position = Rc::new(RefCell::new(Position::new("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")));
+    let position = Rc::new(RefCell::new(Position::new(
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    )));
 
     set_application_state(&ui, &position, -1, true);
     init_callbacks(&ui, &position);
