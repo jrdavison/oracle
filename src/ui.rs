@@ -46,12 +46,13 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
 
     if compute_moves {
         let move_history = format_move_history(&pos);
-        pos.compute_valid_moves(side_to_move);
+        pos.compute_valid_moves();
+        let compute_time = format!("{} (Avg: {})", pos.compute_time(), pos.avg_compute_time());
         ui.set_dashboard_state(DashboardState {
             move_history: Rc::new(VecModel::from(move_history)).into(),
             halfmove_clock: pos.halfmove_clock(),
             en_passant_square: pos.en_passant_sq().into(),
-            compute_time: pos.compute_time().into(),
+            compute_time: compute_time.into(),
         });
     }
 }

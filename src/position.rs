@@ -8,15 +8,18 @@ use std::time::{Duration, Instant};
 pub struct Position {
     pub bitboards: Bitboards,
     pub board: [Piece; Square::Count as usize],
+    pub castling_rights: CastlingRights,
     pub en_passant_sq: Square,
     pub king_squares: [Square; Color::Both as usize],
-    pub castling_rights: CastlingRights,
     pub side_to_move: Color,
 
     move_history: Vec<MoveInfo>,
     redo_history: Vec<MoveInfo>,
 
     compute_time: Duration,
+    total_compute_time: Duration,
+    total_moves: u32,
+
     fullmove_count: i32,
     halfmove_clock: i32,
 }
@@ -26,14 +29,17 @@ impl Default for Position {
         Position {
             bitboards: Bitboards::default(),
             board: [Piece::Empty; Square::Count as usize],
+            castling_rights: CastlingRights::default(),
             en_passant_sq: Square::Count,
             king_squares: [Square::Count; Color::Both as usize],
-            castling_rights: CastlingRights::default(),
 
             move_history: Vec::new(),
             redo_history: Vec::new(),
 
             compute_time: Duration::default(),
+            total_compute_time: Duration::default(),
+            total_moves: 0,
+    
             fullmove_count: 1,
             halfmove_clock: 0,
             side_to_move: Color::White,
@@ -60,6 +66,10 @@ impl Position {
 
     pub fn compute_time(&self) -> String {
         format!("{:?}", self.compute_time)
+    }
+
+    pub fn avg_compute_time(&self) -> String {
+        format!("{:?}", self.total_compute_time / self.total_moves)
     }
 
     pub fn en_passant_sq(&self) -> String {
@@ -99,10 +109,13 @@ impl Position {
         self.bitboards.is_valid_move(from, to)
     }
 
-    pub fn compute_valid_moves(&mut self, color: Color) {
+    pub fn compute_valid_moves(&mut self) {
         let start = Instant::now();
-        compute::compute_valid_moves(self, color);
-        self.compute_time = start.elapsed();
+        compute::compute_valid_moves(self);
+        let delta = start.elapsed();
+        self.compute_time = delta;
+        self.total_compute_time += delta;
+        self.total_moves += 1;
     }
 
     pub fn move_piece(&mut self, from: Square, to: Square, clear_redo: bool) -> MoveInfo {
