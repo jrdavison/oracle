@@ -1,7 +1,6 @@
 export global Dimensions {
     out property <length> board_size: 640px;
     out property <length> sq_size: 80px;
-
     out property <length> dashboard_w: 400px;
 }
 
@@ -22,7 +21,6 @@ export global Palette {
 export global Font {
     out property <int> semi_bold: 600;
     out property <int> bold: 800;
-
     out property <length> font_size_lg: 28px;
     out property <length> font_size_md: 16px;
     out property <length> font_size_sm: 13px;
@@ -31,6 +29,7 @@ export global Font {
 export global Utils {
     out property <[int]> files: [1, 2, 3, 4, 5, 6, 7, 8];
     out property <[string]> ranks: ["a", "b", "c", "d", "e", "f", "g", "h"];
+    out property <int> square_count: 64;
 
     // TODO: this works but there has to be a better way to do this
     out property <[image]> piece_urls: [
@@ -50,23 +49,18 @@ export global Utils {
         @image-url("pieces/13.png"),
         @image-url("pieces/14.png"),
     ];
-
     public pure function square_to_x(sq: int, sq_width: length) -> length {
         Math.mod(sq, 8) * sq_width;
     }
-
     public pure function square_to_y(sq: int, sq_height: length) -> length {
         (7 - Math.floor(sq / 8)) * sq_height;
     }
-
     public pure function square_color(sq: int) -> int {
         return Math.mod(Math.floor(sq / 8) + sq, 2);
     }
-
     public pure function constrain_mouse_x(x: length) -> length {
         Math.min(Math.max(x, 0), Dimensions.board_size);
     }
-
     public pure function constrain_mouse_y(y: length) -> length {
         Math.min(Math.max(y, 0), Dimensions.board_size);
     }

@@ -174,7 +174,7 @@ impl Square {
         (0..(Square::Count as usize)).filter_map(|i| Square::from_u8(i as u8))
     }
 
-    fn is_valid(sq: i8) -> bool {
+    pub fn is_valid(sq: i8) -> bool {
         Square::A1 as i8 <= sq && sq < Square::Count as i8
     }
 }

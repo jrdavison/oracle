@@ -18,25 +18,31 @@ pub fn run_application() -> Result<(), Box<dyn Error>> {
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
     )));
 
-    set_application_state(&ui, &position, -1, true);
+    set_application_state(&ui, &position, Square::Count, true);
     init_callbacks(&ui, &position);
 
     Ok(ui.run()?)
 }
 
-fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragged_piece_sq: i32, compute_moves: bool) {
+fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragged_piece: Square, compute_moves: bool) {
     let mut pos = position.borrow_mut();
 
     let side_to_move = pos.side_to_move();
     let last_move = pos.last_move();
     let board_i32 = pos.board.iter().map(|&piece| piece as i32).collect::<Vec<_>>();
+    let check_sq = if pos.king_in_check(side_to_move) {
+        pos.king_squares[side_to_move as usize]
+    } else {
+        Square::default()
+    };
 
     ui.set_board_state(BoardState {
         board: Rc::new(VecModel::from(board_i32)).into(),
         last_move_from: last_move.from as i32,
         last_move_to: last_move.to as i32,
+        check_sq: check_sq as i32,
     });
-    ui.set_dragged_piece_sq(dragged_piece_sq);
+    ui.set_dragged_piece_sq(dragged_piece as i32);
 
     if compute_moves {
         let move_history = format_move_history(&pos);
@@ -88,7 +94,7 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
 
             let valid_move = move_info.is_valid();
             if valid_move {
-                set_application_state(&ui, &position, -1, valid_move);
+                set_application_state(&ui, &position, Square::Count, valid_move);
             }
         }
     });
@@ -105,7 +111,7 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
             drop(position_mut);
 
             if undo_success {
-                set_application_state(&ui, &position, -1, true);
+                set_application_state(&ui, &position, Square::Count, true);
             }
         }
     });
@@ -122,7 +128,7 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
             drop(position_mut);
 
             if redo_success {
-                set_application_state(&ui, &position, -1, true);
+                set_application_state(&ui, &position, Square::Count, true);
             }
         }
     });

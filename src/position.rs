@@ -1,4 +1,4 @@
-use crate::bitboards::Bitboards;
+use crate::bitboards::{self, Bitboards};
 use crate::moves::compute;
 use crate::moves::info::MoveInfo;
 use crate::utils::{CastlingRights, Color, Direction, File, MoveType, Piece, PieceType, Rank, Square};
@@ -82,7 +82,16 @@ impl Position {
         self.move_history.last().cloned().unwrap_or_default()
     }
 
+    pub fn king_in_check(&self, color: Color) -> bool {
+        let enemy_attacks = self.bitboards.get_attacks(!color);
+        let king_sq = self.king_squares[color as usize];
+        bitboards::is_bit_set(enemy_attacks, king_sq)
+    }
+
     pub fn valid_move(&self, from: Square, to: Square) -> bool {
+        if !Square::is_valid(from as i8) || !Square::is_valid(to as i8) {
+            return false;
+        }
         let piece = self.board[from as usize];
         if Piece::color_of(piece) != self.side_to_move {
             return false;
