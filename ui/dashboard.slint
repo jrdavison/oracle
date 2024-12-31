@@ -13,7 +13,7 @@ export struct SlintMoveInfo {
 export struct DashboardState {
     move_history: [SlintMoveInfo],
 
-    compute_time: string,
+    avg_compute_time: string,
     en_passant_square: string,
     halfmove_clock: int,
 }
@@ -213,7 +213,7 @@ export component Dashboard inherits Rectangle {
         data: [
             { text: "Halfmove Clock:", value: dashboard_state.halfmove_clock },
             { text: "En Passant Square:", value: dashboard_state.en_passant_square },
-            { text: "Time to compute valid moves:", value: dashboard_state.compute_time }
+            { text: "Avg. Time to Compute Moves:", value: dashboard_state.avg_compute_time }
         ];
     }
 }

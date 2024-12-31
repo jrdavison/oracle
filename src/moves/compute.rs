@@ -35,42 +35,29 @@ impl BitOr for ComputedMoves {
 pub fn compute_valid_moves(pos: &mut Position) {
     let compute_moves_for_color = |pos: &mut Position, color: Color| {
         let mut attacks = Bitboard::default();
-        // let king_sq = pos.king_squares[color as usize];
-        // let king_pin_mask = if ignore_checks {
-        //     Bitboard::default()
-        // } else {
-        //     LOOKUP_TABLES.get_diagonal_mask(king_sq) | LOOKUP_TABLES.get_orthogonal_mask(king_sq)
-        // };
-
-        for sq in Square::iter() {
-            let piece = pos.board[sq as usize];
+        for sq in &pos.active_squares[color as usize] {
+            let piece = pos.board[*sq as usize];
             let piece_type = Piece::type_of(piece);
             let piece_color = Piece::color_of(piece);
-            if piece_color == color {
-                let mut computed_moves = match piece_type {
-                    PieceType::Pawn => compute_pawn_moves(pos, sq, piece_color),
-                    PieceType::Knight => compute_knight_moves(sq),
-                    PieceType::Rook => compute_rook_moves(pos, sq),
-                    PieceType::Bishop => compute_bishop_moves(pos, sq),
-                    PieceType::Queen => compute_rook_moves(pos, sq) | compute_bishop_moves(pos, sq),
-                    PieceType::King => compute_king_moves(pos, color),
-                    _ => ComputedMoves::default(),
-                };
+            let mut computed_moves = match piece_type {
+                PieceType::Pawn => compute_pawn_moves(pos, *sq, piece_color),
+                PieceType::Knight => compute_knight_moves(*sq),
+                PieceType::Rook => compute_rook_moves(pos, *sq),
+                PieceType::Bishop => compute_bishop_moves(pos, *sq),
+                PieceType::Queen => compute_rook_moves(pos, *sq) | compute_bishop_moves(pos, *sq),
+                PieceType::King => compute_king_moves(pos, color),
+                _ => ComputedMoves::default(),
+            };
 
-                // can't capture own pieces
-                computed_moves.valid_moves &= !pos.bitboards.get_checkers(piece_color);
+            // can't capture own pieces
+            computed_moves.valid_moves &= !pos.bitboards.get_checkers(piece_color);
 
-                pos.bitboards.set_valid_moves(sq, computed_moves.valid_moves);
-                attacks |= computed_moves.attacks;
-            }
+            pos.bitboards.set_valid_moves(*sq, computed_moves.valid_moves);
+            attacks |= computed_moves.attacks;
         }
         pos.bitboards.set_attacks(color, attacks);
     };
 
-    /*
-    TODO: might be able to speed this up by keeping a data structure of all pieces for each color and just iterate that 
-          instead of iterating the entire board twice?
-    */
     compute_moves_for_color(pos, !pos.side_to_move); // enemy moves first
     compute_moves_for_color(pos, pos.side_to_move); // then friendly moves to handle checks/pins
 }
