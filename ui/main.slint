@@ -9,6 +9,8 @@ export component AppWindow inherits Window {
     in-out property <BoardState> board_state;
     in-out property <DashboardState> dashboard_state;
     in-out property <int> dragged_piece_sq;
+    in-out property <int> check_sq;
+
     title: "Oracle";
     background: Palette.dashboard_bg;
     height: Dimensions.board_size;
@@ -16,6 +18,7 @@ export component AppWindow inherits Window {
     board := Board {
         board_state: board_state;
         dragged_piece_sq: dragged_piece_sq;
+        check_sq: check_sq;
         height: Dimensions.board_size;
         width: Dimensions.board_size;
         x: 0;

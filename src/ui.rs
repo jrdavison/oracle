@@ -30,17 +30,11 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
     let side_to_move = pos.side_to_move();
     let last_move = pos.last_move();
     let board_i32 = pos.board.iter().map(|&piece| piece as i32).collect::<Vec<_>>();
-    let check_sq = if pos.king_in_check(side_to_move) {
-        pos.king_squares[side_to_move as usize]
-    } else {
-        Square::default()
-    };
 
     ui.set_board_state(BoardState {
         board: Rc::new(VecModel::from(board_i32)).into(),
         last_move_from: last_move.from as i32,
         last_move_to: last_move.to as i32,
-        check_sq: check_sq as i32,
     });
     ui.set_dragged_piece_sq(dragged_piece as i32);
 
@@ -53,6 +47,12 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
             en_passant_square: pos.en_passant_sq().into(),
             avg_compute_time: pos.avg_compute_time().into(),
         });
+        let check_sq = if pos.king_in_check(side_to_move) {
+            pos.king_squares[side_to_move as usize]
+        } else {
+            Square::default()
+        };
+        ui.set_check_sq(check_sq as i32);
     }
 }
 

@@ -4,12 +4,13 @@ export struct BoardState {
     board: [int],
     last_move_from: int,
     last_move_to: int,
-    check_sq: int,
 }
 
 export component Board inherits TouchArea {
     in property <BoardState> board_state;
     in-out property <int> dragged_piece_sq; // 64 if no piece is being dragged
+    in-out property <int> check_sq; // 64 if no check is present
+
     for i in Utils.square_count: Rectangle {
         height: Dimensions.sq_size;
         width: Dimensions.sq_size;
@@ -43,6 +44,9 @@ export component Board inherits TouchArea {
         }
         if (board_state.last_move_from == i || board_state.last_move_to == i): Rectangle {
             background: Palette.last_move_sq;
+        }
+        if (check_sq == i): Rectangle {
+            background: Palette.check_sq;
         }
         if (board_state.board[i] != 0 && dragged_piece_sq != i): Image {
             height: parent.height;

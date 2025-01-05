@@ -1,4 +1,4 @@
-use crate::bitboards::{self, Bitboard, LOOKUP_TABLES};
+use crate::bitboards::{self, print_bitboard, Bitboard, LOOKUP_TABLES};
 use crate::position::Position;
 use crate::utils::{CastlingRights, Color, Direction, Piece, PieceType, Rank, Square};
 use std::ops::BitOr;
@@ -39,6 +39,8 @@ pub fn compute_valid_moves(pos: &mut Position) {
             let piece = pos.board[*sq as usize];
             let piece_type = Piece::type_of(piece);
             let piece_color = Piece::color_of(piece);
+
+            // psuedo-legal moves
             let mut computed_moves = match piece_type {
                 PieceType::Pawn => compute_pawn_moves(pos, *sq, piece_color),
                 PieceType::Knight => compute_knight_moves(*sq),
@@ -51,6 +53,15 @@ pub fn compute_valid_moves(pos: &mut Position) {
 
             // can't capture own pieces
             computed_moves.valid_moves &= !pos.bitboards.get_checkers(piece_color);
+
+            // handle checks
+            if pos.side_to_move == color && pos.king_in_check(pos.side_to_move) {
+                let king_sq = pos.king_squares[pos.side_to_move as usize];
+                let king_pin_mask =
+                    LOOKUP_TABLES.get_diagonal_mask(king_sq) | LOOKUP_TABLES.get_orthogonal_mask(king_sq);
+                println!("king_pin_mask: {}", king_pin_mask);
+                print_bitboard(king_pin_mask);
+            }
 
             pos.bitboards.set_valid_moves(*sq, computed_moves.valid_moves);
             attacks |= computed_moves.attacks;
