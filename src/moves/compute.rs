@@ -1,4 +1,4 @@
-use crate::bitboards::{self, print_bitboard, Bitboard, LOOKUP_TABLES};
+use crate::bitboards::{self, Bitboard, LOOKUP_TABLES};
 use crate::position::Position;
 use crate::utils::{CastlingRights, Color, Direction, Piece, PieceType, Rank, Square};
 use std::ops::BitOr;
