@@ -27,28 +27,32 @@ impl MoveInfo {
         let moved_piece_type = Piece::type_of(moved_piece);
 
         let mut captured_piece = position.board[to as usize];
-        let mut capture_piece_sq = Square::Count;
+        let mut capture_piece_sq = Square::Count; // save square for en passant captures
 
         match moved_piece_type {
             PieceType::Pawn => {
                 let color = Piece::color_of(moved_piece);
                 let from_rank = Square::rank_of(from);
+                let to_rank = Square::rank_of(to);
                 let from_file = Square::file_of(from);
                 let to_file = Square::file_of(to);
 
                 let relative_from_rank = Rank::relative_rank(color, from_rank);
+                let relative_to_rank = Rank::relative_rank(color, to_rank);
                 if relative_from_rank == Rank::Rank7 {
                     move_type = MoveType::Promotion;
                     capture_piece_sq = to;
-                } else if relative_from_rank == Rank::Rank2 {
+                } else if relative_from_rank == Rank::Rank2 && relative_to_rank == Rank::Rank4 {
                     move_type = MoveType::TwoSquarePush;
-                } else if captured_piece != Piece::Empty {
-                    move_type = MoveType::Capture;
-                    capture_piece_sq = to;
                 } else if from_file != to_file {
-                    move_type = MoveType::EnPassant;
-                    capture_piece_sq = to + Direction::forward_direction(!color);
-                    captured_piece = position.board[capture_piece_sq as usize];
+                    if captured_piece == Piece::Empty {
+                        move_type = MoveType::EnPassant;
+                        capture_piece_sq = to + Direction::forward_direction(!color);
+                        captured_piece = position.board[capture_piece_sq as usize];
+                    } else {
+                        move_type = MoveType::Capture;
+                        capture_piece_sq = to;
+                    }
                 } else {
                     move_type = MoveType::Quiet;
                 }

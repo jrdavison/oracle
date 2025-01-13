@@ -55,13 +55,11 @@ pub fn compute_valid_moves(pos: &mut Position) {
             computed_moves.valid_moves &= !pos.bitboards.get_checkers(piece_color);
 
             // handle checks
-            if pos.side_to_move == color && pos.king_in_check(pos.side_to_move) {
-                let king_sq = pos.king_squares[pos.side_to_move as usize];
-                let king_pin_mask =
-                    LOOKUP_TABLES.get_diagonal_mask(king_sq) | LOOKUP_TABLES.get_orthogonal_mask(king_sq);
-                println!("king_pin_mask: {}", king_pin_mask);
-                print_bitboard(king_pin_mask);
-            }
+            // if pos.side_to_move == color && pos.king_in_check(pos.side_to_move) {
+            //     let king_sq = pos.king_squares[pos.side_to_move as usize];
+            //     let king_pin_mask =
+            //         LOOKUP_TABLES.get_diagonal_mask(king_sq) | LOOKUP_TABLES.get_orthogonal_mask(king_sq);
+            // }
 
             pos.bitboards.set_valid_moves(*sq, computed_moves.valid_moves);
             attacks |= computed_moves.attacks;

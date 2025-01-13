@@ -1,3 +1,4 @@
+use crate::bitboards;
 use crate::moves::info::MoveInfo;
 use crate::position::Position;
 use crate::utils::{Color, File, Piece, Rank, Square};
@@ -15,7 +16,7 @@ pub fn run_application() -> Result<(), Box<dyn Error>> {
 
     // start: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
     let position = Rc::new(RefCell::new(Position::new(
-        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "r1bBr3/1p3pk1/p1p1p3/n1P4n/3PP3/P5QP/B4PP1/R4RK1 b - - 0 23",
     )));
 
     set_application_state(&ui, &position, Square::Count, true);
@@ -53,7 +54,17 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
             Square::default()
         };
         ui.set_check_sq(check_sq as i32);
-    }
+
+        let black_bb = pos.bitboards.get_checkers(Color::Black);
+        let white_bb =  pos.bitboards.get_checkers(Color::White);
+
+        let move_no = pos.fullmove_count();
+        println!("move_no: {:?} ({:?})", move_no, pos.side_to_move());
+        println!("Black attacks: {:?}", black_bb);
+        bitboards::print_bitboard(black_bb);
+        println!("White attacks: {:?}", white_bb);
+        bitboards::print_bitboard(white_bb);
+}
 }
 
 fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
@@ -82,7 +93,7 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
         let position_weak = position_weak.clone();
         let ui_weak = ui_weak.clone();
         move |src: i32, dest: i32| {
-            let ui = ui_weak.upgrade().expect("could not upgrade ui");
+            let ui: AppWindow = ui_weak.upgrade().expect("could not upgrade ui");
             let position = position_weak.upgrade().expect("could not upgrade position");
             let mut position_mut = position.borrow_mut();
 
