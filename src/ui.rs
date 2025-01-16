@@ -1,4 +1,3 @@
-use crate::bitboards;
 use crate::moves::info::MoveInfo;
 use crate::position::Position;
 use crate::utils::{Color, File, Piece, Rank, Square};
