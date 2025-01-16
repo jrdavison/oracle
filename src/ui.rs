@@ -54,16 +54,6 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
             Square::default()
         };
         ui.set_check_sq(check_sq as i32);
-
-        let black_bb = pos.bitboards.get_checkers(Color::Black);
-        let white_bb =  pos.bitboards.get_checkers(Color::White);
-
-        let move_no = pos.fullmove_count();
-        println!("move_no: {:?} ({:?})", move_no, pos.side_to_move());
-        println!("Black attacks: {:?}", black_bb);
-        bitboards::print_bitboard(black_bb);
-        println!("White attacks: {:?}", white_bb);
-        bitboards::print_bitboard(white_bb);
 }
 }
 
@@ -169,9 +159,10 @@ fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
             0 => 0,
             len => {
                 if color == Color::White {
+                    println!("white: {} / 2 = {}", len, len / 2);
                     len / 2
                 } else {
-                    std::cmp::max(len / 2, 1) - 1
+                    std::cmp::max(( len + 1) / 2, 1) - 1
                 }
             }
         };
