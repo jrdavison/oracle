@@ -132,23 +132,18 @@ impl Position {
 
         // handle special moves
         match move_info.move_type {
-            MoveType::Capture => {
-                self.remove_piece(move_info.capture_piece_sq);
-            }
             MoveType::TwoSquarePush => {
                 let enemy_forward = Direction::forward_direction(!moved_piece_color);
                 self.en_passant_sq = move_info.to + enemy_forward;
             }
-            MoveType::EnPassant => {
+            MoveType::EnPassant | MoveType::Capture => {
                 self.remove_piece(move_info.capture_piece_sq);
             }
             MoveType::Promotion => {
                 // TODO: give user option to choose promotion piece
                 self.board[move_info.to as usize] = Piece::from(PieceType::Queen, moved_piece_color);
                 if Piece::color_of(move_info.captured_piece) != Color::Both {
-                    let color_of_captured = Piece::color_of(move_info.captured_piece);
-                    self.bitboards
-                        .unset_checkers(color_of_captured, move_info.capture_piece_sq);
+                    self.remove_piece(move_info.capture_piece_sq);
                 }
             }
             MoveType::Castle => {
@@ -290,6 +285,20 @@ impl Position {
         }
     }
 
+    pub fn valid_moves(&self) -> Vec<MoveInfo> {
+        let mut moves = Vec::new();
+        for sq in self.active_squares[self.side_to_move as usize].iter() {
+            let valid_moves = self.bitboards.get_valid_moves(*sq);
+            for to in Square::iter() {
+                if bitboards::is_bit_set(valid_moves, to) {
+                    let move_info = MoveInfo::new(self, *sq, to);
+                    moves.push(move_info);
+                }
+            }
+        }
+        moves
+    }
+
     fn remove_piece(&mut self, sq: Square) {
         let piece = self.board[sq as usize];
         let color = Piece::color_of(piece);
@@ -304,6 +313,30 @@ impl Position {
         self.bitboards.set_checkers(color, sq);
         self.active_squares[color as usize].push(sq);
     }
+}
+
+pub fn count_valid_moves(pos: &mut Position, ply: u32) -> u32 {
+    if ply == 0 {
+        return 1;
+    }
+
+    pos.compute_valid_moves();
+    let moves = pos.valid_moves();
+    if ply == 1 {
+        return moves.len() as u32;
+    }
+
+    let mut nodes = 0;
+    for mv in moves {
+        let made = pos.move_piece(mv.from, mv.to, false);
+        if made.move_type == MoveType::Invalid {
+            continue;
+        }
+        nodes += count_valid_moves(pos, ply - 1);
+        let _ = pos.undo_move();
+    }
+
+    nodes
 }
 
 fn init_from_fen(fen: &str) -> Position {

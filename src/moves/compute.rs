@@ -1,6 +1,7 @@
 use crate::bitboards::{self, Bitboard, LOOKUP_TABLES};
 use crate::position::Position;
 use crate::utils::{CastlingRights, Color, Direction, Piece, PieceType, Rank, Square};
+use num_traits::FromPrimitive;
 use std::ops::BitOr;
 
 pub const KINGSIDE_CASTLE_SQUARES: [Square; Color::Both as usize] = [Square::G1, Square::G8];
@@ -33,6 +34,9 @@ impl BitOr for ComputedMoves {
 }
 
 pub fn compute_valid_moves(pos: &mut Position) {
+    let friendly_color = pos.side_to_move;
+    let (pinned_masks, check_mask) = compute_pin_and_check_masks(pos, friendly_color);
+
     let compute_moves_for_color = |pos: &mut Position, color: Color| {
         let mut attacks = Bitboard::default();
         for sq in &pos.active_squares[color as usize] {
@@ -54,12 +58,10 @@ pub fn compute_valid_moves(pos: &mut Position) {
             // can't capture own pieces
             computed_moves.valid_moves &= !pos.bitboards.get_checkers(piece_color);
 
-            // handle checks
-            // if pos.side_to_move == color && pos.king_in_check(pos.side_to_move) {
-            //     let king_sq = pos.king_squares[pos.side_to_move as usize];
-            //     let king_pin_mask =
-            //         LOOKUP_TABLES.get_diagonal_mask(king_sq) | LOOKUP_TABLES.get_orthogonal_mask(king_sq);
-            // }
+            if color == friendly_color && piece_type != PieceType::King {
+                computed_moves.valid_moves &= check_mask;
+                computed_moves.valid_moves &= pinned_masks[*sq as usize];
+            }
 
             pos.bitboards.set_valid_moves(*sq, computed_moves.valid_moves);
             attacks |= computed_moves.attacks;
@@ -174,4 +176,98 @@ fn compute_king_moves(pos: &Position, color: Color) -> ComputedMoves {
     }
 
     ComputedMoves { attacks, valid_moves }
+}
+
+fn compute_pin_and_check_masks(pos: &Position, color: Color) -> ([Bitboard; Square::Count as usize], Bitboard) {
+    let mut pin_masks = [u64::MAX; Square::Count as usize];
+    let mut check_mask = u64::MAX;
+    let mut num_checks = 0u32;
+
+    let occupancy = pos.bitboards.get_checkers(Color::Both);
+    let king_sq = pos.king_squares[color as usize];
+    let friendly_pieces = pos.bitboards.get_checkers(color);
+    let enemy_pieces = pos.bitboards.get_checkers(!color);
+
+    let enemy_rook_queens = enemy_pieces
+        & (piece_type_mask(pos, PieceType::Rook) | piece_type_mask(pos, PieceType::Queen));
+    let enemy_bishop_queens = enemy_pieces
+        & (piece_type_mask(pos, PieceType::Bishop) | piece_type_mask(pos, PieceType::Queen));
+    let enemy_knights = enemy_pieces & piece_type_mask(pos, PieceType::Knight);
+    let enemy_pawns = enemy_pieces & piece_type_mask(pos, PieceType::Pawn);
+
+    let rook_attackers = slider_attackers(king_sq, occupancy, enemy_rook_queens, true);
+    let bishop_attackers = slider_attackers(king_sq, occupancy, enemy_bishop_queens, false);
+    let mut sliders = rook_attackers | bishop_attackers;
+
+    while sliders != 0 {
+        let pinner_idx = sliders.trailing_zeros() as usize;
+        sliders &= sliders - 1;
+
+        let pinner_sq = Square::from_u8(pinner_idx as u8).unwrap_or_default();
+        let between = squares_between(pos, king_sq, pinner_sq);
+        let blockers = between & occupancy;
+
+        if blockers == 0 {
+            num_checks += 1;
+            check_mask = bitboards::set_bit(0, pinner_sq);
+        } else if blockers.count_ones() == 1 && (blockers & friendly_pieces) != 0 {
+            let pinned_idx = blockers.trailing_zeros() as usize;
+            pin_masks[pinned_idx] = between | bitboards::set_bit(0, pinner_sq);
+        }
+    }
+
+    let knight_checks = LOOKUP_TABLES.get_knight_mask(king_sq) & enemy_knights;
+    if knight_checks != 0 {
+        num_checks += knight_checks.count_ones();
+        check_mask = knight_checks;
+    }
+
+    let pawn_checks = LOOKUP_TABLES.get_pawn_attack_mask(color, king_sq) & enemy_pawns;
+    if pawn_checks != 0 {
+        num_checks += pawn_checks.count_ones();
+        check_mask = pawn_checks;
+    }
+
+    if num_checks >= 2 {
+        // double check, only the king can move in this case
+        check_mask = 0;
+    } else if num_checks == 0 {
+        check_mask = u64::MAX;
+    }
+
+    (pin_masks, check_mask)
+}
+
+fn piece_type_mask(pos: &Position, piece_type: PieceType) -> Bitboard {
+    let mut mask = 0;
+    for sq in Square::iter() {
+        if Piece::type_of(pos.board[sq as usize]) == piece_type {
+            mask = bitboards::set_bit(mask, sq);
+        }
+    }
+    mask
+}
+
+fn slider_attackers(king_sq: Square, occ: Bitboard, candidates: Bitboard, rook_like: bool) -> Bitboard {
+    let move_mask = if rook_like {
+        LOOKUP_TABLES.get_orthogonal_mask(king_sq)
+    } else {
+        LOOKUP_TABLES.get_diagonal_mask(king_sq)
+    };
+    let blockers = occ & move_mask;
+    let attacks = if rook_like {
+        LOOKUP_TABLES.get_rook_mask(king_sq, blockers)
+    } else {
+        LOOKUP_TABLES.get_bishop_mask(king_sq, blockers)
+    };
+    attacks & candidates
+}
+
+fn squares_between(_pos: &Position, a: Square, b: Square) -> Bitboard {
+    let ray_ab = LOOKUP_TABLES.get_rook_mask(a, 0) & LOOKUP_TABLES.get_rook_mask(b, 0);
+    if ray_ab != 0 {
+        return ray_ab;
+    }
+
+    LOOKUP_TABLES.get_bishop_mask(a, 0) & LOOKUP_TABLES.get_bishop_mask(b, 0)
 }
