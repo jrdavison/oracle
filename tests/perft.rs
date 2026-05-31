@@ -1,4 +1,5 @@
-use oracle::position::{count_legal_moves, Position};
+use oracle::moves::count_legal_moves;
+use oracle::position::Position;
 use std::time::Instant;
 
 // https://www.chessprogramming.org/Perft

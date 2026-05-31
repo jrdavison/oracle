@@ -1,6 +1,6 @@
 use crate::bitboards::{self, Bitboard, Bitboards};
 use crate::moves::compute;
-use crate::moves::info::{Move, MoveInfo, MoveList, UndoInfo};
+use crate::moves::info::{Move, MoveInfo, UndoInfo};
 use crate::utils::{CastlingRights, Color, Direction, File, MoveType, Piece, PieceType, Rank, Square};
 use num_traits::FromPrimitive;
 use std::time::{Duration, Instant};
@@ -13,9 +13,6 @@ pub struct Position {
     pub en_passant_sq: Square,
     pub king_squares: [Square; Color::Both as usize],
     pub side_to_move: Color,
-
-    move_history: Vec<MoveInfo>,
-    redo_history: Vec<MoveInfo>,
 
     total_compute_time: Duration,
     total_moves: u32,
@@ -33,9 +30,6 @@ impl Default for Position {
             castling_rights: CastlingRights::default(),
             en_passant_sq: Square::Count,
             king_squares: [Square::Count; Color::Both as usize],
-
-            move_history: Vec::new(),
-            redo_history: Vec::new(),
 
             total_compute_time: Duration::default(),
             total_moves: 0,
@@ -74,18 +68,6 @@ impl Position {
         } else {
             format!("{:?}", self.en_passant_sq)
         }
-    }
-
-    pub fn move_history(&self) -> Vec<MoveInfo> {
-        self.move_history.clone()
-    }
-
-    pub fn redo_history(&self) -> Vec<MoveInfo> {
-        self.redo_history.clone()
-    }
-
-    pub fn last_move(&self) -> MoveInfo {
-        self.move_history.last().cloned().unwrap_or_default()
     }
 
     pub fn king_in_check(&self, color: Color) -> bool {
@@ -127,23 +109,21 @@ impl Position {
         // println!("Time to compute legal moves: {:?}", delta);
     }
 
-    pub fn move_piece_from_ui(&mut self, from: Square, to: Square, clear_redo: bool) -> Option<MoveInfo> {
-        let move_info = self.move_piece_with_options(from, to, clear_redo, true, true, true);
+    pub fn play_validated_move(&mut self, from: Square, to: Square) -> Option<MoveInfo> {
+        let move_info = self.move_piece_with_options(from, to, true, true);
         move_info.is_valid().then_some(move_info)
     }
 
     pub fn move_piece(&mut self, mv: Move) -> UndoInfo {
-        self.move_piece_with_options(mv.from, mv.to, false, false, false, false)
+        self.move_piece_with_options(mv.from, mv.to, false, false)
     }
 
     fn move_piece_with_options(
         &mut self,
         from: Square,
         to: Square,
-        clear_redo: bool,
         include_notation: bool,
         validate_move: bool,
-        record_history: bool,
     ) -> MoveInfo {
         let _start = Instant::now();
         if validate_move && !self.legal_move(from, to) {
@@ -232,28 +212,10 @@ impl Position {
         }
 
         self.side_to_move = !self.side_to_move;
-        if record_history {
-            self.move_history.push(move_info.clone());
-
-            // clear redo history if move is not a redo
-            if clear_redo {
-                self.redo_history.clear();
-            }
-        }
 
         // println!("Time to make move: {:?}", _start.elapsed());
 
         move_info
-    }
-
-    pub fn undo_last_move(&mut self) -> bool {
-        if let Some(last_move) = self.move_history.pop() {
-            self.undo_move(last_move.clone());
-            self.redo_history.push(last_move);
-            true
-        } else {
-            false
-        }
     }
 
     pub fn undo_move(&mut self, undo: UndoInfo) {
@@ -333,14 +295,6 @@ impl Position {
         self.fullmove_count = undo.fullmove_count;
     }
 
-    pub fn redo_move(&mut self) -> bool {
-        if let Some(last_move) = self.redo_history.pop() {
-            self.move_piece_from_ui(last_move.from, last_move.to, false).is_some()
-        } else {
-            false
-        }
-    }
-
     fn remove_piece(&mut self, sq: Square) {
         let piece = self.board[sq as usize];
         let color = Piece::color_of(piece);
@@ -367,47 +321,6 @@ impl Position {
         let piece_type = Piece::type_of(piece);
         if piece_type != PieceType::Empty {
             self.piece_masks[piece_type as usize] = bitboards::clear_bit(self.piece_masks[piece_type as usize], sq);
-        }
-    }
-}
-
-pub fn count_legal_moves(pos: &mut Position, ply: u32) -> u64 {
-    if ply == 0 {
-        return 1;
-    }
-
-    pos.compute_legal_moves();
-    let mut moves = MoveList::default();
-    generate_moves(pos, &mut moves);
-    if ply == 1 {
-        return moves.len() as u64;
-    }
-
-    let mut nodes = 0;
-    for mv in moves.iter() {
-        let undo = pos.move_piece(mv);
-        if undo.move_type == MoveType::Invalid {
-            panic!("generated invalid move: {:?} -> {:?}", mv.from, mv.to);
-        }
-        nodes += count_legal_moves(pos, ply - 1);
-        pos.undo_move(undo);
-    }
-
-    nodes
-}
-
-pub fn generate_moves(pos: &Position, out: &mut MoveList) {
-    out.clear();
-    let mut pieces = pos.bitboards.get_checkers(pos.side_to_move);
-    while pieces != 0 {
-        let sq = Square::from_u8(pieces.trailing_zeros() as u8).unwrap_or_default();
-        pieces &= pieces - 1;
-
-        let mut targets = pos.legal_destinations_from(sq);
-        while targets != 0 {
-            let to = Square::from_u8(targets.trailing_zeros() as u8).unwrap_or_default();
-            targets &= targets - 1;
-            out.push(Move { from: sq, to });
         }
     }
 }
