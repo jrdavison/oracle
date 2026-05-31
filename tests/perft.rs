@@ -2,11 +2,12 @@ use oracle::position::{Position, count_valid_moves};
 
 // https://www.chessprogramming.org/Perft
 #[test]
-pub fn test_example() {
-    let mut pos = Position::new("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-    assert_eq!(count_valid_moves(&mut pos, 1), 20);
-    assert_eq!(count_valid_moves(&mut pos, 2), 400);
-    assert_eq!(count_valid_moves(&mut pos, 3), 8902);
+pub fn test_3ply() {
+    let startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+    assert_eq!(count_valid_moves(&mut Position::new(startpos), 1), 20);
+    assert_eq!(count_valid_moves(&mut Position::new(startpos), 2), 400);
+    assert_eq!(count_valid_moves(&mut Position::new(startpos), 3), 8902);
 }
 
 // #[test]

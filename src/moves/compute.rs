@@ -39,7 +39,7 @@ pub fn compute_valid_moves(pos: &mut Position) {
 
     let compute_moves_for_color = |pos: &mut Position, color: Color| {
         let mut attacks = Bitboard::default();
-        for sq in &pos.active_squares[color as usize] {
+        for sq in &pos.occupied_squares[color as usize] {
             let piece = pos.board[*sq as usize];
             let piece_type = Piece::type_of(piece);
             let piece_color = Piece::color_of(piece);
