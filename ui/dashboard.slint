@@ -1,7 +1,6 @@
 import { ListView } from "std-widgets.slint";
 
-import { Palette, Font } from "./globals.slint";
-import { Dimensions } from "globals.slint";
+import { Dimensions, Font, Palette } from "./globals.slint";
 
 export struct SlintMoveInfo {
     black: string,
@@ -14,7 +13,7 @@ export struct SlintMoveInfo {
 export struct DashboardState {
     move_history: [SlintMoveInfo],
 
-    compute_time: string,
+    avg_compute_time: string,
     en_passant_square: string,
     halfmove_clock: int,
 }
@@ -24,7 +23,6 @@ component MoveTableHeader inherits Rectangle {
     in property <color> highlight_color;
     in property <color> text_color;
     in property <TextHorizontalAlignment> text_alignment;
-
     HorizontalLayout {
         alignment: center;
         Rectangle {
@@ -47,11 +45,10 @@ component MoveTableRow inherits Rectangle {
     in property <SlintMoveInfo> move;
     in property <length> container_w;
     in property <length> header_padding;
-
     HorizontalLayout {
         padding: 8px;
         Rectangle { // move no.
-            width: container_w * (1/5) - header_padding;
+            width: container_w * (1 / 5) - header_padding;
             HorizontalLayout {
                 alignment: center;
                 Rectangle {
@@ -66,8 +63,9 @@ component MoveTableRow inherits Rectangle {
                 }
             }
         }
+
         Rectangle { // white move
-            width: container_w * (2/5) - header_padding;
+            width: container_w * (2 / 5) - header_padding;
             HorizontalLayout {
                 alignment: center;
                 Rectangle {
@@ -84,8 +82,9 @@ component MoveTableRow inherits Rectangle {
                 }
             }
         }
+
         Rectangle { // black move
-            width: container_w * (2/5) - header_padding;
+            width: container_w * (2 / 5) - header_padding;
             HorizontalLayout {
                 alignment: center;
                 Rectangle {
@@ -109,16 +108,13 @@ component MoveTable {
     in property <[SlintMoveInfo]> moves;
     in property <length> table_height;
     in property <length> table_width;
-
     container := Rectangle {
         height: table_height;
         width: table_width;
-
         border-color: Palette.border;
         border-radius: 5px;
         border-width: 2px;
         clip: true;
-
         VerticalLayout {
             alignment: start;
             header := Rectangle {
@@ -130,21 +126,23 @@ component MoveTable {
                         text: "";
                         highlight_color: transparent;
                         text_color: white;
-                        width: container.width * (1/5) - header.padding;
+                        width: container.width * (1 / 5) - header.padding;
                         text_alignment: left;
                     }
+
                     MoveTableHeader {
                         text: "White";
                         highlight_color: white;
                         text_color: black;
-                        width: container.width * (2/5) - header.padding;
+                        width: container.width * (2 / 5) - header.padding;
                         text_alignment: center;
                     }
+
                     MoveTableHeader {
                         text: "Black";
                         highlight_color: black;
                         text_color: white;
-                        width: container.width * (2/5) - header.padding;
+                        width: container.width * (2 / 5) - header.padding;
                         text_alignment: center;
                     }
                 }
@@ -153,7 +151,7 @@ component MoveTable {
             move_history := ListView {
                 height: table_height - 38px; // hardcoded header height since using header.height causes circular dependency
                 width: table_width - (container.padding * 2);
-                for move[i] in moves : MoveTableRow {
+                for move[i] in moves: MoveTableRow {
                     background: Math.mod(i, 2) == 0 ? Palette.alternate_bg : Palette.dashboard_bg;
                     container_w: container.width - (container.padding * 2);
                     header_padding: header.padding;
@@ -166,8 +164,7 @@ component MoveTable {
 
 component InfoTable inherits ListView {
     in property <[{text: string, value: string}]> data;
-
-    for row[i] in root.data : Rectangle {
+    for row[i] in root.data: Rectangle {
         background: Math.mod(i, 2) == 0 ? Palette.alternate_bg : Palette.dashboard_bg;
         width: root.width;
         HorizontalLayout {
@@ -178,6 +175,7 @@ component InfoTable inherits ListView {
                 min-width: root.width / 2;
                 text: row.text;
             }
+
             Text {
                 color: white;
                 font-size: Font.font_size_sm;
@@ -191,22 +189,17 @@ component InfoTable inherits ListView {
 
 export component Dashboard inherits Rectangle {
     in property <DashboardState> dashboard_state;
-    
     property <length> info_table_height: 93px;
     property <length> move_table_height: 350px;
     property <length> move_table_width: Dimensions.dashboard_w * 0.85;
-
     VerticalLayout {
         alignment: start;
         padding: 10px;
-
         HorizontalLayout {
             alignment: center;
-
             MoveTable {
                 table_height: move_table_height;
                 table_width: move_table_width;
-
                 moves: dashboard_state.move_history;
             }
         }
@@ -217,11 +210,10 @@ export component Dashboard inherits Rectangle {
         width: 100%;
         x: 0;
         y: Dimensions.board_size - self.height;
-
         data: [
-            {text: "Halfmove Clock:", value: dashboard_state.halfmove_clock},
-            {text: "En Passant Square:", value: dashboard_state.en_passant_square},
-            {text: "Time to compute valid moves:", value: dashboard_state.compute_time}
+            { text: "Halfmove Clock:", value: dashboard_state.halfmove_clock },
+            { text: "En Passant Square:", value: dashboard_state.en_passant_square },
+            { text: "Avg. Time to Compute Moves:", value: dashboard_state.avg_compute_time }
         ];
     }
 }

@@ -1,6 +1,7 @@
+use super::compute::{KINGSIDE_CASTLE_SQUARES, QUEENSIDE_CASTLE_SQUARES};
 use crate::bitboards;
 use crate::position::Position;
-use crate::utils::{Direction, File, MoveType, Piece, PieceType, Rank, Square};
+use crate::utils::{CastlingRights, Direction, File, MoveType, Piece, PieceType, Rank, Square};
 use slint::SharedString;
 
 #[derive(Clone, Debug, Default)]
@@ -11,6 +12,8 @@ pub struct MoveInfo {
     pub moved_piece: Piece,
     pub captured_piece: Piece,
     pub capture_piece_sq: Square,
+    pub en_passant_sq: Square,
+    pub castling_rights: CastlingRights,
     pub fullmove_count: i32,
     pub halfmove_clock: i32,
     pub notation: SharedString,
@@ -20,38 +23,48 @@ impl MoveInfo {
     pub fn new(position: &Position, from: Square, to: Square) -> MoveInfo {
         let move_type;
         let moved_piece = position.board[from as usize];
-        let mut captured_piece = position.board[to as usize];
-        let mut capture_piece_sq = Square::Count;
+        let moved_piece_color = Piece::color_of(moved_piece);
+        let moved_piece_type = Piece::type_of(moved_piece);
 
-        match Piece::type_of(moved_piece) {
+        let mut captured_piece = position.board[to as usize];
+        let mut capture_piece_sq = Square::Count; // save square for en passant captures
+
+        match moved_piece_type {
             PieceType::Pawn => {
                 let color = Piece::color_of(moved_piece);
                 let from_rank = Square::rank_of(from);
+                let to_rank = Square::rank_of(to);
                 let from_file = Square::file_of(from);
                 let to_file = Square::file_of(to);
 
                 let relative_from_rank = Rank::relative_rank(color, from_rank);
+                let relative_to_rank = Rank::relative_rank(color, to_rank);
                 if relative_from_rank == Rank::Rank7 {
                     move_type = MoveType::Promotion;
                     capture_piece_sq = to;
-                } else if relative_from_rank == Rank::Rank2 {
+                } else if relative_from_rank == Rank::Rank2 && relative_to_rank == Rank::Rank4 {
                     move_type = MoveType::TwoSquarePush;
-                } else if captured_piece != Piece::Empty {
-                    move_type = MoveType::Capture;
-                    capture_piece_sq = to;
                 } else if from_file != to_file {
-                    move_type = MoveType::EnPassant;
-                    capture_piece_sq = to + Direction::forward_direction(!color);
-                    captured_piece = position.board[capture_piece_sq as usize];
+                    if captured_piece == Piece::Empty {
+                        move_type = MoveType::EnPassant;
+                        capture_piece_sq = to + Direction::forward_direction(!color);
+                        captured_piece = position.board[capture_piece_sq as usize];
+                    } else {
+                        move_type = MoveType::Capture;
+                        capture_piece_sq = to;
+                    }
                 } else {
                     move_type = MoveType::Quiet;
                 }
             }
             PieceType::King => {
-                // TODO: castling moves
                 if captured_piece != Piece::Empty {
                     move_type = MoveType::Capture;
                     capture_piece_sq = to;
+                } else if to == KINGSIDE_CASTLE_SQUARES[moved_piece_color as usize]
+                    || to == QUEENSIDE_CASTLE_SQUARES[moved_piece_color as usize]
+                {
+                    move_type = MoveType::Castle;
                 } else {
                     move_type = MoveType::Quiet;
                 }
@@ -73,6 +86,8 @@ impl MoveInfo {
             moved_piece,
             captured_piece,
             capture_piece_sq,
+            en_passant_sq: position.en_passant_sq,
+            castling_rights: position.castling_rights,
             fullmove_count: position.fullmove_count(),
             halfmove_clock: position.halfmove_clock(),
             notation: SharedString::default(),
@@ -103,6 +118,13 @@ impl MoveInfo {
                     )
                 } else {
                     format!("{}={}", to_square, PieceType::Queen.make_notation_string())
+                }
+            }
+            MoveType::Castle => {
+                if self.to == KINGSIDE_CASTLE_SQUARES[Piece::color_of(self.moved_piece) as usize] {
+                    "O-O".into()
+                } else {
+                    "O-O-O".into()
                 }
             }
             _ => "not handled".into(),

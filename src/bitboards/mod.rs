@@ -19,7 +19,7 @@ pub struct Bitboards {
 }
 
 impl Default for Bitboards {
-    fn default() -> Self {
+    fn default() -> Bitboards {
         Bitboards {
             valid_moves: [0; Square::Count as usize],
             checkers: [0; Color::Both as usize],
@@ -72,6 +72,13 @@ impl Bitboards {
             self.attacks[color as usize] = attacks;
         }
     }
+
+    pub fn get_attacks(&self, color: Color) -> Bitboard {
+        if color == Color::Both {
+            return self.attacks[Color::White as usize] | self.attacks[Color::Black as usize];
+        }
+        self.attacks[color as usize]
+    }
 }
 
 #[allow(dead_code)]
@@ -79,7 +86,7 @@ pub fn print_bitboard(bb: Bitboard) {
     for rank in Rank::iter_reverse() {
         print!("{}: ", rank);
         for file in File::iter() {
-            let sq = Square::make_square(file, rank);
+            let sq = Square::from(file, rank);
             if is_bit_set(bb, sq) {
                 print!("1 ");
             } else {

@@ -1,16 +1,15 @@
 export component EvalBar inherits Rectangle {
     in property <percent> b_eval: 50%;
     in property <percent> w_eval: 50%;
-
     height: 100%;
     width: 20px;
-
     Rectangle {
         background: black;
         height: b_eval;
         x: 0;
         y: 0;
     }
+
     Rectangle {
         background: white;
         height: w_eval;

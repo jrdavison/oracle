@@ -1,7 +1,7 @@
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 use std::fmt;
-use std::ops::{Add, Mul, Not, Sub};
+use std::ops::{Add, BitAnd, Mul, Not, Sub};
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -13,7 +13,7 @@ pub enum MoveType {
     Capture,
     EnPassant,
     TwoSquarePush,
-    // Castle,
+    Castle,
     Promotion,
 }
 
@@ -50,7 +50,7 @@ pub enum PieceType {
 }
 
 impl PieceType {
-    pub fn make_piece_type(c: char) -> PieceType {
+    pub fn from_char(c: char) -> PieceType {
         let c_lower = c.to_lowercase().next().unwrap_or('\0');
         match c_lower {
             'k' => PieceType::King,
@@ -97,7 +97,7 @@ pub enum Piece {
 }
 
 impl Piece {
-    pub fn make_piece(pt: PieceType, c: Color) -> Piece {
+    pub fn from(pt: PieceType, c: Color) -> Piece {
         Piece::from_u8((pt as u8) + ((c as u8) << 3)).unwrap_or_default()
     }
 
@@ -151,8 +151,15 @@ impl Add<Direction> for Square {
 }
 
 impl Square {
-    pub fn make_square(file: File, rank: Rank) -> Square {
+    pub fn from(file: File, rank: Rank) -> Square {
         Square::from_u8((rank as u8) << 3 | (file as u8)).unwrap_or_default()
+    }
+
+    pub fn from_string(square_str: &str) -> Square {
+        let mut chars = square_str.chars();
+        let file = File::from_char(chars.next().unwrap_or(' '));
+        let rank = Rank::from_char(chars.next().unwrap_or(' '));
+        Square::from(file, rank)
     }
 
     pub fn rank_of(sq: Square) -> Rank {
@@ -167,7 +174,7 @@ impl Square {
         (0..(Square::Count as usize)).filter_map(|i| Square::from_u8(i as u8))
     }
 
-    fn is_valid(sq: i8) -> bool {
+    pub fn is_valid(sq: i8) -> bool {
         Square::A1 as i8 <= sq && sq < Square::Count as i8
     }
 }
@@ -241,6 +248,20 @@ impl File {
             _ => "???",
         }
     }
+
+    fn from_char(c: char) -> File {
+        match c {
+            'a' => File::FileA,
+            'b' => File::FileB,
+            'c' => File::FileC,
+            'd' => File::FileD,
+            'e' => File::FileE,
+            'f' => File::FileF,
+            'g' => File::FileG,
+            'h' => File::FileH,
+            _ => File::Count,
+        }
+    }
 }
 
 impl Add<u8> for File {
@@ -311,6 +332,20 @@ impl Rank {
             _ => "???",
         }
     }
+
+    fn from_char(c: char) -> Rank {
+        match c {
+            '1' => Rank::Rank1,
+            '2' => Rank::Rank2,
+            '3' => Rank::Rank3,
+            '4' => Rank::Rank4,
+            '5' => Rank::Rank5,
+            '6' => Rank::Rank6,
+            '7' => Rank::Rank7,
+            '8' => Rank::Rank8,
+            _ => Rank::Count,
+        }
+    }
 }
 
 impl Add<u8> for Rank {
@@ -344,5 +379,39 @@ impl Mul<u8> for Rank {
 impl fmt::Display for Rank {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", *self as u8 + 1)
+    }
+}
+
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive, PartialEq)]
+pub enum CastlingRights {
+    #[default]
+    NoCastling = 0,
+
+    WhiteOO = 0b0001,
+    WhiteOOO = 0b0010,
+    BlackOO = 0b0100,
+    BlackOOO = 0b1000,
+
+    KingSide = 0b0101,
+    QueenSide = 0b1010,
+    WhiteCastling = 0b0011,
+    BlackCastling = 0b1100,
+    AllCastling = 0b1111,
+}
+
+impl BitAnd for CastlingRights {
+    type Output = CastlingRights;
+
+    fn bitand(self, rhs: CastlingRights) -> CastlingRights {
+        CastlingRights::from_u8(self as u8 & rhs as u8).unwrap_or_default()
+    }
+}
+
+impl CastlingRights {
+    pub fn unset_castling_rights(&mut self, rights_to_unset: CastlingRights) {
+        let current = *self as u8;
+        let mask = !(rights_to_unset as u8);
+        *self = CastlingRights::from_u8(current & mask).unwrap_or_default();
     }
 }

@@ -15,16 +15,16 @@ pub fn run_application() -> Result<(), Box<dyn Error>> {
 
     // start: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
     let position = Rc::new(RefCell::new(Position::new(
-        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "r1bBr3/1p3pk1/p1p1p3/n1P4n/3PP3/P5QP/B4PP1/R4RK1 b - - 0 23",
     )));
 
-    set_application_state(&ui, &position, -1, true); // -1 no piece is being dragged
+    set_application_state(&ui, &position, Square::Count, true);
     init_callbacks(&ui, &position);
 
     Ok(ui.run()?)
 }
 
-fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragged_piece_sq: i32, compute_moves: bool) {
+fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragged_piece: Square, compute_moves: bool) {
     let mut pos = position.borrow_mut();
 
     let side_to_move = pos.side_to_move();
@@ -36,18 +36,24 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
         last_move_from: last_move.from as i32,
         last_move_to: last_move.to as i32,
     });
-    ui.set_dragged_piece_sq(dragged_piece_sq);
+    ui.set_dragged_piece_sq(dragged_piece as i32);
 
     if compute_moves {
         let move_history = format_move_history(&pos);
-        pos.compute_valid_moves(side_to_move);
+        pos.compute_valid_moves();
         ui.set_dashboard_state(DashboardState {
             move_history: Rc::new(VecModel::from(move_history)).into(),
             halfmove_clock: pos.halfmove_clock(),
-            en_passant_square: pos.en_passant_square().into(),
-            compute_time: pos.compute_time().into(),
+            en_passant_square: pos.en_passant_sq().into(),
+            avg_compute_time: pos.avg_compute_time().into(),
         });
-    }
+        let check_sq = if pos.king_in_check(side_to_move) {
+            pos.king_squares[side_to_move as usize]
+        } else {
+            Square::default()
+        };
+        ui.set_check_sq(check_sq as i32);
+}
 }
 
 fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
@@ -69,14 +75,14 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
     ui.global::<RustInterface>().on_square_from_xy(|x: f32, y: f32| {
         let file = File::from_x(x);
         let rank = Rank::from_y(y);
-        Square::make_square(file, rank) as i32
+        Square::from(file, rank) as i32
     });
 
     ui.global::<RustInterface>().on_move_piece({
         let position_weak = position_weak.clone();
         let ui_weak = ui_weak.clone();
         move |src: i32, dest: i32| {
-            let ui = ui_weak.upgrade().expect("could not upgrade ui");
+            let ui: AppWindow = ui_weak.upgrade().expect("could not upgrade ui");
             let position = position_weak.upgrade().expect("could not upgrade position");
             let mut position_mut = position.borrow_mut();
 
@@ -88,7 +94,7 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
 
             let valid_move = move_info.is_valid();
             if valid_move {
-                set_application_state(&ui, &position, -1, valid_move);
+                set_application_state(&ui, &position, Square::Count, valid_move);
             }
         }
     });
@@ -105,7 +111,7 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
             drop(position_mut);
 
             if undo_success {
-                set_application_state(&ui, &position, -1, true);
+                set_application_state(&ui, &position, Square::Count, true);
             }
         }
     });
@@ -122,7 +128,7 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
             drop(position_mut);
 
             if redo_success {
-                set_application_state(&ui, &position, -1, true);
+                set_application_state(&ui, &position, Square::Count, true);
             }
         }
     });
@@ -139,26 +145,28 @@ fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
 
     let mut moves = chunk_move_history(&combined_history);
     if moves.is_empty() {
+        let white_str = if pos.side_to_move() == Color::White { "" } else { "..." };
         moves.push(SlintMoveInfo {
             move_no: 1,
-            white: "".into(),
+            white: white_str.into(),
             black: "".into(),
             active_move: 0,
         });
     } else if let Some(active_move) = history.last() {
+        let color = Piece::color_of(active_move.moved_piece);
         let fullmove_idx = match history.len() {
             0 => 0,
             len => {
-                if Piece::color_of(active_move.moved_piece) == Color::White {
+                if color == Color::White {
+                    println!("white: {} / 2 = {}", len, len / 2);
                     len / 2
                 } else {
-                    (len / 2) - 1
+                    std::cmp::max(( len + 1) / 2, 1) - 1
                 }
             }
         };
 
         if let Some(move_ref) = moves.get_mut(fullmove_idx) {
-            let color = Piece::color_of(active_move.moved_piece);
             move_ref.active_move = if color == Color::White { 1 } else { 2 };
         }
     }
