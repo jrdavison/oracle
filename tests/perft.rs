@@ -1,13 +1,36 @@
-use oracle::position::{Position, count_valid_moves};
+use oracle::position::{count_valid_moves, Position};
+use std::time::Instant;
 
 // https://www.chessprogramming.org/Perft
 #[test]
-pub fn test_3ply() {
-    let startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+pub fn test_basic_count_up_to_4ply() {
+    let start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    let start_pos = &mut Position::new(start_fen);
 
-    assert_eq!(count_valid_moves(&mut Position::new(startpos), 1), 20);
-    assert_eq!(count_valid_moves(&mut Position::new(startpos), 2), 400);
-    assert_eq!(count_valid_moves(&mut Position::new(startpos), 3), 8902);
+    let start_1ply = Instant::now();
+    let valid_1ply = count_valid_moves(start_pos, 1);
+    println!("Time to count 1ply moves: {:?}", start_1ply.elapsed());
+    assert_eq!(valid_1ply, 20);
+
+    let start_2ply = Instant::now();
+    let valid_2ply = count_valid_moves(start_pos, 2);
+    println!("Time to count 2ply moves: {:?}", start_2ply.elapsed());
+    assert_eq!(valid_2ply, 400);
+
+    let start_3ply = Instant::now();
+    let valid_3ply = count_valid_moves(start_pos, 3);
+    println!("Time to count 3ply moves: {:?}", start_3ply.elapsed());
+    assert_eq!(valid_3ply, 8902);
+
+    let start_4ply = Instant::now();
+    let valid_4ply = count_valid_moves(start_pos, 4);
+    println!("Time to count 4ply moves: {:?}", start_4ply.elapsed());
+    assert_eq!(valid_4ply, 197281);
+
+    let start_5ply = Instant::now();
+    let valid_5ply = count_valid_moves(start_pos, 5);
+    println!("Time to count 5ply moves: {:?}", start_5ply.elapsed());
+    assert_eq!(valid_5ply, 4865609);
 }
 
 // #[test]

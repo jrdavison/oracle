@@ -111,11 +111,11 @@ impl Position {
         let delta = start.elapsed();
         self.total_compute_time += delta;
         self.total_moves += 1;
-        println!("Time to compute valid moves: {:?}", delta);
+        // println!("Time to compute valid moves: {:?}", delta);
     }
 
     pub fn move_piece(&mut self, from: Square, to: Square, clear_redo: bool) -> MoveInfo {
-        let start = Instant::now();
+        let _start = Instant::now();
         if !self.valid_move(from, to) {
             return MoveInfo::default();
         }
@@ -205,7 +205,7 @@ impl Position {
             self.redo_history.clear();
         }
 
-        println!("Time to make move: {:?}", start.elapsed());
+        // println!("Time to make move: {:?}", _start.elapsed());
 
         move_info
     }

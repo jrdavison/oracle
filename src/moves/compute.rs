@@ -39,6 +39,17 @@ pub fn compute_valid_moves(pos: &mut Position) {
 
     let compute_moves_for_color = |pos: &mut Position, color: Color| {
         let mut attacks = Bitboard::default();
+
+        // For king safety, enemy sliders must see through the friendly king's
+        // current square. Otherwise a king could illegally move along a rook,
+        // bishop, or queen ray that it was previously blocking.
+        let attack_occupancy = if color != friendly_color {
+            let full_checkers_bb = pos.bitboards.get_checkers(Color::Both);
+            bitboards::clear_bit(full_checkers_bb, pos.king_squares[friendly_color as usize])
+        } else {
+            pos.bitboards.get_checkers(Color::Both)
+        };
+
         for sq in &pos.occupied_squares[color as usize] {
             let piece = pos.board[*sq as usize];
             let piece_type = Piece::type_of(piece);
@@ -48,9 +59,11 @@ pub fn compute_valid_moves(pos: &mut Position) {
             let mut computed_moves = match piece_type {
                 PieceType::Pawn => compute_pawn_moves(pos, *sq, piece_color),
                 PieceType::Knight => compute_knight_moves(*sq),
-                PieceType::Rook => compute_rook_moves(pos, *sq),
-                PieceType::Bishop => compute_bishop_moves(pos, *sq),
-                PieceType::Queen => compute_rook_moves(pos, *sq) | compute_bishop_moves(pos, *sq),
+                PieceType::Rook => compute_rook_moves(attack_occupancy, *sq),
+                PieceType::Bishop => compute_bishop_moves(attack_occupancy, *sq),
+                PieceType::Queen => {
+                    compute_rook_moves(attack_occupancy, *sq) | compute_bishop_moves(attack_occupancy, *sq)
+                }
                 PieceType::King => compute_king_moves(pos, color),
                 _ => ComputedMoves::default(),
             };
@@ -114,9 +127,9 @@ fn compute_knight_moves(sq: Square) -> ComputedMoves {
     }
 }
 
-fn compute_rook_moves(pos: &Position, sq: Square) -> ComputedMoves {
+fn compute_rook_moves(occupancy: Bitboard, sq: Square) -> ComputedMoves {
     let move_mask = LOOKUP_TABLES.get_orthogonal_mask(sq);
-    let blocker_key = pos.bitboards.get_checkers(Color::Both) & move_mask;
+    let blocker_key = occupancy & move_mask;
     let attacks = LOOKUP_TABLES.get_rook_mask(sq, blocker_key);
 
     ComputedMoves {
@@ -125,9 +138,9 @@ fn compute_rook_moves(pos: &Position, sq: Square) -> ComputedMoves {
     }
 }
 
-fn compute_bishop_moves(pos: &Position, sq: Square) -> ComputedMoves {
+fn compute_bishop_moves(occupancy: Bitboard, sq: Square) -> ComputedMoves {
     let diagonal_mask = LOOKUP_TABLES.get_diagonal_mask(sq);
-    let blocker_key = pos.bitboards.get_checkers(Color::Both) & diagonal_mask;
+    let blocker_key = occupancy & diagonal_mask;
     let attacks = LOOKUP_TABLES.get_bishop_mask(sq, blocker_key);
 
     ComputedMoves {
@@ -188,31 +201,52 @@ fn compute_pin_and_check_masks(pos: &Position, color: Color) -> ([Bitboard; Squa
     let friendly_pieces = pos.bitboards.get_checkers(color);
     let enemy_pieces = pos.bitboards.get_checkers(!color);
 
-    let enemy_rook_queens = enemy_pieces
-        & (piece_type_mask(pos, PieceType::Rook) | piece_type_mask(pos, PieceType::Queen));
-    let enemy_bishop_queens = enemy_pieces
-        & (piece_type_mask(pos, PieceType::Bishop) | piece_type_mask(pos, PieceType::Queen));
+    let enemy_rook_queens =
+        enemy_pieces & (piece_type_mask(pos, PieceType::Rook) | piece_type_mask(pos, PieceType::Queen));
+    let enemy_bishop_queens =
+        enemy_pieces & (piece_type_mask(pos, PieceType::Bishop) | piece_type_mask(pos, PieceType::Queen));
     let enemy_knights = enemy_pieces & piece_type_mask(pos, PieceType::Knight);
     let enemy_pawns = enemy_pieces & piece_type_mask(pos, PieceType::Pawn);
 
-    let rook_attackers = slider_attackers(king_sq, occupancy, enemy_rook_queens, true);
-    let bishop_attackers = slider_attackers(king_sq, occupancy, enemy_bishop_queens, false);
-    let mut sliders = rook_attackers | bishop_attackers;
-
+    let king_bit = bitboards::set_bit(0, king_sq);
+    let mut sliders = enemy_rook_queens | enemy_bishop_queens;
     while sliders != 0 {
+        // Pop the least-significant set bit so we visit only occupied slider squares.
         let pinner_idx = sliders.trailing_zeros() as usize;
         sliders &= sliders - 1;
 
         let pinner_sq = Square::from_u8(pinner_idx as u8).unwrap_or_default();
-        let between = squares_between(pos, king_sq, pinner_sq);
+        let mut pinner_attacks = 0;
+        if bitboards::is_bit_set(enemy_rook_queens, pinner_sq) {
+            pinner_attacks |= compute_rook_moves(occupancy, pinner_sq).attacks;
+        }
+        if bitboards::is_bit_set(enemy_bishop_queens, pinner_sq) {
+            pinner_attacks |= compute_bishop_moves(occupancy, pinner_sq).attacks;
+        }
+
+        let between = squares_between(king_sq, pinner_sq);
         let blockers = between & occupancy;
 
-        if blockers == 0 {
+        if (pinner_attacks & king_bit) != 0 {
             num_checks += 1;
-            check_mask = bitboards::set_bit(0, pinner_sq);
+            check_mask = between | bitboards::set_bit(0, pinner_sq);
         } else if blockers.count_ones() == 1 && (blockers & friendly_pieces) != 0 {
-            let pinned_idx = blockers.trailing_zeros() as usize;
-            pin_masks[pinned_idx] = between | bitboards::set_bit(0, pinner_sq);
+            // A single friendly blocker is pinned only if removing it exposes
+            // the king to this actual slider. This avoids false pins from
+            // sliders that are not aligned with the king.
+            let xray_occupancy = occupancy & !blockers;
+            let mut xray_attacks = 0;
+            if bitboards::is_bit_set(enemy_rook_queens, pinner_sq) {
+                xray_attacks |= compute_rook_moves(xray_occupancy, pinner_sq).attacks;
+            }
+            if bitboards::is_bit_set(enemy_bishop_queens, pinner_sq) {
+                xray_attacks |= compute_bishop_moves(xray_occupancy, pinner_sq).attacks;
+            }
+
+            if (xray_attacks & king_bit) != 0 {
+                let pinned_idx = blockers.trailing_zeros() as usize;
+                pin_masks[pinned_idx] = between | bitboards::set_bit(0, pinner_sq);
+            }
         }
     }
 
@@ -248,26 +282,37 @@ fn piece_type_mask(pos: &Position, piece_type: PieceType) -> Bitboard {
     mask
 }
 
-fn slider_attackers(king_sq: Square, occ: Bitboard, candidates: Bitboard, rook_like: bool) -> Bitboard {
-    let move_mask = if rook_like {
-        LOOKUP_TABLES.get_orthogonal_mask(king_sq)
-    } else {
-        LOOKUP_TABLES.get_diagonal_mask(king_sq)
-    };
-    let blockers = occ & move_mask;
-    let attacks = if rook_like {
-        LOOKUP_TABLES.get_rook_mask(king_sq, blockers)
-    } else {
-        LOOKUP_TABLES.get_bishop_mask(king_sq, blockers)
-    };
-    attacks & candidates
-}
+fn squares_between(a: Square, b: Square) -> Bitboard {
+    // Return only true rank/file/diagonal squares between two aligned squares.
+    // Attack-mask intersections can include unrelated squares for non-aligned
+    // pieces, which corrupts check-block and pin masks.
+    let a_file = Square::file_of(a) as i8;
+    let a_rank = Square::rank_of(a) as i8;
+    let b_file = Square::file_of(b) as i8;
+    let b_rank = Square::rank_of(b) as i8;
 
-fn squares_between(_pos: &Position, a: Square, b: Square) -> Bitboard {
-    let ray_ab = LOOKUP_TABLES.get_rook_mask(a, 0) & LOOKUP_TABLES.get_rook_mask(b, 0);
-    if ray_ab != 0 {
-        return ray_ab;
+    let file_delta = b_file - a_file;
+    let rank_delta = b_rank - a_rank;
+
+    let step = if file_delta == 0 {
+        rank_delta.signum() * 8
+    } else if rank_delta == 0 {
+        file_delta.signum()
+    } else if file_delta.abs() == rank_delta.abs() {
+        rank_delta.signum() * 8 + file_delta.signum()
+    } else {
+        return 0;
+    };
+
+    let mut between = 0;
+    let mut sq = a as i8 + step;
+    while sq != b as i8 {
+        if !Square::is_valid(sq) {
+            return 0;
+        }
+        between = bitboards::set_bit(between, Square::from_i8(sq).unwrap_or_default());
+        sq += step;
     }
 
-    LOOKUP_TABLES.get_bishop_mask(a, 0) & LOOKUP_TABLES.get_bishop_mask(b, 0)
+    between
 }
