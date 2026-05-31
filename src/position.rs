@@ -1,4 +1,4 @@
-use crate::bitboards::{self, Bitboards};
+use crate::bitboards::{self, Bitboard, Bitboards};
 use crate::moves::compute;
 use crate::moves::info::{EngineMove, MoveInfo};
 use crate::utils::{CastlingRights, Color, Direction, File, MoveType, Piece, PieceType, Rank, Square};
@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 
 pub struct Position {
     pub bitboards: Bitboards,
+    pub piece_masks: [Bitboard; PieceType::Pawn as usize + 1],
     pub board: [Piece; Square::Count as usize],
     pub castling_rights: CastlingRights,
     pub en_passant_sq: Square,
@@ -27,6 +28,7 @@ impl Default for Position {
     fn default() -> Position {
         Position {
             bitboards: Bitboards::default(),
+            piece_masks: [0; PieceType::Pawn as usize + 1],
             board: [Piece::Empty; Square::Count as usize],
             castling_rights: CastlingRights::default(),
             en_passant_sq: Square::Count,
@@ -236,10 +238,13 @@ impl Position {
                     self.board[last_move.to as usize] = last_move.captured_piece;
                     self.bitboards.set_checkers(color, last_move.from);
                     self.bitboards.unset_checkers(color, last_move.to);
+                    self.set_piece_mask(last_move.moved_piece, last_move.from);
+                    self.unset_piece_mask(last_move.moved_piece, last_move.to);
 
                     if last_move.captured_piece != Piece::Empty {
                         let captured_color = Piece::color_of(last_move.captured_piece);
                         self.bitboards.set_checkers(captured_color, last_move.capture_piece_sq);
+                        self.set_piece_mask(last_move.captured_piece, last_move.capture_piece_sq);
                     }
                 }
                 MoveType::EnPassant => {
@@ -251,6 +256,9 @@ impl Position {
                     self.bitboards.set_checkers(color, last_move.from);
                     self.bitboards.unset_checkers(color, last_move.to);
                     self.bitboards.set_checkers(captured_color, last_move.capture_piece_sq);
+                    self.set_piece_mask(last_move.moved_piece, last_move.from);
+                    self.unset_piece_mask(last_move.moved_piece, last_move.to);
+                    self.set_piece_mask(last_move.captured_piece, last_move.capture_piece_sq);
                     self.en_passant_sq = last_move.to;
                 }
                 MoveType::Castle => {
@@ -267,12 +275,17 @@ impl Position {
                     self.board[last_move.to as usize] = Piece::Empty;
                     self.bitboards.set_checkers(color, last_move.from);
                     self.bitboards.unset_checkers(color, last_move.to);
+                    self.set_piece_mask(last_move.moved_piece, last_move.from);
+                    self.unset_piece_mask(last_move.moved_piece, last_move.to);
 
                     // reset rook
-                    self.board[rook_from as usize] = self.board[rook_to as usize];
+                    let rook = self.board[rook_to as usize];
+                    self.board[rook_from as usize] = rook;
                     self.board[rook_to as usize] = Piece::Empty;
                     self.bitboards.set_checkers(color, rook_from);
                     self.bitboards.unset_checkers(color, rook_to);
+                    self.set_piece_mask(rook, rook_from);
+                    self.unset_piece_mask(rook, rook_to);
                 }
                 MoveType::Invalid => panic!("Invalid move"),
             }
@@ -326,12 +339,28 @@ impl Position {
         let color = Piece::color_of(piece);
         self.board[sq as usize] = Piece::Empty;
         self.bitboards.unset_checkers(color, sq);
+        self.unset_piece_mask(piece, sq);
     }
 
     fn add_piece(&mut self, sq: Square, piece: Piece) {
         let color = Piece::color_of(piece);
         self.board[sq as usize] = piece;
         self.bitboards.set_checkers(color, sq);
+        self.set_piece_mask(piece, sq);
+    }
+
+    fn set_piece_mask(&mut self, piece: Piece, sq: Square) {
+        let piece_type = Piece::type_of(piece);
+        if piece_type != PieceType::Empty {
+            self.piece_masks[piece_type as usize] = bitboards::set_bit(self.piece_masks[piece_type as usize], sq);
+        }
+    }
+
+    fn unset_piece_mask(&mut self, piece: Piece, sq: Square) {
+        let piece_type = Piece::type_of(piece);
+        if piece_type != PieceType::Empty {
+            self.piece_masks[piece_type as usize] = bitboards::clear_bit(self.piece_masks[piece_type as usize], sq);
+        }
     }
 }
 
@@ -386,8 +415,8 @@ fn init_from_fen(fen: &str) -> Position {
                 let color = if c.is_uppercase() { Color::White } else { Color::Black };
                 let sq = Square::from(file, rank);
                 let piece_type = PieceType::from_char(c);
-                position.board[sq as usize] = Piece::from(piece_type, color);
-                position.bitboards.set_checkers(color, sq);
+                let piece = Piece::from(piece_type, color);
+                position.add_piece(sq, piece);
 
                 if piece_type == PieceType::King {
                     position.king_squares[color as usize] = sq;

@@ -206,11 +206,11 @@ fn compute_pin_and_check_masks(pos: &Position, color: Color) -> ([Bitboard; Squa
     let enemy_pieces = pos.bitboards.get_checkers(!color);
 
     let enemy_rook_queens =
-        enemy_pieces & (piece_type_mask(pos, PieceType::Rook) | piece_type_mask(pos, PieceType::Queen));
+        enemy_pieces & (pos.piece_masks[PieceType::Rook as usize] | pos.piece_masks[PieceType::Queen as usize]);
     let enemy_bishop_queens =
-        enemy_pieces & (piece_type_mask(pos, PieceType::Bishop) | piece_type_mask(pos, PieceType::Queen));
-    let enemy_knights = enemy_pieces & piece_type_mask(pos, PieceType::Knight);
-    let enemy_pawns = enemy_pieces & piece_type_mask(pos, PieceType::Pawn);
+        enemy_pieces & (pos.piece_masks[PieceType::Bishop as usize] | pos.piece_masks[PieceType::Queen as usize]);
+    let enemy_knights = enemy_pieces & pos.piece_masks[PieceType::Knight as usize];
+    let enemy_pawns = enemy_pieces & pos.piece_masks[PieceType::Pawn as usize];
 
     let king_bit = bitboards::set_bit(0, king_sq);
     let mut sliders = enemy_rook_queens | enemy_bishop_queens;
@@ -274,16 +274,6 @@ fn compute_pin_and_check_masks(pos: &Position, color: Color) -> ([Bitboard; Squa
     }
 
     (pin_masks, check_mask)
-}
-
-fn piece_type_mask(pos: &Position, piece_type: PieceType) -> Bitboard {
-    let mut mask = 0;
-    for sq in Square::iter() {
-        if Piece::type_of(pos.board[sq as usize]) == piece_type {
-            mask = bitboards::set_bit(mask, sq);
-        }
-    }
-    mask
 }
 
 fn squares_between(a: Square, b: Square) -> Bitboard {
