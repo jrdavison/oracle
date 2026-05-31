@@ -1,5 +1,5 @@
-use crate::moves::info::MoveInfo;
-use crate::position::Position;
+use crate::bitboards::Bitboard;
+use crate::game::{GameMove, GameState};
 use crate::utils::{Color, File, Piece, Rank, Square};
 use itertools::Itertools;
 use num_traits::FromPrimitive;
@@ -14,138 +14,166 @@ pub fn run_application() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
 
     // start: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
-    let position = Rc::new(RefCell::new(Position::new(
+    let game = Rc::new(RefCell::new(GameState::new(
         "r1bBr3/1p3pk1/p1p1p3/n1P4n/3PP3/P5QP/B4PP1/R4RK1 b - - 0 23",
     )));
 
-    set_application_state(&ui, &position, Square::Count, true);
-    init_callbacks(&ui, &position);
+    set_application_state(&ui, &game, Square::Count, true);
+    init_callbacks(&ui, &game);
 
     Ok(ui.run()?)
 }
 
-fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragged_piece: Square, compute_moves: bool) {
-    let mut pos = position.borrow_mut();
+fn set_application_state(ui: &AppWindow, game: &Rc<RefCell<GameState>>, dragged_piece: Square, refresh_position: bool) {
+    let mut game = game.borrow_mut();
 
-    let side_to_move = pos.side_to_move();
-    let last_move = pos.last_move();
-    let board_i32 = pos.board.iter().map(|&piece| piece as i32).collect::<Vec<_>>();
-
-    ui.set_board_state(BoardState {
-        board: Rc::new(VecModel::from(board_i32)).into(),
-        last_move_from: last_move.from as i32,
-        last_move_to: last_move.to as i32,
-    });
-    ui.set_dragged_piece_sq(dragged_piece as i32);
-
-    if compute_moves {
-        let move_history = format_move_history(&pos);
-        pos.compute_valid_moves();
+    if refresh_position {
+        game.position.compute_legal_moves();
+        let move_history = format_move_history(&game);
         ui.set_dashboard_state(DashboardState {
             move_history: Rc::new(VecModel::from(move_history)).into(),
-            halfmove_clock: pos.halfmove_clock(),
-            en_passant_square: pos.en_passant_sq().into(),
-            avg_compute_time: pos.avg_compute_time().into(),
+            halfmove_clock: game.position.halfmove_clock(),
+            en_passant_square: game.position.en_passant_sq().into(),
+            avg_compute_time: game.position.avg_compute_time().into(),
         });
-        let check_sq = if pos.king_in_check(side_to_move) {
-            pos.king_squares[side_to_move as usize]
-        } else {
-            Square::default()
-        };
-        ui.set_check_sq(check_sq as i32);
+    }
+
+    ui.set_board_state(build_board_state(&game, dragged_piece));
+}
+
+fn build_board_state(game: &GameState, dragged_piece: Square) -> BoardState {
+    let pos = &game.position;
+    let side_to_move = pos.side_to_move();
+    let last_move = game.last_move();
+    let board_i32 = pos.board.iter().map(|&piece| piece as i32).collect::<Vec<_>>();
+    let legal_targets = if dragged_piece == Square::Count {
+        vec![false; Square::Count as usize]
+    } else {
+        bitboard_to_square_flags(pos.legal_destinations_from(dragged_piece))
+    };
+    let check_sq = if pos.king_in_check(side_to_move) {
+        pos.king_squares[side_to_move as usize]
+    } else {
+        Square::Count
+    };
+    let dragged_piece_value = if dragged_piece == Square::Count {
+        Piece::Empty
+    } else {
+        pos.board[dragged_piece as usize]
+    };
+
+    BoardState {
+        board: Rc::new(VecModel::from(board_i32)).into(),
+        legal_targets: Rc::new(VecModel::from(legal_targets)).into(),
+        last_move_from: last_move.from as i32,
+        last_move_to: last_move.to as i32,
+        check_sq: check_sq as i32,
+        dragged_piece_sq: dragged_piece as i32,
+        dragged_piece: dragged_piece_value as i32,
     }
 }
 
-fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
-    let ui_weak = ui.as_weak();
-    let position_weak = Rc::downgrade(position);
+fn bitboard_to_square_flags(mask: Bitboard) -> Vec<bool> {
+    Square::iter().map(|sq| (mask & (1u64 << (sq as u8))) != 0).collect()
+}
 
-    ui.global::<RustInterface>().on_highlight_valid_move_sq({
-        let position_weak = position_weak.clone();
-        move |from, to| {
-            let position = position_weak.upgrade().expect("could not upgrade position");
-            let position = position.borrow();
-            position.valid_move(
-                Square::from_u8(from as u8).unwrap_or_default(),
-                Square::from_u8(to as u8).unwrap_or_default(),
-            )
+fn init_callbacks(ui: &AppWindow, game: &Rc<RefCell<GameState>>) {
+    let ui_weak = ui.as_weak();
+    let game_weak = Rc::downgrade(game);
+
+    ui.global::<RustInterface>().on_begin_drag({
+        let game_weak = game_weak.clone();
+        let ui_weak = ui_weak.clone();
+        move |src| {
+            let ui: AppWindow = ui_weak.upgrade().expect("could not upgrade ui");
+            let game = game_weak.upgrade().expect("could not upgrade game");
+            let game = game.borrow();
+            let src_sq = Square::from_u8(src as u8).unwrap_or_default();
+            let dragged_piece = if src_sq == Square::Count || game.position.board[src_sq as usize] == Piece::Empty {
+                Square::Count
+            } else {
+                src_sq
+            };
+            ui.set_board_state(build_board_state(&game, dragged_piece));
         }
     });
 
-    ui.global::<RustInterface>().on_square_from_xy(|x: f32, y: f32| {
-        let file = File::from_x(x);
-        let rank = Rank::from_y(y);
-        Square::from(file, rank) as i32
-    });
+    ui.global::<RustInterface>()
+        .on_square_from_xy(|x: f32, y: f32, sq_size: f32| {
+            let file = File::from_x(x, sq_size);
+            let rank = Rank::from_y(y, sq_size);
+            Square::from(file, rank) as i32
+        });
 
     ui.global::<RustInterface>().on_move_piece({
-        let position_weak = position_weak.clone();
+        let game_weak = game_weak.clone();
         let ui_weak = ui_weak.clone();
         move |src: i32, dest: i32| {
             let ui: AppWindow = ui_weak.upgrade().expect("could not upgrade ui");
-            let position = position_weak.upgrade().expect("could not upgrade position");
-            let mut position_mut = position.borrow_mut();
+            let game = game_weak.upgrade().expect("could not upgrade game");
+            let mut game_mut = game.borrow_mut();
 
             let src_sq = Square::from_u8(src as u8).unwrap_or_default();
             let dest_sq = Square::from_u8(dest as u8).unwrap_or_default();
 
-            let move_info = position_mut.move_piece(src_sq, dest_sq, true);
-            drop(position_mut);
+            let move_info = game_mut.play_move(src_sq, dest_sq).unwrap_or_default();
+            drop(game_mut);
 
-            let valid_move = move_info.is_valid();
-            if valid_move {
-                set_application_state(&ui, &position, Square::Count, valid_move);
-            }
+            set_application_state(&ui, &game, Square::Count, move_info.is_valid());
         }
     });
 
     ui.global::<RustInterface>().on_undo_move({
-        let position_weak = position_weak.clone();
+        let game_weak = game_weak.clone();
         let ui_weak = ui_weak.clone();
         move || {
-            let position = position_weak.upgrade().expect("could not upgrade position");
+            let game = game_weak.upgrade().expect("could not upgrade game");
             let ui = ui_weak.upgrade().expect("could not upgrade ui");
-            let mut position_mut = position.borrow_mut();
+            let mut game_mut = game.borrow_mut();
 
-            let undo_success = position_mut.undo_move();
-            drop(position_mut);
+            let undo_success = game_mut.undo_move();
+            drop(game_mut);
 
             if undo_success {
-                set_application_state(&ui, &position, Square::Count, true);
+                set_application_state(&ui, &game, Square::Count, true);
             }
         }
     });
 
     ui.global::<RustInterface>().on_redo_move({
-        let position_weak = position_weak.clone();
+        let game_weak = game_weak.clone();
         let ui_weak = ui_weak.clone();
         move || {
-            let position = position_weak.upgrade().expect("could not upgrade position");
+            let game = game_weak.upgrade().expect("could not upgrade game");
             let ui = ui_weak.upgrade().expect("could not upgrade ui");
-            let mut position_mut = position.borrow_mut();
+            let mut game_mut = game.borrow_mut();
 
-            let redo_success = position_mut.redo_move();
-            drop(position_mut);
+            let redo_success = game_mut.redo_move();
+            drop(game_mut);
 
             if redo_success {
-                set_application_state(&ui, &position, Square::Count, true);
+                set_application_state(&ui, &game, Square::Count, true);
             }
         }
     });
 }
 
-fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
-    let history = pos.move_history();
-    let mut redo_history = pos.redo_history();
+fn format_move_history(game: &GameState) -> Vec<SlintMoveInfo> {
+    let history = game.move_history();
+    let mut redo_history = game.redo_history().to_vec();
     redo_history.reverse();
 
     let mut combined_history = Vec::new();
-    combined_history.extend_from_slice(&history);
+    combined_history.extend_from_slice(history);
     combined_history.extend_from_slice(&redo_history);
 
     let mut moves = chunk_move_history(&combined_history);
     if moves.is_empty() {
-        let white_str = if pos.side_to_move() == Color::White { "" } else { "..." };
+        let white_str = if game.position.side_to_move() == Color::White {
+            ""
+        } else {
+            "..."
+        };
         moves.push(SlintMoveInfo {
             move_no: 1,
             white: white_str.into(),
@@ -153,15 +181,14 @@ fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
             active_move: 0,
         });
     } else if let Some(active_move) = history.last() {
-        let color = Piece::color_of(active_move.moved_piece);
+        let color = Piece::color_of(active_move.info.moved_piece);
         let fullmove_idx = match history.len() {
             0 => 0,
             len => {
                 if color == Color::White {
-                    println!("white: {} / 2 = {}", len, len / 2);
                     len / 2
                 } else {
-                    std::cmp::max(( len + 1) / 2, 1) - 1
+                    std::cmp::max((len + 1) / 2, 1) - 1
                 }
             }
         };
@@ -174,30 +201,30 @@ fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
     moves
 }
 
-fn chunk_move_history(history: &[MoveInfo]) -> Vec<SlintMoveInfo> {
+fn chunk_move_history(history: &[GameMove]) -> Vec<SlintMoveInfo> {
     let mut moves_iter = history.iter();
     let mut slint_move_info: Vec<SlintMoveInfo> = Vec::new();
 
     // first move is by black, add ... to white
     if let Some(first_move) = moves_iter.next() {
-        if Piece::color_of(first_move.moved_piece) == Color::Black {
+        if Piece::color_of(first_move.info.moved_piece) == Color::Black {
             slint_move_info.push(SlintMoveInfo {
-                move_no: first_move.fullmove_count,
+                move_no: first_move.info.fullmove_count,
                 white: "...".into(),
-                black: first_move.notation.clone(),
+                black: first_move.notation.clone().into(),
                 active_move: 0,
             });
         } else if let Some(first_response) = moves_iter.next() {
             slint_move_info.push(SlintMoveInfo {
-                move_no: first_move.fullmove_count,
-                white: first_move.notation.clone(),
-                black: first_response.notation.clone(),
+                move_no: first_move.info.fullmove_count,
+                white: first_move.notation.clone().into(),
+                black: first_response.notation.clone().into(),
                 active_move: 0,
             });
         } else {
             slint_move_info.push(SlintMoveInfo {
-                move_no: first_move.fullmove_count,
-                white: first_move.notation.clone(),
+                move_no: first_move.info.fullmove_count,
+                white: first_move.notation.clone().into(),
                 black: "".into(),
                 active_move: 0,
             });
@@ -209,16 +236,16 @@ fn chunk_move_history(history: &[MoveInfo]) -> Vec<SlintMoveInfo> {
         match chunk_vec.len() {
             2 => {
                 slint_move_info.push(SlintMoveInfo {
-                    move_no: chunk_vec[0].fullmove_count,
-                    white: chunk_vec[0].notation.clone(),
-                    black: chunk_vec[1].notation.clone(),
+                    move_no: chunk_vec[0].info.fullmove_count,
+                    white: chunk_vec[0].notation.clone().into(),
+                    black: chunk_vec[1].notation.clone().into(),
                     active_move: 0,
                 });
             }
             1 => {
                 slint_move_info.push(SlintMoveInfo {
-                    move_no: chunk_vec[0].fullmove_count,
-                    white: chunk_vec[0].notation.clone(),
+                    move_no: chunk_vec[0].info.fullmove_count,
+                    white: chunk_vec[0].notation.clone().into(),
                     black: "".into(),
                     active_move: 0,
                 });

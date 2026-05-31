@@ -13,7 +13,7 @@ pub type Bitboard = u64;
 pub static LOOKUP_TABLES: tables::LookupTables = tables::LookupTables::init();
 
 pub struct Bitboards {
-    valid_moves: [Bitboard; Square::Count as usize],
+    legal_moves: [Bitboard; Square::Count as usize],
     checkers: [Bitboard; Color::Both as usize],
     attacks: [Bitboard; Color::Both as usize],
 }
@@ -21,7 +21,7 @@ pub struct Bitboards {
 impl Default for Bitboards {
     fn default() -> Bitboards {
         Bitboards {
-            valid_moves: [0; Square::Count as usize],
+            legal_moves: [0; Square::Count as usize],
             checkers: [0; Color::Both as usize],
             attacks: [0; Color::Both as usize],
         }
@@ -29,16 +29,16 @@ impl Default for Bitboards {
 }
 
 impl Bitboards {
-    pub fn set_valid_moves(&mut self, sq: Square, bb: Bitboard) {
-        self.valid_moves[sq as usize] = bb;
+    pub fn set_legal_moves(&mut self, sq: Square, bb: Bitboard) {
+        self.legal_moves[sq as usize] = bb;
     }
 
-    pub fn get_valid_moves(&self, sq: Square) -> Bitboard {
-        self.valid_moves[sq as usize]
+    pub fn get_legal_moves(&self, sq: Square) -> Bitboard {
+        self.legal_moves[sq as usize]
     }
 
-    pub fn is_valid_move(&self, from: Square, to: Square) -> bool {
-        is_bit_set(self.valid_moves[from as usize], to)
+    pub fn is_legal_move(&self, from: Square, to: Square) -> bool {
+        is_bit_set(self.legal_moves[from as usize], to)
     }
 
     pub fn get_checkers(&self, color: Color) -> Bitboard {

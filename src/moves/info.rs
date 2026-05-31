@@ -1,10 +1,56 @@
 use super::compute::{KINGSIDE_CASTLE_SQUARES, QUEENSIDE_CASTLE_SQUARES};
-use crate::bitboards;
 use crate::position::Position;
-use crate::utils::{CastlingRights, Direction, File, MoveType, Piece, PieceType, Rank, Square};
-use slint::SharedString;
+use crate::utils::{CastlingRights, Direction, MoveType, Piece, PieceType, Rank, Square};
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Move {
+    pub from: Square,
+    pub to: Square,
+}
+
+// Enough for reachable orthodox chess positions; arbitrary FENs can exceed this.
+const MAX_MOVES: usize = 256;
+
+#[derive(Clone, Copy, Debug)]
+pub struct MoveList {
+    pub moves: [Move; MAX_MOVES],
+    pub len: usize,
+}
+
+impl Default for MoveList {
+    fn default() -> MoveList {
+        MoveList {
+            moves: [Move::default(); MAX_MOVES],
+            len: 0,
+        }
+    }
+}
+
+impl MoveList {
+    pub fn clear(&mut self) {
+        self.len = 0;
+    }
+
+    pub fn push(&mut self, mv: Move) {
+        debug_assert!(self.len < self.moves.len());
+        self.moves[self.len] = mv;
+        self.len += 1;
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = Move> + '_ {
+        self.moves[..self.len].iter().copied()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MoveInfo {
     pub move_type: MoveType,
     pub from: Square,
@@ -16,7 +62,6 @@ pub struct MoveInfo {
     pub castling_rights: CastlingRights,
     pub fullmove_count: i32,
     pub halfmove_clock: i32,
-    pub notation: SharedString,
 }
 
 impl MoveInfo {
@@ -79,7 +124,7 @@ impl MoveInfo {
             }
         }
 
-        let mut new_move = MoveInfo {
+        MoveInfo {
             move_type,
             from,
             to,
@@ -90,101 +135,10 @@ impl MoveInfo {
             castling_rights: position.castling_rights,
             fullmove_count: position.fullmove_count(),
             halfmove_clock: position.halfmove_clock(),
-            notation: SharedString::default(),
-        };
-        new_move.set_algebraic_notation(position);
-
-        new_move
+        }
     }
 
     pub fn is_valid(&self) -> bool {
         self.move_type != MoveType::Invalid
     }
-
-    fn set_algebraic_notation(&mut self, position: &Position) {
-        let piece_identifier = disambiguate_move(self, position);
-        let to_square = format!("{:?}", self.to).to_lowercase();
-
-        let move_string = match self.move_type {
-            MoveType::Quiet | MoveType::TwoSquarePush => [piece_identifier, to_square].join(""),
-            MoveType::Capture | MoveType::EnPassant => [piece_identifier, to_square].join("x"),
-            MoveType::Promotion => {
-                if self.captured_piece != Piece::Empty {
-                    format!(
-                        "{}x{}={}",
-                        Square::file_of(self.from).make_notation_string(),
-                        to_square,
-                        PieceType::Queen.make_notation_string()
-                    )
-                } else {
-                    format!("{}={}", to_square, PieceType::Queen.make_notation_string())
-                }
-            }
-            MoveType::Castle => {
-                if self.to == KINGSIDE_CASTLE_SQUARES[Piece::color_of(self.moved_piece) as usize] {
-                    "O-O".into()
-                } else {
-                    "O-O-O".into()
-                }
-            }
-            _ => "not handled".into(),
-        };
-
-        // TODO: handle check/checkmate
-
-        self.notation = SharedString::from(move_string);
-    }
-}
-
-fn disambiguate_move(info: &MoveInfo, position: &Position) -> String {
-    let piece_type = Piece::type_of(info.moved_piece);
-    let original_attack = position.bitboards.get_valid_moves(info.from);
-
-    let mut common_moves = original_attack;
-    let mut piece_sqs = vec![info.from];
-    for sq in Square::iter() {
-        let other_piece = position.board[sq as usize];
-        if (sq != info.from && Piece::color_of(info.moved_piece) == Piece::color_of(other_piece))
-            && (Piece::type_of(info.moved_piece) == Piece::type_of(other_piece))
-        {
-            let other_attack = position.bitboards.get_valid_moves(sq);
-            let check_common_moves = original_attack & other_attack;
-            if check_common_moves != 0 {
-                piece_sqs.push(sq);
-            }
-            common_moves &= other_attack;
-        }
-    }
-
-    let formatted_string = if bitboards::is_bit_set(common_moves, info.to) && piece_sqs.len() > 1 {
-        let files = piece_sqs.iter().map(|&sq| Square::file_of(sq)).collect::<Vec<File>>();
-        let ranks = piece_sqs.iter().map(|&sq| Square::rank_of(sq)).collect::<Vec<Rank>>();
-        let files_are_same = files.iter().all(|&file| file == files[0]);
-        let ranks_are_same = ranks.iter().all(|&rank| rank == ranks[0]);
-        if !files_are_same {
-            format!(
-                "{}{}",
-                piece_type.make_notation_string(),
-                Square::file_of(info.from).make_notation_string()
-            )
-        } else if !ranks_are_same {
-            format!(
-                "{}{}",
-                piece_type.make_notation_string(),
-                Square::rank_of(info.from).make_notation_string()
-            )
-        } else {
-            let from = format!("{:?}", info.from).to_lowercase();
-            format!("{}{}", piece_type.make_notation_string(), from)
-        }
-    } else if piece_type == PieceType::Pawn
-        && (info.move_type == MoveType::EnPassant || info.move_type == MoveType::Capture)
-    {
-        // add file of pawns automatically during captures (and en passant)
-        Square::file_of(info.from).make_notation_string().to_string()
-    } else {
-        piece_type.make_notation_string().to_string()
-    };
-
-    formatted_string
 }

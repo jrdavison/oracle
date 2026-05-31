@@ -2,14 +2,16 @@ import { Dimensions, Font, Palette, RustInterface, Utils } from "./globals.slint
 
 export struct BoardState {
     board: [int],
+    legal_targets: [bool],
     last_move_from: int,
     last_move_to: int,
+    check_sq: int,
+    dragged_piece_sq: int,
+    dragged_piece: int,
 }
 
 export component Board inherits TouchArea {
     in property <BoardState> board_state;
-    in-out property <int> dragged_piece_sq; // 64 if no piece is being dragged
-    in-out property <int> check_sq; // 64 if no check is present
 
     for i in Utils.square_count: Rectangle {
         height: Dimensions.sq_size;
@@ -20,58 +22,57 @@ export component Board inherits TouchArea {
         x: Utils.square_to_x(i, self.width);
         y: Utils.square_to_y(i, self.height);
 
-        // Add numbers to left file (1-8)
-        if (mod(i, 8) == 0): Text {
+        Text {
             color: Utils.square_color(i) == 0 ? Palette.light_sq : Palette.dark_sq;
             font-size: Font.font_size_md;
             font-weight: Font.semi_bold;
-            text: Utils.files[floor(i / 8)]; // Adjust text to match reversed rank
+            text: mod(i, 8) == 0 ? Utils.files[floor(i / 8)] : "";
             x: 3px;
             y: 0px;
         }
 
-        // Add letters to bottom rank (a-h)
-        if (i < 8): Text {
+        Text {
             color: Utils.square_color(i) == 0 ? Palette.light_sq : Palette.dark_sq;
             font-size: Font.font_size_md;
             font-weight: Font.semi_bold;
-            text: Utils.ranks[i];
+            text: i < 8 ? Utils.ranks[i] : "";
             x: parent.width - 13px;
             y: parent.height - 22px;
         }
-        if (dragged_piece_sq != Utils.square_count && RustInterface.highlight_valid_move_sq(dragged_piece_sq, i)): Rectangle {
-            background: Palette.valid_sq;
+        Rectangle {
+            background: board_state.legal_targets[i] ? Palette.legal_sq : transparent;
         }
-        if (board_state.last_move_from == i || board_state.last_move_to == i): Rectangle {
-            background: Palette.last_move_sq;
+        Rectangle {
+            background: board_state.last_move_from == i || board_state.last_move_to == i ? Palette.last_move_sq : transparent;
         }
-        if (check_sq == i): Rectangle {
-            background: Palette.check_sq;
+        Rectangle {
+            background: board_state.check_sq == i ? Palette.check_sq : transparent;
         }
-        if (board_state.board[i] != 0 && dragged_piece_sq != i): Image {
+        Image {
             height: parent.height;
             source: Utils.piece_urls[board_state.board[i]];
+            visible: board_state.board[i] != 0 && board_state.dragged_piece_sq != i;
             width: parent.width;
         }
     }
-    if (dragged_piece_sq != Utils.square_count): Image {
+    Image {
         height: Dimensions.sq_size;
-        source: Utils.piece_urls[board_state.board[dragged_piece_sq]];
+        source: Utils.piece_urls[board_state.dragged_piece];
+        visible: board_state.dragged_piece_sq != Utils.square_count;
         width: Dimensions.sq_size;
         x: Utils.constrain_mouse_x(parent.mouse-x) - (Dimensions.sq_size / 2);
         y: Utils.constrain_mouse_y(parent.mouse-y) - (Dimensions.sq_size / 2);
     }
     moved => {
-        if (dragged_piece_sq == Utils.square_count) {
-            self.dragged_piece_sq = RustInterface.square_from_xy(self.mouse-x, self.mouse-y);
+        if (board_state.dragged_piece_sq == Utils.square_count) {
+            RustInterface.begin_drag(RustInterface.square_from_xy(self.mouse-x, self.mouse-y, Dimensions.sq_size));
         }
     }
     clicked => {
-        if (self.dragged_piece_sq != Utils.square_count) {
-            if (self.board_state.board[self.dragged_piece_sq] != 0) {
-                RustInterface.move_piece(self.dragged_piece_sq, RustInterface.square_from_xy(self.mouse-x, self.mouse-y));
+        if (self.board_state.dragged_piece_sq != Utils.square_count) {
+            if (self.board_state.dragged_piece != 0) {
+                RustInterface.move_piece(self.board_state.dragged_piece_sq, RustInterface.square_from_xy(self.mouse-x, self.mouse-y, Dimensions.sq_size));
             }
         }
-        self.dragged_piece_sq = Utils.square_count;
     }
 }

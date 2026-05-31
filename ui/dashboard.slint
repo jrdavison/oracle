@@ -1,6 +1,6 @@
 import { ListView } from "std-widgets.slint";
 
-import { Dimensions, Font, Palette } from "./globals.slint";
+import { Font, Palette } from "./globals.slint";
 
 export struct SlintMoveInfo {
     black: string,
@@ -23,82 +23,66 @@ component MoveTableHeader inherits Rectangle {
     in property <color> highlight_color;
     in property <color> text_color;
     in property <TextHorizontalAlignment> text_alignment;
-    HorizontalLayout {
-        alignment: center;
-        Rectangle {
-            background: highlight_color;
-            border-radius: 5px;
-            width: 60%;
-            Text {
-                color: text_color;
-                font-size: Font.font_size_md;
-                font-weight: Font.semi_bold;
-                horizontal-alignment: text_alignment;
-                text: text;
-                width: 100%;
-            }
-        }
+    background: highlight_color;
+    border-radius: 5px;
+    height: 32px;
+    Text {
+        color: text_color;
+        font-size: Font.font_size_md;
+        font-weight: Font.semi_bold;
+        height: parent.height;
+        horizontal-alignment: text_alignment;
+        text: text;
+        vertical-alignment: center;
+        width: parent.width;
     }
 }
 
 component MoveTableRow inherits Rectangle {
     in property <SlintMoveInfo> move;
     in property <length> container_w;
-    in property <length> header_padding;
+    height: 32px;
     HorizontalLayout {
-        padding: 8px;
         Rectangle { // move no.
-            width: container_w * (1 / 5) - header_padding;
-            HorizontalLayout {
-                alignment: center;
-                Rectangle {
-                    width: 30%;
-                    Text {
-                        color: white;
-                        font-size: Font.font_size_md;
-                        horizontal-alignment: left;
-                        text: move.move_no + ".";
-                        width: 100%;
-                    }
-                }
+            width: container_w / 5;
+            Text {
+                color: white;
+                font-size: Font.font_size_md;
+                height: parent.height;
+                horizontal-alignment: center;
+                text: move.move_no + ".";
+                vertical-alignment: center;
+                width: parent.width;
             }
         }
 
         Rectangle { // white move
-            width: container_w * (2 / 5) - header_padding;
-            HorizontalLayout {
-                alignment: center;
-                Rectangle {
-                    background: move.active_move == 1 ? Palette.active_highlight : transparent;
-                    border-radius: 5px;
-                    width: 30%;
-                    Text {
-                        color: move.active_move == 1 ? black : white;
-                        font-size: Font.font_size_md;
-                        horizontal-alignment: center;
-                        text: move.white;
-                        width: 100%;
-                    }
-                }
+            background: move.active_move == 1 ? Palette.active_highlight : transparent;
+            border-radius: 5px;
+            width: container_w * 2 / 5;
+            Text {
+                color: move.active_move == 1 ? black : white;
+                font-size: Font.font_size_md;
+                height: parent.height;
+                horizontal-alignment: center;
+                text: move.white;
+                vertical-alignment: center;
+                width: parent.width;
             }
         }
 
         Rectangle { // black move
-            width: container_w * (2 / 5) - header_padding;
-            HorizontalLayout {
-                alignment: center;
-                Rectangle {
-                    background: move.active_move == 2 ? Palette.active_highlight : transparent;
-                    border-radius: 5px;
-                    width: 30%;
-                    Text {
-                        color: move.active_move == 2 ? black : white;
-                        font-size: Font.font_size_md;
-                        horizontal-alignment: center;
-                        text: move.black;
-                        width: 100%;
-                    }
-                }
+            background: move.active_move == 2 ? Palette.active_highlight : transparent;
+            border-radius: 5px;
+            width: container_w * 2 / 5;
+            Text {
+                color: move.active_move == 2 ? black : white;
+                font-size: Font.font_size_md;
+                height: parent.height;
+                horizontal-alignment: center;
+                text: move.black;
+                vertical-alignment: center;
+                width: parent.width;
             }
         }
     }
@@ -118,15 +102,15 @@ component MoveTable {
         VerticalLayout {
             alignment: start;
             header := Rectangle {
+                height: 40px;
                 width: container.width - (container.padding * 2);
                 HorizontalLayout {
-                    padding: 10px;
                     alignment: start;
                     MoveTableHeader {
                         text: "";
                         highlight_color: transparent;
                         text_color: white;
-                        width: container.width * (1 / 5) - header.padding;
+                        width: header.width / 5;
                         text_alignment: left;
                     }
 
@@ -134,7 +118,7 @@ component MoveTable {
                         text: "White";
                         highlight_color: white;
                         text_color: black;
-                        width: container.width * (2 / 5) - header.padding;
+                        width: header.width * 2 / 5;
                         text_alignment: center;
                     }
 
@@ -142,19 +126,18 @@ component MoveTable {
                         text: "Black";
                         highlight_color: black;
                         text_color: white;
-                        width: container.width * (2 / 5) - header.padding;
+                        width: header.width * 2 / 5;
                         text_alignment: center;
                     }
                 }
             }
 
             move_history := ListView {
-                height: table_height - 38px; // hardcoded header height since using header.height causes circular dependency
+                height: table_height - header.height;
                 width: table_width - (container.padding * 2);
                 for move[i] in moves: MoveTableRow {
                     background: Math.mod(i, 2) == 0 ? Palette.alternate_bg : Palette.dashboard_bg;
                     container_w: container.width - (container.padding * 2);
-                    header_padding: header.padding;
                     move: move;
                 }
             }
@@ -190,11 +173,12 @@ component InfoTable inherits ListView {
 export component Dashboard inherits Rectangle {
     in property <DashboardState> dashboard_state;
     property <length> info_table_height: 93px;
-    property <length> move_table_height: 350px;
-    property <length> move_table_width: Dimensions.dashboard_w * 0.85;
+    property <length> content_padding: 10px;
+    property <length> move_table_height: root.height - info_table_height - (content_padding * 2);
+    property <length> move_table_width: root.width - (content_padding * 2);
     VerticalLayout {
         alignment: start;
-        padding: 10px;
+        padding: content_padding;
         HorizontalLayout {
             alignment: center;
             MoveTable {
@@ -209,7 +193,7 @@ export component Dashboard inherits Rectangle {
         height: info_table_height;
         width: 100%;
         x: 0;
-        y: Dimensions.board_size - self.height;
+        y: root.height - self.height;
         data: [
             { text: "Halfmove Clock:", value: dashboard_state.halfmove_clock },
             { text: "En Passant Square:", value: dashboard_state.en_passant_square },
