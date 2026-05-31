@@ -9,7 +9,7 @@ export global Palette {
     out property <color> dark_sq: #b58863;
     out property <color> last_move_sq: #ffcc0073;
     out property <color> light_sq: #f0d9b5;
-    out property <color> valid_sq: #23409973;
+    out property <color> legal_sq: #23409973;
     out property <color> check_sq: #ff000073;
 
     // dashboard
@@ -69,7 +69,7 @@ export global Utils {
 
 export global RustInterface {
     pure callback square_from_xy(/* x */ length, /* y */ length) -> int;
-    pure callback highlight_valid_move_sq(/* from */ int, /* to */ int) -> bool;
+    pure callback highlight_legal_move_sq(/* from */ int, /* to */ int) -> bool;
     callback move_piece(/* src */ int, /* dest */ int);
     callback undo_move();
     callback redo_move();

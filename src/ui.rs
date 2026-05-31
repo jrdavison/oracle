@@ -1,3 +1,4 @@
+use crate::bitboards;
 use crate::moves::info::MoveInfo;
 use crate::position::Position;
 use crate::utils::{Color, File, Piece, Rank, Square};
@@ -40,7 +41,7 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
 
     if compute_moves {
         let move_history = format_move_history(&pos);
-        pos.compute_valid_moves();
+        pos.compute_legal_moves();
         ui.set_dashboard_state(DashboardState {
             move_history: Rc::new(VecModel::from(move_history)).into(),
             halfmove_clock: pos.halfmove_clock(),
@@ -60,15 +61,14 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
     let ui_weak = ui.as_weak();
     let position_weak = Rc::downgrade(position);
 
-    ui.global::<RustInterface>().on_highlight_valid_move_sq({
+    ui.global::<RustInterface>().on_highlight_legal_move_sq({
         let position_weak = position_weak.clone();
         move |from, to| {
             let position = position_weak.upgrade().expect("could not upgrade position");
             let position = position.borrow();
-            position.valid_move(
-                Square::from_u8(from as u8).unwrap_or_default(),
-                Square::from_u8(to as u8).unwrap_or_default(),
-            )
+            let from = Square::from_u8(from as u8).unwrap_or_default();
+            let to = Square::from_u8(to as u8).unwrap_or_default();
+            bitboards::is_bit_set(position.legal_destinations_from(from), to)
         }
     });
 
@@ -89,12 +89,14 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
             let src_sq = Square::from_u8(src as u8).unwrap_or_default();
             let dest_sq = Square::from_u8(dest as u8).unwrap_or_default();
 
-            let move_info = position_mut.move_piece(src_sq, dest_sq, true);
+            let move_info = position_mut
+                .move_piece_from_ui(src_sq, dest_sq, true)
+                .unwrap_or_default();
             drop(position_mut);
 
-            let valid_move = move_info.is_valid();
-            if valid_move {
-                set_application_state(&ui, &position, Square::Count, valid_move);
+            let legal_move = move_info.is_valid();
+            if legal_move {
+                set_application_state(&ui, &position, Square::Count, legal_move);
             }
         }
     });
@@ -107,7 +109,7 @@ fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
             let ui = ui_weak.upgrade().expect("could not upgrade ui");
             let mut position_mut = position.borrow_mut();
 
-            let undo_success = position_mut.undo_move();
+            let undo_success = position_mut.undo_last_move();
             drop(position_mut);
 
             if undo_success {

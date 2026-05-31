@@ -4,9 +4,50 @@ use crate::position::Position;
 use crate::utils::{CastlingRights, Direction, File, MoveType, Piece, PieceType, Rank, Square};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct EngineMove {
+pub struct Move {
     pub from: Square,
     pub to: Square,
+}
+
+pub type UndoInfo = MoveInfo;
+
+#[derive(Clone, Copy, Debug)]
+pub struct MoveList {
+    pub moves: [Move; 256],
+    pub len: usize,
+}
+
+impl Default for MoveList {
+    fn default() -> MoveList {
+        MoveList {
+            moves: [Move::default(); 256],
+            len: 0,
+        }
+    }
+}
+
+impl MoveList {
+    pub fn clear(&mut self) {
+        self.len = 0;
+    }
+
+    pub fn push(&mut self, mv: Move) {
+        debug_assert!(self.len < self.moves.len());
+        self.moves[self.len] = mv;
+        self.len += 1;
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = Move> + '_ {
+        self.moves[..self.len].iter().copied()
+    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -153,7 +194,7 @@ impl MoveInfo {
 
 fn disambiguate_move(info: &MoveInfo, position: &Position) -> String {
     let piece_type = Piece::type_of(info.moved_piece);
-    let original_attack = position.bitboards.get_valid_moves(info.from);
+    let original_attack = position.bitboards.get_legal_moves(info.from);
 
     let mut common_moves = original_attack;
     let mut piece_sqs = vec![info.from];
@@ -162,7 +203,7 @@ fn disambiguate_move(info: &MoveInfo, position: &Position) -> String {
         if (sq != info.from && Piece::color_of(info.moved_piece) == Piece::color_of(other_piece))
             && (Piece::type_of(info.moved_piece) == Piece::type_of(other_piece))
         {
-            let other_attack = position.bitboards.get_valid_moves(sq);
+            let other_attack = position.bitboards.get_legal_moves(sq);
             let check_common_moves = original_attack & other_attack;
             if check_common_moves != 0 {
                 piece_sqs.push(sq);

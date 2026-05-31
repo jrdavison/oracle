@@ -1,6 +1,6 @@
 use crate::bitboards::{self, Bitboard, Bitboards};
 use crate::moves::compute;
-use crate::moves::info::{EngineMove, MoveInfo};
+use crate::moves::info::{Move, MoveInfo, MoveList, UndoInfo};
 use crate::utils::{CastlingRights, Color, Direction, File, MoveType, Piece, PieceType, Rank, Square};
 use num_traits::FromPrimitive;
 use std::time::{Duration, Instant};
@@ -94,7 +94,7 @@ impl Position {
         bitboards::is_bit_set(enemy_attacks, king_sq)
     }
 
-    pub fn valid_move(&self, from: Square, to: Square) -> bool {
+    pub fn legal_move(&self, from: Square, to: Square) -> bool {
         if !Square::is_valid(from as i8) || !Square::is_valid(to as i8) {
             return false;
         }
@@ -102,24 +102,38 @@ impl Position {
         if Piece::color_of(piece) != self.side_to_move {
             return false;
         }
-        self.bitboards.is_valid_move(from, to)
+        self.bitboards.is_legal_move(from, to)
     }
 
-    pub fn compute_valid_moves(&mut self) {
+    pub fn legal_destinations_from(&self, from: Square) -> Bitboard {
+        if !Square::is_valid(from as i8) {
+            return 0;
+        }
+
+        let piece = self.board[from as usize];
+        if Piece::color_of(piece) != self.side_to_move {
+            return 0;
+        }
+
+        self.bitboards.get_legal_moves(from)
+    }
+
+    pub fn compute_legal_moves(&mut self) {
         let start = Instant::now();
-        compute::compute_valid_moves(self);
+        compute::compute_legal_moves(self);
         let delta = start.elapsed();
         self.total_compute_time += delta;
         self.total_moves += 1;
-        // println!("Time to compute valid moves: {:?}", delta);
+        // println!("Time to compute legal moves: {:?}", delta);
     }
 
-    pub fn move_piece(&mut self, from: Square, to: Square, clear_redo: bool) -> MoveInfo {
-        self.move_piece_with_options(from, to, clear_redo, true, true)
+    pub fn move_piece_from_ui(&mut self, from: Square, to: Square, clear_redo: bool) -> Option<MoveInfo> {
+        let move_info = self.move_piece_with_options(from, to, clear_redo, true, true, true);
+        move_info.is_valid().then_some(move_info)
     }
 
-    fn make_generated_move(&mut self, from: Square, to: Square, clear_redo: bool) -> MoveInfo {
-        self.move_piece_with_options(from, to, clear_redo, false, false)
+    pub fn move_piece(&mut self, mv: Move) -> UndoInfo {
+        self.move_piece_with_options(mv.from, mv.to, false, false, false, false)
     }
 
     fn move_piece_with_options(
@@ -129,9 +143,10 @@ impl Position {
         clear_redo: bool,
         include_notation: bool,
         validate_move: bool,
+        record_history: bool,
     ) -> MoveInfo {
         let _start = Instant::now();
-        if validate_move && !self.valid_move(from, to) {
+        if validate_move && !self.legal_move(from, to) {
             return MoveInfo::default();
         }
 
@@ -217,11 +232,13 @@ impl Position {
         }
 
         self.side_to_move = !self.side_to_move;
-        self.move_history.push(move_info.clone());
+        if record_history {
+            self.move_history.push(move_info.clone());
 
-        // clear redo history if move is not a redo
-        if clear_redo {
-            self.redo_history.clear();
+            // clear redo history if move is not a redo
+            if clear_redo {
+                self.redo_history.clear();
+            }
         }
 
         // println!("Time to make move: {:?}", _start.elapsed());
@@ -229,78 +246,9 @@ impl Position {
         move_info
     }
 
-    pub fn undo_move(&mut self) -> bool {
+    pub fn undo_last_move(&mut self) -> bool {
         if let Some(last_move) = self.move_history.pop() {
-            let color = Piece::color_of(last_move.moved_piece);
-            match last_move.move_type {
-                MoveType::Quiet | MoveType::TwoSquarePush | MoveType::Capture | MoveType::Promotion => {
-                    self.board[last_move.from as usize] = last_move.moved_piece;
-                    self.board[last_move.to as usize] = last_move.captured_piece;
-                    self.bitboards.set_checkers(color, last_move.from);
-                    self.bitboards.unset_checkers(color, last_move.to);
-                    self.set_piece_mask(last_move.moved_piece, last_move.from);
-                    self.unset_piece_mask(last_move.moved_piece, last_move.to);
-
-                    if last_move.captured_piece != Piece::Empty {
-                        let captured_color = Piece::color_of(last_move.captured_piece);
-                        self.bitboards.set_checkers(captured_color, last_move.capture_piece_sq);
-                        self.set_piece_mask(last_move.captured_piece, last_move.capture_piece_sq);
-                    }
-                }
-                MoveType::EnPassant => {
-                    let color = Piece::color_of(last_move.moved_piece);
-                    let captured_color = Piece::color_of(last_move.captured_piece);
-                    self.board[last_move.from as usize] = last_move.moved_piece;
-                    self.board[last_move.to as usize] = Piece::Empty;
-                    self.board[last_move.capture_piece_sq as usize] = last_move.captured_piece;
-                    self.bitboards.set_checkers(color, last_move.from);
-                    self.bitboards.unset_checkers(color, last_move.to);
-                    self.bitboards.set_checkers(captured_color, last_move.capture_piece_sq);
-                    self.set_piece_mask(last_move.moved_piece, last_move.from);
-                    self.unset_piece_mask(last_move.moved_piece, last_move.to);
-                    self.set_piece_mask(last_move.captured_piece, last_move.capture_piece_sq);
-                    self.en_passant_sq = last_move.to;
-                }
-                MoveType::Castle => {
-                    let (rook_from, rook_to) = match last_move.to {
-                        Square::G1 => (Square::H1, Square::F1),
-                        Square::C1 => (Square::A1, Square::D1),
-                        Square::G8 => (Square::H8, Square::F8),
-                        Square::C8 => (Square::A8, Square::D8),
-                        _ => (Square::Count, Square::Count),
-                    };
-
-                    // reset king
-                    self.board[last_move.from as usize] = last_move.moved_piece;
-                    self.board[last_move.to as usize] = Piece::Empty;
-                    self.bitboards.set_checkers(color, last_move.from);
-                    self.bitboards.unset_checkers(color, last_move.to);
-                    self.set_piece_mask(last_move.moved_piece, last_move.from);
-                    self.unset_piece_mask(last_move.moved_piece, last_move.to);
-
-                    // reset rook
-                    let rook = self.board[rook_to as usize];
-                    self.board[rook_from as usize] = rook;
-                    self.board[rook_to as usize] = Piece::Empty;
-                    self.bitboards.set_checkers(color, rook_from);
-                    self.bitboards.unset_checkers(color, rook_to);
-                    self.set_piece_mask(rook, rook_from);
-                    self.unset_piece_mask(rook, rook_to);
-                }
-                MoveType::Invalid => panic!("Invalid move"),
-            }
-
-            let moved_piece_type = Piece::type_of(last_move.moved_piece);
-            if moved_piece_type == PieceType::King {
-                self.king_squares[color as usize] = last_move.from;
-            }
-
-            self.side_to_move = !self.side_to_move;
-            self.en_passant_sq = last_move.en_passant_sq;
-            self.castling_rights = last_move.castling_rights;
-            self.halfmove_clock = last_move.halfmove_clock;
-            self.fullmove_count = last_move.fullmove_count;
-
+            self.undo_move(last_move.clone());
             self.redo_history.push(last_move);
             true
         } else {
@@ -308,30 +256,89 @@ impl Position {
         }
     }
 
+    pub fn undo_move(&mut self, undo: UndoInfo) {
+        let color = Piece::color_of(undo.moved_piece);
+        match undo.move_type {
+            MoveType::Quiet | MoveType::TwoSquarePush | MoveType::Capture | MoveType::Promotion => {
+                self.board[undo.from as usize] = undo.moved_piece;
+                self.board[undo.to as usize] = undo.captured_piece;
+                self.bitboards.set_checkers(color, undo.from);
+                self.bitboards.unset_checkers(color, undo.to);
+                self.set_piece_mask(undo.moved_piece, undo.from);
+                let moved_to_piece = if undo.move_type == MoveType::Promotion {
+                    Piece::from(PieceType::Queen, color)
+                } else {
+                    undo.moved_piece
+                };
+                self.unset_piece_mask(moved_to_piece, undo.to);
+
+                if undo.captured_piece != Piece::Empty {
+                    let captured_color = Piece::color_of(undo.captured_piece);
+                    self.bitboards.set_checkers(captured_color, undo.capture_piece_sq);
+                    self.set_piece_mask(undo.captured_piece, undo.capture_piece_sq);
+                }
+            }
+            MoveType::EnPassant => {
+                let color = Piece::color_of(undo.moved_piece);
+                let captured_color = Piece::color_of(undo.captured_piece);
+                self.board[undo.from as usize] = undo.moved_piece;
+                self.board[undo.to as usize] = Piece::Empty;
+                self.board[undo.capture_piece_sq as usize] = undo.captured_piece;
+                self.bitboards.set_checkers(color, undo.from);
+                self.bitboards.unset_checkers(color, undo.to);
+                self.bitboards.set_checkers(captured_color, undo.capture_piece_sq);
+                self.set_piece_mask(undo.moved_piece, undo.from);
+                self.unset_piece_mask(undo.moved_piece, undo.to);
+                self.set_piece_mask(undo.captured_piece, undo.capture_piece_sq);
+                self.en_passant_sq = undo.to;
+            }
+            MoveType::Castle => {
+                let (rook_from, rook_to) = match undo.to {
+                    Square::G1 => (Square::H1, Square::F1),
+                    Square::C1 => (Square::A1, Square::D1),
+                    Square::G8 => (Square::H8, Square::F8),
+                    Square::C8 => (Square::A8, Square::D8),
+                    _ => (Square::Count, Square::Count),
+                };
+
+                // reset king
+                self.board[undo.from as usize] = undo.moved_piece;
+                self.board[undo.to as usize] = Piece::Empty;
+                self.bitboards.set_checkers(color, undo.from);
+                self.bitboards.unset_checkers(color, undo.to);
+                self.set_piece_mask(undo.moved_piece, undo.from);
+                self.unset_piece_mask(undo.moved_piece, undo.to);
+
+                // reset rook
+                let rook = self.board[rook_to as usize];
+                self.board[rook_from as usize] = rook;
+                self.board[rook_to as usize] = Piece::Empty;
+                self.bitboards.set_checkers(color, rook_from);
+                self.bitboards.unset_checkers(color, rook_to);
+                self.set_piece_mask(rook, rook_from);
+                self.unset_piece_mask(rook, rook_to);
+            }
+            MoveType::Invalid => panic!("Invalid move"),
+        }
+
+        let moved_piece_type = Piece::type_of(undo.moved_piece);
+        if moved_piece_type == PieceType::King {
+            self.king_squares[color as usize] = undo.from;
+        }
+
+        self.side_to_move = !self.side_to_move;
+        self.en_passant_sq = undo.en_passant_sq;
+        self.castling_rights = undo.castling_rights;
+        self.halfmove_clock = undo.halfmove_clock;
+        self.fullmove_count = undo.fullmove_count;
+    }
+
     pub fn redo_move(&mut self) -> bool {
         if let Some(last_move) = self.redo_history.pop() {
-            self.move_piece(last_move.from, last_move.to, false);
-            true
+            self.move_piece_from_ui(last_move.from, last_move.to, false).is_some()
         } else {
             false
         }
-    }
-
-    pub fn valid_moves(&self) -> Vec<EngineMove> {
-        let mut moves = Vec::new();
-        let mut pieces = self.bitboards.get_checkers(self.side_to_move);
-        while pieces != 0 {
-            let sq = Square::from_u8(pieces.trailing_zeros() as u8).unwrap_or_default();
-            pieces &= pieces - 1;
-
-            let valid_moves = self.bitboards.get_valid_moves(sq);
-            for to in Square::iter() {
-                if bitboards::is_bit_set(valid_moves, to) {
-                    moves.push(EngineMove { from: sq, to });
-                }
-            }
-        }
-        moves
     }
 
     fn remove_piece(&mut self, sq: Square) {
@@ -364,30 +371,45 @@ impl Position {
     }
 }
 
-pub fn count_valid_moves(pos: &mut Position, ply: u32) -> u32 {
+pub fn count_legal_moves(pos: &mut Position, ply: u32) -> u32 {
     if ply == 0 {
         return 1;
     }
 
-    pos.compute_valid_moves();
-    let moves = pos.valid_moves();
+    pos.compute_legal_moves();
+    let mut moves = MoveList::default();
+    generate_moves(pos, &mut moves);
     if ply == 1 {
         return moves.len() as u32;
     }
 
     let mut nodes = 0;
-    for mv in moves {
-        let redo_len = pos.redo_history.len();
-        let made = pos.make_generated_move(mv.from, mv.to, false);
-        if made.move_type == MoveType::Invalid {
+    for mv in moves.iter() {
+        let undo = pos.move_piece(mv);
+        if undo.move_type == MoveType::Invalid {
             panic!("generated invalid move: {:?} -> {:?}", mv.from, mv.to);
         }
-        nodes += count_valid_moves(pos, ply - 1);
-        let _ = pos.undo_move();
-        pos.redo_history.truncate(redo_len);
+        nodes += count_legal_moves(pos, ply - 1);
+        pos.undo_move(undo);
     }
 
     nodes
+}
+
+pub fn generate_moves(pos: &Position, out: &mut MoveList) {
+    out.clear();
+    let mut pieces = pos.bitboards.get_checkers(pos.side_to_move);
+    while pieces != 0 {
+        let sq = Square::from_u8(pieces.trailing_zeros() as u8).unwrap_or_default();
+        pieces &= pieces - 1;
+
+        let mut targets = pos.legal_destinations_from(sq);
+        while targets != 0 {
+            let to = Square::from_u8(targets.trailing_zeros() as u8).unwrap_or_default();
+            targets &= targets - 1;
+            out.push(Move { from: sq, to });
+        }
+    }
 }
 
 fn init_from_fen(fen: &str) -> Position {

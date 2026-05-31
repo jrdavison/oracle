@@ -39,8 +39,8 @@ export component Board inherits TouchArea {
             x: parent.width - 13px;
             y: parent.height - 22px;
         }
-        if (dragged_piece_sq != Utils.square_count && RustInterface.highlight_valid_move_sq(dragged_piece_sq, i)): Rectangle {
-            background: Palette.valid_sq;
+        if (dragged_piece_sq != Utils.square_count && RustInterface.highlight_legal_move_sq(dragged_piece_sq, i)): Rectangle {
+            background: Palette.legal_sq;
         }
         if (board_state.last_move_from == i || board_state.last_move_to == i): Rectangle {
             background: Palette.last_move_sq;
