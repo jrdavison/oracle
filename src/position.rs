@@ -371,7 +371,7 @@ impl Position {
     }
 }
 
-pub fn count_legal_moves(pos: &mut Position, ply: u32) -> u32 {
+pub fn count_legal_moves(pos: &mut Position, ply: u32) -> u64 {
     if ply == 0 {
         return 1;
     }
@@ -380,7 +380,7 @@ pub fn count_legal_moves(pos: &mut Position, ply: u32) -> u32 {
     let mut moves = MoveList::default();
     generate_moves(pos, &mut moves);
     if ply == 1 {
-        return moves.len() as u32;
+        return moves.len() as u64;
     }
 
     let mut nodes = 0;

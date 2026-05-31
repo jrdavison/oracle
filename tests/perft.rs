@@ -31,6 +31,31 @@ pub fn test_basic_count_up_to_4ply() {
     let legal_5ply = count_legal_moves(start_pos, 5);
     println!("Time to count 5ply moves: {:?}", start_5ply.elapsed());
     assert_eq!(legal_5ply, 4865609);
+
+    let start_6ply = Instant::now();
+    let legal_6ply = count_legal_moves(start_pos, 6);
+    println!("Time to count 6ply moves: {:?}", start_6ply.elapsed());
+    assert_eq!(legal_6ply, 119060324);
+
+    // let start_7ply = Instant::now();
+    // let legal_7ply = count_legal_moves(start_pos, 7);
+    // println!("Time to count 7ply moves: {:?}", start_7ply.elapsed());
+    // assert_eq!(legal_7ply, 3195901860);
+
+    // let start_8ply = Instant::now();
+    // let legal_8ply = count_legal_moves(start_pos, 8);
+    // println!("Time to count 8ply moves: {:?}", start_8ply.elapsed());
+    // assert_eq!(legal_8ply, 84998978956);
+
+    // let start_9ply = Instant::now();
+    // let legal_9ply = count_legal_moves(start_pos, 9);
+    // println!("Time to count 9ply moves: {:?}", start_9ply.elapsed());
+    // assert_eq!(legal_9ply, 2439530234167);
+
+    // let start_10ply = Instant::now();
+    // let legal_10ply = count_legal_moves(start_pos, 10);
+    // println!("Time to count 10ply moves: {:?}", start_10ply.elapsed());
+    // assert_eq!(legal_10ply, 69352859712417);
 }
 
 // #[test]
