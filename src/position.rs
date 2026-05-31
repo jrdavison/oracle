@@ -6,7 +6,6 @@ use num_traits::FromPrimitive;
 use std::time::{Duration, Instant};
 
 pub struct Position {
-    pub occupied_squares: [Vec<Square>; Color::Both as usize], // piece location index by color
     pub bitboards: Bitboards,
     pub board: [Piece; Square::Count as usize],
     pub castling_rights: CastlingRights,
@@ -27,7 +26,6 @@ pub struct Position {
 impl Default for Position {
     fn default() -> Position {
         Position {
-            occupied_squares: [Vec::new(), Vec::new()],
             bitboards: Bitboards::default(),
             board: [Piece::Empty; Square::Count as usize],
             castling_rights: CastlingRights::default(),
@@ -238,12 +236,10 @@ impl Position {
                     self.board[last_move.to as usize] = last_move.captured_piece;
                     self.bitboards.set_checkers(color, last_move.from);
                     self.bitboards.unset_checkers(color, last_move.to);
-                    self.move_occupied_square(color, last_move.to, last_move.from);
 
                     if last_move.captured_piece != Piece::Empty {
                         let captured_color = Piece::color_of(last_move.captured_piece);
                         self.bitboards.set_checkers(captured_color, last_move.capture_piece_sq);
-                        self.add_occupied_square(captured_color, last_move.capture_piece_sq);
                     }
                 }
                 MoveType::EnPassant => {
@@ -255,8 +251,6 @@ impl Position {
                     self.bitboards.set_checkers(color, last_move.from);
                     self.bitboards.unset_checkers(color, last_move.to);
                     self.bitboards.set_checkers(captured_color, last_move.capture_piece_sq);
-                    self.move_occupied_square(color, last_move.to, last_move.from);
-                    self.add_occupied_square(captured_color, last_move.capture_piece_sq);
                     self.en_passant_sq = last_move.to;
                 }
                 MoveType::Castle => {
@@ -273,14 +267,12 @@ impl Position {
                     self.board[last_move.to as usize] = Piece::Empty;
                     self.bitboards.set_checkers(color, last_move.from);
                     self.bitboards.unset_checkers(color, last_move.to);
-                    self.move_occupied_square(color, last_move.to, last_move.from);
 
                     // reset rook
                     self.board[rook_from as usize] = self.board[rook_to as usize];
                     self.board[rook_to as usize] = Piece::Empty;
                     self.bitboards.set_checkers(color, rook_from);
                     self.bitboards.unset_checkers(color, rook_to);
-                    self.move_occupied_square(color, rook_to, rook_from);
                 }
                 MoveType::Invalid => panic!("Invalid move"),
             }
@@ -314,11 +306,15 @@ impl Position {
 
     pub fn valid_moves(&self) -> Vec<EngineMove> {
         let mut moves = Vec::new();
-        for sq in self.occupied_squares[self.side_to_move as usize].iter() {
-            let valid_moves = self.bitboards.get_valid_moves(*sq);
+        let mut pieces = self.bitboards.get_checkers(self.side_to_move);
+        while pieces != 0 {
+            let sq = Square::from_u8(pieces.trailing_zeros() as u8).unwrap_or_default();
+            pieces &= pieces - 1;
+
+            let valid_moves = self.bitboards.get_valid_moves(sq);
             for to in Square::iter() {
                 if bitboards::is_bit_set(valid_moves, to) {
-                    moves.push(EngineMove { from: *sq, to });
+                    moves.push(EngineMove { from: sq, to });
                 }
             }
         }
@@ -330,31 +326,12 @@ impl Position {
         let color = Piece::color_of(piece);
         self.board[sq as usize] = Piece::Empty;
         self.bitboards.unset_checkers(color, sq);
-        self.occupied_squares[color as usize].retain(|&s| s != sq);
     }
 
     fn add_piece(&mut self, sq: Square, piece: Piece) {
         let color = Piece::color_of(piece);
         self.board[sq as usize] = piece;
         self.bitboards.set_checkers(color, sq);
-        self.occupied_squares[color as usize].push(sq);
-    }
-
-    fn add_occupied_square(&mut self, color: Color, sq: Square) {
-        if color == Color::Both || sq == Square::Count {
-            return;
-        }
-        if !self.occupied_squares[color as usize].contains(&sq) {
-            self.occupied_squares[color as usize].push(sq);
-        }
-    }
-
-    fn move_occupied_square(&mut self, color: Color, from: Square, to: Square) {
-        if color == Color::Both {
-            return;
-        }
-        self.occupied_squares[color as usize].retain(|&s| s != from);
-        self.add_occupied_square(color, to);
     }
 }
 
@@ -411,8 +388,6 @@ fn init_from_fen(fen: &str) -> Position {
                 let piece_type = PieceType::from_char(c);
                 position.board[sq as usize] = Piece::from(piece_type, color);
                 position.bitboards.set_checkers(color, sq);
-
-                position.occupied_squares[color as usize].push(sq);
 
                 if piece_type == PieceType::King {
                     position.king_squares[color as usize] = sq;

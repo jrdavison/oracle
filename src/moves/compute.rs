@@ -50,19 +50,23 @@ pub fn compute_valid_moves(pos: &mut Position) {
             pos.bitboards.get_checkers(Color::Both)
         };
 
-        for sq in &pos.occupied_squares[color as usize] {
-            let piece = pos.board[*sq as usize];
+        let mut pieces = pos.bitboards.get_checkers(color);
+        while pieces != 0 {
+            let sq = Square::from_u8(pieces.trailing_zeros() as u8).unwrap_or_default();
+            pieces &= pieces - 1;
+
+            let piece = pos.board[sq as usize];
             let piece_type = Piece::type_of(piece);
             let piece_color = Piece::color_of(piece);
 
             // psuedo-legal moves
             let mut computed_moves = match piece_type {
-                PieceType::Pawn => compute_pawn_moves(pos, *sq, piece_color),
-                PieceType::Knight => compute_knight_moves(*sq),
-                PieceType::Rook => compute_rook_moves(attack_occupancy, *sq),
-                PieceType::Bishop => compute_bishop_moves(attack_occupancy, *sq),
+                PieceType::Pawn => compute_pawn_moves(pos, sq, piece_color),
+                PieceType::Knight => compute_knight_moves(sq),
+                PieceType::Rook => compute_rook_moves(attack_occupancy, sq),
+                PieceType::Bishop => compute_bishop_moves(attack_occupancy, sq),
                 PieceType::Queen => {
-                    compute_rook_moves(attack_occupancy, *sq) | compute_bishop_moves(attack_occupancy, *sq)
+                    compute_rook_moves(attack_occupancy, sq) | compute_bishop_moves(attack_occupancy, sq)
                 }
                 PieceType::King => compute_king_moves(pos, color),
                 _ => ComputedMoves::default(),
@@ -73,10 +77,10 @@ pub fn compute_valid_moves(pos: &mut Position) {
 
             if color == friendly_color && piece_type != PieceType::King {
                 computed_moves.valid_moves &= check_mask;
-                computed_moves.valid_moves &= pinned_masks[*sq as usize];
+                computed_moves.valid_moves &= pinned_masks[sq as usize];
             }
 
-            pos.bitboards.set_valid_moves(*sq, computed_moves.valid_moves);
+            pos.bitboards.set_valid_moves(sq, computed_moves.valid_moves);
             attacks |= computed_moves.attacks;
         }
         pos.bitboards.set_attacks(color, attacks);
