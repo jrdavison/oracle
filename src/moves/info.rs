@@ -2,7 +2,12 @@ use super::compute::{KINGSIDE_CASTLE_SQUARES, QUEENSIDE_CASTLE_SQUARES};
 use crate::bitboards;
 use crate::position::Position;
 use crate::utils::{CastlingRights, Direction, File, MoveType, Piece, PieceType, Rank, Square};
-use slint::SharedString;
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EngineMove {
+    pub from: Square,
+    pub to: Square,
+}
 
 #[derive(Clone, Debug, Default)]
 pub struct MoveInfo {
@@ -16,11 +21,19 @@ pub struct MoveInfo {
     pub castling_rights: CastlingRights,
     pub fullmove_count: i32,
     pub halfmove_clock: i32,
-    pub notation: SharedString,
+    pub notation: String,
 }
 
 impl MoveInfo {
     pub fn new(position: &Position, from: Square, to: Square) -> MoveInfo {
+        MoveInfo::from_position(position, from, to, true)
+    }
+
+    pub fn new_without_notation(position: &Position, from: Square, to: Square) -> MoveInfo {
+        MoveInfo::from_position(position, from, to, false)
+    }
+
+    fn from_position(position: &Position, from: Square, to: Square, include_notation: bool) -> MoveInfo {
         let move_type;
         let moved_piece = position.board[from as usize];
         let moved_piece_color = Piece::color_of(moved_piece);
@@ -90,9 +103,11 @@ impl MoveInfo {
             castling_rights: position.castling_rights,
             fullmove_count: position.fullmove_count(),
             halfmove_clock: position.halfmove_clock(),
-            notation: SharedString::default(),
+            notation: String::default(),
         };
-        new_move.set_algebraic_notation(position);
+        if include_notation {
+            new_move.set_algebraic_notation(position);
+        }
 
         new_move
     }
@@ -132,7 +147,7 @@ impl MoveInfo {
 
         // TODO: handle check/checkmate
 
-        self.notation = SharedString::from(move_string);
+        self.notation = move_string;
     }
 }
 

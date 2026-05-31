@@ -1,6 +1,6 @@
 use crate::bitboards::{self, Bitboards};
 use crate::moves::compute;
-use crate::moves::info::MoveInfo;
+use crate::moves::info::{EngineMove, MoveInfo};
 use crate::utils::{CastlingRights, Color, Direction, File, MoveType, Piece, PieceType, Rank, Square};
 use num_traits::FromPrimitive;
 use std::time::{Duration, Instant};
@@ -115,12 +115,30 @@ impl Position {
     }
 
     pub fn move_piece(&mut self, from: Square, to: Square, clear_redo: bool) -> MoveInfo {
+        self.move_piece_with_options(from, to, clear_redo, true)
+    }
+
+    fn move_piece_without_notation(&mut self, from: Square, to: Square, clear_redo: bool) -> MoveInfo {
+        self.move_piece_with_options(from, to, clear_redo, false)
+    }
+
+    fn move_piece_with_options(
+        &mut self,
+        from: Square,
+        to: Square,
+        clear_redo: bool,
+        include_notation: bool,
+    ) -> MoveInfo {
         let _start = Instant::now();
         if !self.valid_move(from, to) {
             return MoveInfo::default();
         }
 
-        let move_info = MoveInfo::new(self, from, to);
+        let move_info = if include_notation {
+            MoveInfo::new(self, from, to)
+        } else {
+            MoveInfo::new_without_notation(self, from, to)
+        };
         let moved_piece_color = Piece::color_of(move_info.moved_piece);
         let moved_piece_type = Piece::type_of(move_info.moved_piece);
 
@@ -293,14 +311,13 @@ impl Position {
         }
     }
 
-    pub fn valid_moves(&self) -> Vec<MoveInfo> {
+    pub fn valid_moves(&self) -> Vec<EngineMove> {
         let mut moves = Vec::new();
         for sq in self.occupied_squares[self.side_to_move as usize].iter() {
             let valid_moves = self.bitboards.get_valid_moves(*sq);
             for to in Square::iter() {
                 if bitboards::is_bit_set(valid_moves, to) {
-                    let move_info = MoveInfo::new(self, *sq, to);
-                    moves.push(move_info);
+                    moves.push(EngineMove { from: *sq, to });
                 }
             }
         }
@@ -354,7 +371,7 @@ pub fn count_valid_moves(pos: &mut Position, ply: u32) -> u32 {
     let mut nodes = 0;
     for mv in moves {
         let redo_len = pos.redo_history.len();
-        let made = pos.move_piece(mv.from, mv.to, false);
+        let made = pos.move_piece_without_notation(mv.from, mv.to, false);
         if made.move_type == MoveType::Invalid {
             panic!("generated invalid move: {:?} -> {:?}", mv.from, mv.to);
         }

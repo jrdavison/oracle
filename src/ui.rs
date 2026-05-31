@@ -161,7 +161,7 @@ fn format_move_history(pos: &Position) -> Vec<SlintMoveInfo> {
                     println!("white: {} / 2 = {}", len, len / 2);
                     len / 2
                 } else {
-                    std::cmp::max(( len + 1) / 2, 1) - 1
+                    std::cmp::max((len + 1) / 2, 1) - 1
                 }
             }
         };
@@ -184,20 +184,20 @@ fn chunk_move_history(history: &[MoveInfo]) -> Vec<SlintMoveInfo> {
             slint_move_info.push(SlintMoveInfo {
                 move_no: first_move.fullmove_count,
                 white: "...".into(),
-                black: first_move.notation.clone(),
+                black: first_move.notation.clone().into(),
                 active_move: 0,
             });
         } else if let Some(first_response) = moves_iter.next() {
             slint_move_info.push(SlintMoveInfo {
                 move_no: first_move.fullmove_count,
-                white: first_move.notation.clone(),
-                black: first_response.notation.clone(),
+                white: first_move.notation.clone().into(),
+                black: first_response.notation.clone().into(),
                 active_move: 0,
             });
         } else {
             slint_move_info.push(SlintMoveInfo {
                 move_no: first_move.fullmove_count,
-                white: first_move.notation.clone(),
+                white: first_move.notation.clone().into(),
                 black: "".into(),
                 active_move: 0,
             });
@@ -210,15 +210,15 @@ fn chunk_move_history(history: &[MoveInfo]) -> Vec<SlintMoveInfo> {
             2 => {
                 slint_move_info.push(SlintMoveInfo {
                     move_no: chunk_vec[0].fullmove_count,
-                    white: chunk_vec[0].notation.clone(),
-                    black: chunk_vec[1].notation.clone(),
+                    white: chunk_vec[0].notation.clone().into(),
+                    black: chunk_vec[1].notation.clone().into(),
                     active_move: 0,
                 });
             }
             1 => {
                 slint_move_info.push(SlintMoveInfo {
                     move_no: chunk_vec[0].fullmove_count,
-                    white: chunk_vec[0].notation.clone(),
+                    white: chunk_vec[0].notation.clone().into(),
                     black: "".into(),
                     active_move: 0,
                 });
