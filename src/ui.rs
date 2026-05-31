@@ -53,7 +53,7 @@ fn set_application_state(ui: &AppWindow, position: &Rc<RefCell<Position>>, dragg
             Square::default()
         };
         ui.set_check_sq(check_sq as i32);
-}
+    }
 }
 
 fn init_callbacks(ui: &AppWindow, position: &Rc<RefCell<Position>>) {
