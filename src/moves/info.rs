@@ -8,16 +8,19 @@ pub struct Move {
     pub to: Square,
 }
 
+// Enough for reachable orthodox chess positions; arbitrary FENs can exceed this.
+const MAX_MOVES: usize = 256;
+
 #[derive(Clone, Copy, Debug)]
 pub struct MoveList {
-    pub moves: [Move; 256],
+    pub moves: [Move; MAX_MOVES],
     pub len: usize,
 }
 
 impl Default for MoveList {
     fn default() -> MoveList {
         MoveList {
-            moves: [Move::default(); 256],
+            moves: [Move::default(); MAX_MOVES],
             len: 0,
         }
     }

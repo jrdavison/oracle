@@ -185,7 +185,6 @@ fn format_move_history(game: &GameState) -> Vec<SlintMoveInfo> {
             0 => 0,
             len => {
                 if color == Color::White {
-                    println!("white: {} / 2 = {}", len, len / 2);
                     len / 2
                 } else {
                     std::cmp::max((len + 1) / 2, 1) - 1
