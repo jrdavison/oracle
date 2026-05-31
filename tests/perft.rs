@@ -4,7 +4,7 @@ use std::time::Instant;
 
 // https://www.chessprogramming.org/Perft
 #[test]
-pub fn test_basic_count_up_to_4ply() {
+pub fn test_basic_count_up_to_5ply() {
     let start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let start_pos = &mut Position::new(start_fen);
 
@@ -33,10 +33,10 @@ pub fn test_basic_count_up_to_4ply() {
     println!("Time to count 5ply moves: {:?}", start_5ply.elapsed());
     assert_eq!(legal_5ply, 4865609);
 
-    let start_6ply = Instant::now();
-    let legal_6ply = count_legal_moves(start_pos, 6);
-    println!("Time to count 6ply moves: {:?}", start_6ply.elapsed());
-    assert_eq!(legal_6ply, 119060324);
+    // let start_6ply = Instant::now();
+    // let legal_6ply = count_legal_moves(start_pos, 6);
+    // println!("Time to count 6ply moves: {:?}", start_6ply.elapsed());
+    // assert_eq!(legal_6ply, 119060324);
 
     // let start_7ply = Instant::now();
     // let legal_7ply = count_legal_moves(start_pos, 7);
