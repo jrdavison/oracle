@@ -98,11 +98,12 @@ fn init_callbacks(ui: &AppWindow, game: &Rc<RefCell<GameState>>) {
         }
     });
 
-    ui.global::<RustInterface>().on_square_from_xy(|x: f32, y: f32| {
-        let file = File::from_x(x);
-        let rank = Rank::from_y(y);
-        Square::from(file, rank) as i32
-    });
+    ui.global::<RustInterface>()
+        .on_square_from_xy(|x: f32, y: f32, sq_size: f32| {
+            let file = File::from_x(x, sq_size);
+            let rank = Rank::from_y(y, sq_size);
+            Square::from(file, rank) as i32
+        });
 
     ui.global::<RustInterface>().on_move_piece({
         let game_weak = game_weak.clone();

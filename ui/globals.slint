@@ -1,7 +1,6 @@
 export global Dimensions {
-    out property <length> board_size: 640px;
-    out property <length> sq_size: 80px;
-    out property <length> dashboard_w: 400px;
+    out property <length> sq_size: 100px; // (8 x sq_size) for total board dimenstions
+    out property <length> dashboard_w: 500px;
 }
 
 export global Palette {
@@ -59,16 +58,19 @@ export global Utils {
     public pure function square_color(sq: int) -> int {
         return Math.mod(Math.floor(sq / 8) + sq, 2);
     }
+    public pure function board_size() -> length {
+        return Dimensions.sq_size * 8;
+    }
     public pure function constrain_mouse_x(x: length) -> length {
-        Math.min(Math.max(x, 0), Dimensions.board_size);
+        Math.min(Math.max(x, 0), Utils.board_size());
     }
     public pure function constrain_mouse_y(y: length) -> length {
-        Math.min(Math.max(y, 0), Dimensions.board_size);
+        Math.min(Math.max(y, 0), Utils.board_size());
     }
 }
 
 export global RustInterface {
-    pure callback square_from_xy(/* x */ length, /* y */ length) -> int;
+    pure callback square_from_xy(/* x */ length, /* y */ length, /* sq_size */ length) -> int;
     callback begin_drag(/* src */ int);
     callback move_piece(/* src */ int, /* dest */ int);
     callback undo_move();

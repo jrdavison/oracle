@@ -226,8 +226,8 @@ pub enum File {
 }
 
 impl File {
-    pub fn from_x(x: f32) -> File {
-        let file = (x.floor() as i32) / 80; // TODO: don't hardcode square size
+    pub fn from_x(x: f32, sq_size: f32) -> File {
+        let file = (x.floor() / sq_size).floor() as i32;
         File::from_i32(file).unwrap_or_default()
     }
 
@@ -302,8 +302,8 @@ pub enum Rank {
 }
 
 impl Rank {
-    pub fn from_y(y: f32) -> Rank {
-        let rank = 7 - (y.floor() as i32 / 80); // TODO: don't hardcode square size
+    pub fn from_y(y: f32, sq_size: f32) -> Rank {
+        let rank = 7 - (y.floor() / sq_size).floor() as i32;
         Rank::from_i32(rank).unwrap_or_default()
     }
 

@@ -1,7 +1,7 @@
 import { Board, BoardState } from "./board.slint";
 import { Dashboard, DashboardState, SlintMoveInfo } from "./dashboard.slint";
 import { EvalBar } from "./eval.slint";
-import { Dimensions, Palette, RustInterface } from "./globals.slint";
+import { Dimensions, Palette, RustInterface, Utils } from "./globals.slint";
 
 export { BoardState, DashboardState, RustInterface, SlintMoveInfo } // export to use in rust code
 
@@ -11,26 +11,26 @@ export component AppWindow inherits Window {
 
     title: "Oracle";
     background: Palette.dashboard_bg;
-    height: Dimensions.board_size;
-    width: Dimensions.board_size + Dimensions.dashboard_w;
+    height: Utils.board_size();
+    width: Utils.board_size() + Dimensions.dashboard_w;
     board := Board {
         board_state: board_state;
-        height: Dimensions.board_size;
-        width: Dimensions.board_size;
+        height: Utils.board_size();
+        width: Utils.board_size();
         x: 0;
     }
 
     dash := Dashboard {
-        height: Dimensions.board_size;
+        height: Utils.board_size();
         width: Dimensions.dashboard_w - eval.width;
-        x: Dimensions.board_size + eval.width;
+        x: Utils.board_size() + eval.width;
         dashboard_state: dashboard_state;
     }
 
     eval := EvalBar {
         b_eval: 50%;
         w_eval: 50%;
-        x: Dimensions.board_size;
+        x: Utils.board_size();
     }
 
     key_handler := FocusScope {
