@@ -1,6 +1,6 @@
 use super::info::{Move, MoveList};
 use crate::position::Position;
-use crate::utils::{MoveType, Square};
+use crate::utils::Square;
 use num_traits::FromPrimitive;
 
 pub fn count_legal_moves(pos: &mut Position, ply: u32) -> u64 {
@@ -17,10 +17,9 @@ pub fn count_legal_moves(pos: &mut Position, ply: u32) -> u64 {
 
     let mut nodes = 0;
     for mv in moves.iter() {
-        let undo = pos.move_piece(mv);
-        if undo.move_type == MoveType::Invalid {
-            panic!("generated invalid move: {:?} -> {:?}", mv.from, mv.to);
-        }
+        let undo = pos
+            .move_piece(mv, false)
+            .unwrap_or_else(|| panic!("generated invalid move: {:?} -> {:?}", mv.from, mv.to));
         nodes += count_legal_moves(pos, ply - 1);
         pos.undo_move(undo);
     }

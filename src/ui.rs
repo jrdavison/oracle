@@ -1,6 +1,5 @@
 use crate::bitboards::Bitboard;
-use crate::game::GameState;
-use crate::moves::info::MoveInfo;
+use crate::game::{GameMove, GameState};
 use crate::utils::{Color, File, Piece, Rank, Square};
 use itertools::Itertools;
 use num_traits::FromPrimitive;
@@ -181,7 +180,7 @@ fn format_move_history(game: &GameState) -> Vec<SlintMoveInfo> {
             active_move: 0,
         });
     } else if let Some(active_move) = history.last() {
-        let color = Piece::color_of(active_move.moved_piece);
+        let color = Piece::color_of(active_move.info.moved_piece);
         let fullmove_idx = match history.len() {
             0 => 0,
             len => {
@@ -202,29 +201,29 @@ fn format_move_history(game: &GameState) -> Vec<SlintMoveInfo> {
     moves
 }
 
-fn chunk_move_history(history: &[MoveInfo]) -> Vec<SlintMoveInfo> {
+fn chunk_move_history(history: &[GameMove]) -> Vec<SlintMoveInfo> {
     let mut moves_iter = history.iter();
     let mut slint_move_info: Vec<SlintMoveInfo> = Vec::new();
 
     // first move is by black, add ... to white
     if let Some(first_move) = moves_iter.next() {
-        if Piece::color_of(first_move.moved_piece) == Color::Black {
+        if Piece::color_of(first_move.info.moved_piece) == Color::Black {
             slint_move_info.push(SlintMoveInfo {
-                move_no: first_move.fullmove_count,
+                move_no: first_move.info.fullmove_count,
                 white: "...".into(),
                 black: first_move.notation.clone().into(),
                 active_move: 0,
             });
         } else if let Some(first_response) = moves_iter.next() {
             slint_move_info.push(SlintMoveInfo {
-                move_no: first_move.fullmove_count,
+                move_no: first_move.info.fullmove_count,
                 white: first_move.notation.clone().into(),
                 black: first_response.notation.clone().into(),
                 active_move: 0,
             });
         } else {
             slint_move_info.push(SlintMoveInfo {
-                move_no: first_move.fullmove_count,
+                move_no: first_move.info.fullmove_count,
                 white: first_move.notation.clone().into(),
                 black: "".into(),
                 active_move: 0,
@@ -237,7 +236,7 @@ fn chunk_move_history(history: &[MoveInfo]) -> Vec<SlintMoveInfo> {
         match chunk_vec.len() {
             2 => {
                 slint_move_info.push(SlintMoveInfo {
-                    move_no: chunk_vec[0].fullmove_count,
+                    move_no: chunk_vec[0].info.fullmove_count,
                     white: chunk_vec[0].notation.clone().into(),
                     black: chunk_vec[1].notation.clone().into(),
                     active_move: 0,
@@ -245,7 +244,7 @@ fn chunk_move_history(history: &[MoveInfo]) -> Vec<SlintMoveInfo> {
             }
             1 => {
                 slint_move_info.push(SlintMoveInfo {
-                    move_no: chunk_vec[0].fullmove_count,
+                    move_no: chunk_vec[0].info.fullmove_count,
                     white: chunk_vec[0].notation.clone().into(),
                     black: "".into(),
                     active_move: 0,

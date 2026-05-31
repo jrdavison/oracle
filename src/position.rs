@@ -1,6 +1,6 @@
 use crate::bitboards::{self, Bitboard, Bitboards};
 use crate::moves::compute;
-use crate::moves::info::{Move, MoveInfo, UndoInfo};
+use crate::moves::info::{Move, MoveInfo};
 use crate::utils::{CastlingRights, Color, Direction, File, MoveType, Piece, PieceType, Rank, Square};
 use num_traits::FromPrimitive;
 use std::time::{Duration, Instant};
@@ -76,7 +76,7 @@ impl Position {
         bitboards::is_bit_set(enemy_attacks, king_sq)
     }
 
-    pub fn legal_move(&self, from: Square, to: Square) -> bool {
+    pub fn is_legal_move(&self, from: Square, to: Square) -> bool {
         if !Square::is_valid(from as i8) || !Square::is_valid(to as i8) {
             return false;
         }
@@ -109,32 +109,13 @@ impl Position {
         // println!("Time to compute legal moves: {:?}", delta);
     }
 
-    pub fn play_validated_move(&mut self, from: Square, to: Square) -> Option<MoveInfo> {
-        let move_info = self.move_piece_with_options(from, to, true, true);
-        move_info.is_valid().then_some(move_info)
-    }
-
-    pub fn move_piece(&mut self, mv: Move) -> UndoInfo {
-        self.move_piece_with_options(mv.from, mv.to, false, false)
-    }
-
-    fn move_piece_with_options(
-        &mut self,
-        from: Square,
-        to: Square,
-        include_notation: bool,
-        validate_move: bool,
-    ) -> MoveInfo {
+    pub fn move_piece(&mut self, mv: Move, validate: bool) -> Option<MoveInfo> {
         let _start = Instant::now();
-        if validate_move && !self.legal_move(from, to) {
-            return MoveInfo::default();
+        if validate && !self.is_legal_move(mv.from, mv.to) {
+            return None;
         }
 
-        let move_info = if include_notation {
-            MoveInfo::new(self, from, to)
-        } else {
-            MoveInfo::new_without_notation(self, from, to)
-        };
+        let move_info = MoveInfo::new(self, mv.from, mv.to);
         let moved_piece_color = Piece::color_of(move_info.moved_piece);
         let moved_piece_type = Piece::type_of(move_info.moved_piece);
 
@@ -215,10 +196,10 @@ impl Position {
 
         // println!("Time to make move: {:?}", _start.elapsed());
 
-        move_info
+        Some(move_info)
     }
 
-    pub fn undo_move(&mut self, undo: UndoInfo) {
+    pub fn undo_move(&mut self, undo: MoveInfo) {
         let color = Piece::color_of(undo.moved_piece);
         match undo.move_type {
             MoveType::Quiet | MoveType::TwoSquarePush | MoveType::Capture | MoveType::Promotion => {
